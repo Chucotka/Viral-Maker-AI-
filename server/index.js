@@ -33,20 +33,22 @@ try {
   app.use('/api/publish', publishRoute);
   app.use('/api/user', userRoute);
 
-  // Fallback to index.html for SPA
-  app.get(/^(?!\/api).+/, (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/index.html'));
-  });
-
   // Initialize Telegram Bot
   setupBot();
   const bot = getBot();
 
   // On Vercel, setup webhook
   if (bot) {
-    const { webhookCallback } = require('grammy');
-    app.use('/api/webhook', webhookCallback(bot, 'express'));
+    app.post('/api/webhook', (req, res) => {
+      bot.handleUpdate(req.body);
+      res.sendStatus(200);
+    });
   }
+
+  // Fallback to index.html for SPA
+  app.get(/^(?!\/api).+/, (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/index.html'));
+  });
 } catch (error) {
   console.error('Failed to initialize server:', error);
 }
