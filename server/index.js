@@ -42,20 +42,10 @@ try {
   setupBot();
   const bot = getBot();
 
-  if (process.env.NODE_ENV !== 'production') {
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-      if (bot) {
-          bot.start().catch(console.error);
-          console.log('Bot started in long-polling mode (local dev).');
-      }
-    });
-  } else {
-    // On Vercel, setup webhook and don't call app.listen
-    if (bot) {
-      const { webhookCallback } = require('grammy');
-      app.use('/api/webhook', webhookCallback(bot, 'express'));
-    }
+  // On Vercel, setup webhook
+  if (bot) {
+    const { webhookCallback } = require('grammy');
+    app.use('/api/webhook', webhookCallback(bot, 'express'));
   }
 } catch (error) {
   console.error('Failed to initialize server:', error);

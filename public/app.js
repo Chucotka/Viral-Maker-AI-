@@ -40,6 +40,16 @@ async function loadDashboardData() {
         const data = await response.json();
         const posts = data.posts || [];
 
+        // Helper function to escape HTML to prevent XSS
+        const escapeHTML = (str) => {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        };
+
         // Update Dashboard
         const postsList = document.getElementById('recent-posts-list');
         if (posts.length === 0) {
@@ -48,10 +58,10 @@ async function loadDashboardData() {
             postsList.innerHTML = posts.slice(0, 3).map(post => `
                 <div class="post-card">
                     <div class="post-card-header">
-                        <span>${post.platform} • ${post.tone}</span>
-                        <span style="color: var(--warning)">🔥 ${post.viralScore}</span>
+                        <span>${escapeHTML(post.platform)} • ${escapeHTML(post.tone)}</span>
+                        <span style="color: var(--warning)">🔥 ${escapeHTML(post.viralScore)}</span>
                     </div>
-                    <div class="post-card-content">${post.content}</div>
+                    <div class="post-card-content">${escapeHTML(post.content)}</div>
                 </div>
             `).join('');
 
@@ -69,9 +79,9 @@ async function loadDashboardData() {
             const topPost = posts.reduce((prev, current) => (prev.viralScore > current.viralScore) ? prev : current);
             document.getElementById('top-post-card').innerHTML = `
                 <div class="post-card-header">
-                    <span>🔥 ${topPost.viralScore} Score</span>
+                    <span>🔥 ${escapeHTML(topPost.viralScore)} Score</span>
                 </div>
-                <div class="post-card-content">${topPost.content}</div>
+                <div class="post-card-content">${escapeHTML(topPost.content)}</div>
             `;
 
             // Simple Chart (last 7 posts for simplicity)
