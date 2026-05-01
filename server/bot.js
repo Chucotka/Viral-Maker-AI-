@@ -7,7 +7,18 @@ function setupBot() {
   }
 
   const { Bot } = require('grammy');
-  bot = new Bot(process.env.TELEGRAM_BOT_TOKEN);
+  // Initialize with dummy bot info to bypass async init requirement for webhooks
+  bot = new Bot(process.env.TELEGRAM_BOT_TOKEN, {
+      botInfo: {
+        id: 1,
+        is_bot: true,
+        first_name: "Viral Maker AI",
+        username: "viral_maker_ai_bot",
+        can_join_groups: true,
+        can_read_all_group_messages: true,
+        supports_inline_queries: false,
+      }
+  });
 
   const webAppUrl = process.env.WEBAPP_URL || 'https://example.com'; // fallback if not set
 

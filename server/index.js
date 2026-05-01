@@ -33,22 +33,39 @@ try {
   app.use('/api/publish', publishRoute);
   app.use('/api/user', userRoute);
 
+  app.get('/api/test', (req, res) => res.json({ ok: true, env: !!process.env.TELEGRAM_BOT_TOKEN }));
+
   // Initialize Telegram Bot
   setupBot();
   const bot = getBot();
 
-  // On Vercel, setup webhook
-  if (bot) {
-    app.post('/api/webhook', (req, res) => {
-      bot.handleUpdate(req.body);
+  app.post('/api/webhook', async (req, res) => {
+    try {
+      if (bot) {
+        try {
+            await bot.init();
+        } catch(err) {
+            // bot may already be initialized, ignore this.
+        }
+        await bot.handleUpdate(req.body);
+      }
       res.sendStatus(200);
-    });
-  }
+    } catch (e) {
+      console.error('Webhook error:', e);
+      res.sendStatus(200); // always return 200 to Telegram
+    }
+  });
 
   // Fallback to index.html for SPA
   app.get(/^(?!\/api).+/, (req, res) => {
     res.sendFile(path.join(__dirname, '../public/index.html'));
   });
+
+  if (app && app._router && app._router.stack) {
+    app._router.stack.forEach(r => {
+      if (r.route) console.log('Route:', r.route.path);
+    });
+  }
 } catch (error) {
   console.error('Failed to initialize server:', error);
 }

@@ -1,14 +1,4 @@
-
-> app@1.0.0 dev
-> nodemon dev.js
-
-[33m[nodemon] 3.1.14[39m
-[33m[nodemon] to restart at any time, enter `rs`[39m
-[33m[nodemon] watching path(s): *.*[39m
-[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
-[32m[nodemon] starting `node dev.js`[39m
-◇ injected env (4) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
-(node:339261) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+◇ injected env (4) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+(node:400809) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
 (Use `node --trace-deprecation ...` to show where the warning was created)
 Development server running on port 3000
-[32m[nodemon] clean exit - waiting for changes before restart[39m
