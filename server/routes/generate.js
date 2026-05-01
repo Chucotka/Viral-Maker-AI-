@@ -1,5 +1,5 @@
 const express = require('express');
-const { generateContent } = require('../services/openai');
+const { generateContent } = require('../services/gemini');
 const { calculateViralScore } = require('../services/viralScore');
 const { savePost, getPosts, getUserData, incrementUserCount } = require('../services/db');
 
@@ -27,7 +27,7 @@ router.post('/', async (req, res) => {
     }
 
     // Force model based on plan
-    const finalModel = userData.plan === 'free' ? 'gpt-3.5-turbo' : (model || 'gpt-4o');
+    const finalModel = userData.plan === 'free' ? 'gemini-1.5-flash' : (model || 'gemini-1.5-pro');
 
     const content = await generateContent({ topic, platform, tone, model: finalModel });
 

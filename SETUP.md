@@ -21,7 +21,7 @@ Welcome to the **Viral Maker AI** setup guide! This project contains both the Ex
    cp .env.example .env
    ```
 2. Open `.env` and fill in the values:
-   - `OPENAI_API_KEY`: Your OpenAI API key.
+   - `GEMINI_API_KEY`: Your Google Gemini API key.
    - `TELEGRAM_BOT_TOKEN`: The token you got from `@BotFather`.
    - `WEBAPP_URL`: Leave this blank for a moment, we will get it from ngrok.
 

@@ -159,7 +159,7 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
     const topic = document.getElementById('studio-topic').value.trim();
     const platform = document.getElementById('studio-platform').value;
     const tone = document.getElementById('studio-tone').value;
-    const model = document.getElementById('settings-model').value || 'gpt-4o';
+    const model = document.getElementById('settings-model').value || 'gemini-1.5-pro';
 
     const limitMsg = document.getElementById('limit-msg');
     limitMsg.classList.add('hidden');
