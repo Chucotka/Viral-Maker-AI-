@@ -1,13 +1,12 @@
-const { Bot } = require('grammy');
-
 let bot;
 
-async function setupBot() {
+function setupBot() {
   if (!process.env.TELEGRAM_BOT_TOKEN) {
-    console.error('TELEGRAM_BOT_TOKEN is not set. Bot will not start.');
-    return;
+    console.warn('No TELEGRAM_BOT_TOKEN, bot disabled');
+    return null;
   }
 
+  const { Bot } = require('grammy');
   bot = new Bot(process.env.TELEGRAM_BOT_TOKEN);
 
   const webAppUrl = process.env.WEBAPP_URL || 'https://example.com'; // fallback if not set

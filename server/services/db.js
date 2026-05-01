@@ -1,16 +1,26 @@
 const fs = require('fs');
 const path = require('path');
 
-const DB_PATH = path.join(__dirname, '../../posts.json');
-const USERS_DB_PATH = path.join(__dirname, '../../users.json');
+// Use /tmp for serverless read-only filesystem compatibility, fallback to local file otherwise
+const isVercel = process.env.VERCEL || process.env.NODE_ENV === 'production';
+const DB_PATH = isVercel ? '/tmp/posts.json' : path.join(__dirname, '../../posts.json');
+const USERS_DB_PATH = isVercel ? '/tmp/users.json' : path.join(__dirname, '../../users.json');
 
 // Initialize databases if they don't exist
-if (!fs.existsSync(DB_PATH)) {
-  fs.writeFileSync(DB_PATH, JSON.stringify([]));
+try {
+  if (!fs.existsSync(DB_PATH)) {
+    fs.writeFileSync(DB_PATH, JSON.stringify([]));
+  }
+} catch (error) {
+  console.warn(`Failed to initialize ${DB_PATH}. Vercel read-only filesystem?`, error);
 }
 
-if (!fs.existsSync(USERS_DB_PATH)) {
-  fs.writeFileSync(USERS_DB_PATH, JSON.stringify({}));
+try {
+  if (!fs.existsSync(USERS_DB_PATH)) {
+    fs.writeFileSync(USERS_DB_PATH, JSON.stringify({}));
+  }
+} catch (error) {
+  console.warn(`Failed to initialize ${USERS_DB_PATH}. Vercel read-only filesystem?`, error);
 }
 
 function getPosts() {
