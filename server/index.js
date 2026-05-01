@@ -18,6 +18,7 @@ try {
   app = express();
   const PORT = process.env.PORT || 3000;
 
+  app.get('/api/ping', (req, res) => res.send('pong'));
   app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
   app.use(cors());
