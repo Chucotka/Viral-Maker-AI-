@@ -19,6 +19,12 @@ try {
   const PORT = process.env.PORT || 3000;
 
   app.get('/api/ping', (req, res) => res.send('pong'));
+
+  app.post('/api/webhook', async (req, res) => {
+    console.log('Webhook called:', JSON.stringify(req.body));
+    res.sendStatus(200);
+  });
+
   app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
   app.use(cors());
@@ -39,23 +45,6 @@ try {
   // Initialize Telegram Bot
   setupBot();
   const bot = getBot();
-
-  app.post('/api/webhook', async (req, res) => {
-    try {
-      if (bot) {
-        try {
-            await bot.init();
-        } catch(err) {
-            // bot may already be initialized, ignore this.
-        }
-        await bot.handleUpdate(req.body);
-      }
-      res.sendStatus(200);
-    } catch (e) {
-      console.error('Webhook error:', e);
-      res.sendStatus(200); // always return 200 to Telegram
-    }
-  });
 
   // Fallback to index.html for SPA
   app.get(/^(?!\/api).+/, (req, res) => {
