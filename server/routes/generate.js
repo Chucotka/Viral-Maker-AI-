@@ -1,19 +1,38 @@
 const express = require('express');
 const { generateContent } = require('../services/openai');
 const { calculateViralScore } = require('../services/viralScore');
-const { savePost, getPosts } = require('../services/db');
+const { savePost, getPosts, getUserData, incrementUserCount } = require('../services/db');
 
 const router = express.Router();
 
 router.post('/', async (req, res) => {
   try {
-    const { topic, platform, tone, model } = req.body;
+    const { topic, platform, tone, model, userId } = req.body;
 
     if (!topic || !platform || !tone) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const content = await generateContent({ topic, platform, tone, model });
+    // Rate Limiting Logic
+    const user = userId || 'anonymous';
+    const userData = getUserData(user);
+    const LIMITS = { free: 5, pro: Infinity };
+    const limit = LIMITS[userData.plan] || 5;
+
+    if (userData.dailyCount >= limit) {
+      return res.status(403).json({
+        error: 'limit_reached',
+        message: 'Лимит исчерпан на сегодня. Перейди на Pro для безлимитной генерации.'
+      });
+    }
+
+    // Force model based on plan
+    const finalModel = userData.plan === 'free' ? 'gpt-3.5-turbo' : (model || 'gpt-4o');
+
+    const content = await generateContent({ topic, platform, tone, model: finalModel });
+
+    // Increment after successful generation
+    incrementUserCount(user);
     const viralScore = calculateViralScore(content);
 
     const post = savePost({

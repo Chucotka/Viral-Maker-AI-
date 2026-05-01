@@ -8,6 +8,7 @@ const generateRoute = require('./routes/generate');
 const scoreRoute = require('./routes/score');
 const trendsRoute = require('./routes/trends');
 const publishRoute = require('./routes/publish');
+const userRoute = require('./routes/user');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -23,6 +24,7 @@ app.use('/api/generate', generateRoute);
 app.use('/api/score', scoreRoute);
 app.use('/api/trends', trendsRoute);
 app.use('/api/publish', publishRoute);
+app.use('/api/user', userRoute);
 
 // Fallback to index.html for SPA
 app.get(/^(?!\/api).+/, (req, res) => {

@@ -4,8 +4,10 @@ tg.expand();
 tg.ready();
 
 // Set user name if available
+let userId = 'anonymous';
 if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
     document.getElementById('user-name').textContent = tg.initDataUnsafe.user.first_name;
+    userId = tg.initDataUnsafe.user.id.toString();
 }
 
 // Global state
@@ -88,6 +90,38 @@ async function loadDashboardData() {
     }
 }
 
+// --- User Data ---
+async function loadUserData() {
+    try {
+        const response = await fetch(`/api/user?userId=${userId}`);
+        const data = await response.json();
+        if (data.userData) {
+            updatePlanUI(data.userData.plan);
+        }
+    } catch (error) {
+        console.error('Error loading user data:', error);
+    }
+}
+
+function updatePlanUI(plan) {
+    const badge = document.getElementById('current-plan-badge');
+    const upgradeBtn = document.getElementById('btn-upgrade-pro');
+
+    if (plan === 'pro') {
+        badge.className = 'plan-badge plan-pro';
+        badge.innerHTML = 'Pro · Безлимит ✨';
+        upgradeBtn.classList.add('hidden');
+    } else {
+        badge.className = 'plan-badge plan-free';
+        badge.innerHTML = 'Free · 5 генераций/день';
+        upgradeBtn.classList.remove('hidden');
+    }
+}
+
+document.getElementById('btn-upgrade-pro').addEventListener('click', () => {
+    tg.openLink('https://t.me/tribute');
+});
+
 // --- Trends Data ---
 async function loadTrends() {
     try {
@@ -127,6 +161,9 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
     const tone = document.getElementById('studio-tone').value;
     const model = document.getElementById('settings-model').value || 'gpt-4o';
 
+    const limitMsg = document.getElementById('limit-msg');
+    limitMsg.classList.add('hidden');
+
     if (!topic) {
         tg.showAlert('Пожалуйста, введите тему или идею.');
         return;
@@ -141,12 +178,19 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
         const response = await fetch('/api/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ topic, platform, tone, model })
+            body: JSON.stringify({ topic, platform, tone, model, userId })
         });
 
-        if (!response.ok) throw new Error('Ошибка генерации');
-
         const data = await response.json();
+
+        if (response.status === 403 && data.error === 'limit_reached') {
+            limitMsg.innerHTML = `⚡️ Лимит 5 генераций исчерпан. <a href="javascript:void(0)" onclick="tg.openLink('https://t.me/tribute')">Перейти на Pro →</a>`;
+            limitMsg.classList.remove('hidden');
+            limitMsg.classList.add('error');
+            return;
+        }
+
+        if (!response.ok) throw new Error('Ошибка генерации');
 
         currentGeneratedText = data.content;
         currentGeneratedScore = data.viralScore;
@@ -233,5 +277,6 @@ document.getElementById('trend-search').addEventListener('input', (e) => {
 });
 
 // Init
+loadUserData();
 loadTrends();
 loadDashboardData();

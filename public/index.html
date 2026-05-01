@@ -75,6 +75,7 @@
             </div>
 
             <button class="btn btn-primary btn-full" id="btn-generate">Сгенерировать</button>
+            <p id="limit-msg" class="status-msg hidden"></p>
 
             <!-- Result Area -->
             <div class="result-area hidden" id="result-container">
@@ -149,6 +150,14 @@
             <header class="section-header">
                 <h2>Настройки</h2>
             </header>
+
+            <div class="settings-group">
+                <label>Твой тариф</label>
+                <div id="plan-badge-container">
+                    <div class="plan-badge plan-free" id="current-plan-badge">Free · 5 генераций/день</div>
+                </div>
+                <button class="btn btn-accent btn-full hidden" id="btn-upgrade-pro" style="margin-top: 12px;">Перейти на Pro — подписка</button>
+            </div>
 
             <div class="settings-group">
                 <label>Канал для автопостинга</label>

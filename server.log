@@ -1,0 +1,52 @@
+
+> app@1.0.0 dev
+> nodemon server/index.js
+
+[33m[nodemon] 3.1.14[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[32m[nodemon] starting `node server/index.js`[39m
+◇ injected env (4) from .env // tip: ⌘ suppress logs { quiet: true }
+Telegram Bot is up and running!
+(node:179817) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Server is running on port 3000
+Failed to start polling: GrammyError: Call to 'getMe' failed! (404: Not Found)
+    at toGrammyError (/app/node_modules/grammy/out/core/error.js:47:12)
+    at ApiClient.callApi (/app/node_modules/grammy/out/core/client.js:100:48)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async withRetries (/app/node_modules/grammy/out/bot.js:523:41)
+    at async Bot.init (/app/node_modules/grammy/out/bot.js:169:22)
+    at async Promise.all (index 0)
+    at async Bot.start (/app/node_modules/grammy/out/bot.js:298:13) {
+  method: 'getMe',
+  payload: {},
+  ok: false,
+  error_code: 404,
+  description: 'Not Found',
+  parameters: {}
+}
+[32m[nodemon] clean exit - waiting for changes before restart[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node server/index.js`[39m
+◇ injected env (4) from .env // tip: ⌘ enable debugging { debug: true }
+Telegram Bot is up and running!
+(node:183927) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Server is running on port 3000
+Failed to start polling: GrammyError: Call to 'getMe' failed! (404: Not Found)
+    at toGrammyError (/app/node_modules/grammy/out/core/error.js:47:12)
+    at ApiClient.callApi (/app/node_modules/grammy/out/core/client.js:100:48)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async withRetries (/app/node_modules/grammy/out/bot.js:523:41)
+    at async Bot.init (/app/node_modules/grammy/out/bot.js:169:22)
+    at async Promise.all (index 0)
+    at async Bot.start (/app/node_modules/grammy/out/bot.js:298:13) {
+  method: 'getMe',
+  payload: {},
+  ok: false,
+  error_code: 404,
+  description: 'Not Found',
+  parameters: {}
+}
