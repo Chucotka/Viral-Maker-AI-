@@ -2,7 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { setupBot } = require('./bot');
+const { setupBot, getBot } = require('./bot');
+const { webhookCallback } = require('grammy');
 
 const generateRoute = require('./routes/generate');
 const scoreRoute = require('./routes/score');
@@ -32,8 +33,23 @@ app.get(/^(?!\/api).+/, (req, res) => {
 });
 
 // Initialize Telegram Bot
-setupBot().catch(console.error);
+setupBot().then(() => {
+  const bot = getBot();
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+  if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+      if (bot) {
+          bot.start().catch(console.error);
+          console.log('Bot started in long-polling mode (local dev).');
+      }
+    });
+  } else {
+    // On Vercel, setup webhook and don't call app.listen
+    if (bot) {
+      app.use('/api/webhook', webhookCallback(bot, 'express'));
+    }
+  }
+}).catch(console.error);
+
+module.exports = app;

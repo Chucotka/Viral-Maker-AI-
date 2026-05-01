@@ -33,14 +33,8 @@ async function setupBot() {
     });
   });
 
-  // Start polling
-  try {
-      bot.catch((err) => console.error('Bot error:', err));
-      bot.start().catch(err => console.error('Failed to start polling:', err));
-      console.log('Telegram Bot is up and running!');
-  } catch (err) {
-      console.error('Failed to start Telegram Bot:', err);
-  }
+  bot.catch((err) => console.error('Bot error:', err));
+  return bot;
 }
 
 function getBot() {
