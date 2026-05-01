@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Viral Maker AI</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="app-container">
+
+        <!-- Tab 1: Dashboard -->
+        <section id="tab-dashboard" class="tab-content active">
+            <header class="dashboard-header">
+                <div class="user-info">
+                    <div class="avatar" id="user-avatar">👤</div>
+                    <span id="user-name">Пользователь</span>
+                </div>
+                <div class="score-badge">
+                    <span class="score-label">Viral Score</span>
+                    <span class="score-value" id="dashboard-score">0</span>/100
+                </div>
+            </header>
+
+            <div class="main-cta-container">
+                <button class="btn btn-primary btn-large" onclick="switchTab('studio')">🚀 Создать Контент</button>
+            </div>
+
+            <div class="trending-strip-container">
+                <h3>Тренды сейчас</h3>
+                <div class="trending-strip" id="dashboard-trends">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+
+            <div class="recent-posts-container">
+                <h3>Последние генерации</h3>
+                <div class="recent-posts" id="recent-posts-list">
+                    <p class="text-muted">История пуста.</p>
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab 2: Content Studio -->
+        <section id="tab-studio" class="tab-content">
+            <header class="section-header">
+                <h2>Студия Контента</h2>
+            </header>
+
+            <div class="form-group">
+                <label>Опиши идею или вставь тему</label>
+                <textarea id="studio-topic" placeholder="Например: Как использовать AI для бизнеса в 2024 году..." rows="4"></textarea>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group half">
+                    <label>Платформа</label>
+                    <select id="studio-platform">
+                        <option value="Telegram">Telegram</option>
+                        <option value="Instagram">Instagram</option>
+                        <option value="TikTok">TikTok</option>
+                    </select>
+                </div>
+                <div class="form-group half">
+                    <label>Тон</label>
+                    <select id="studio-tone">
+                        <option value="вирусный">Вирусный 🚀</option>
+                        <option value="экспертный">Экспертный 🧠</option>
+                        <option value="провокационный">Провокационный 🔥</option>
+                        <option value="юмор">Юмор 😂</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="btn btn-primary btn-full" id="btn-generate">Сгенерировать</button>
+
+            <!-- Result Area -->
+            <div class="result-area hidden" id="result-container">
+                <div class="result-header">
+                    <h3>Результат</h3>
+                    <div class="score-badge small">
+                        <span id="result-score">0</span>/100 Viral
+                    </div>
+                </div>
+                <div class="result-content" id="result-text">
+                    <!-- Generated text goes here -->
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" id="btn-copy">Скопировать</button>
+                    <button class="btn btn-accent" id="btn-publish">В канал 📢</button>
+                    <button class="btn btn-secondary" id="btn-remake">Переделать</button>
+                </div>
+                <p id="publish-status" class="status-msg hidden"></p>
+            </div>
+        </section>
+
+        <!-- Tab 3: Trend Explorer -->
+        <section id="tab-trends" class="tab-content">
+            <header class="section-header">
+                <h2>Навигатор Трендов</h2>
+            </header>
+
+            <div class="search-container">
+                <input type="text" id="trend-search" placeholder="Поиск тем...">
+            </div>
+
+            <div class="trends-grid" id="trends-grid">
+                <!-- Populated via JS -->
+            </div>
+        </section>
+
+        <!-- Tab 4: Analytics -->
+        <section id="tab-analytics" class="tab-content">
+            <header class="section-header">
+                <h2>Аналитика</h2>
+            </header>
+
+            <div class="analytics-stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-total">0</div>
+                    <div class="stat-label">Всего постов</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-avg">0</div>
+                    <div class="stat-label">Средний Score</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3>Viral Score (7 дней)</h3>
+                <div class="simple-chart" id="analytics-chart">
+                    <!-- Simple CSS bars populated via JS -->
+                </div>
+            </div>
+
+            <div class="top-post-container">
+                <h3>Лучший пост</h3>
+                <div class="top-post" id="top-post-card">
+                    <p class="text-muted">Нет данных</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab 5: Settings -->
+        <section id="tab-settings" class="tab-content">
+            <header class="section-header">
+                <h2>Настройки</h2>
+            </header>
+
+            <div class="settings-group">
+                <label>Канал для автопостинга</label>
+                <input type="text" id="settings-channel" placeholder="@my_awesome_channel">
+                <p class="text-hint">Убедитесь, что бот является администратором.</p>
+            </div>
+
+            <div class="settings-group">
+                <label>Модель OpenAI</label>
+                <select id="settings-model">
+                    <option value="gpt-4o">GPT-4o (Рекомендуется)</option>
+                    <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Быстрее)</option>
+                </select>
+            </div>
+
+            <div class="plans-container">
+                <h3>Тарифы</h3>
+                <div class="plan-card active">
+                    <div class="plan-header">
+                        <h4>Free</h4>
+                        <span class="plan-price">0 Stars</span>
+                    </div>
+                    <p>5 генераций в день</p>
+                </div>
+                <div class="plan-card">
+                    <div class="plan-header">
+                        <h4>Pro</h4>
+                        <span class="plan-price">99 Stars/мес</span>
+                    </div>
+                    <p>Безлимит + аналитика</p>
+                </div>
+                <div class="plan-card">
+                    <div class="plan-header">
+                        <h4>Premium</h4>
+                        <span class="plan-price">299 Stars/мес</span>
+                    </div>
+                    <p>Автопостинг + все платформы</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" onclick="switchTab('dashboard')">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">Дашборд</span>
+            </button>
+            <button class="nav-item" onclick="switchTab('studio')">
+                <span class="nav-icon">✍️</span>
+                <span class="nav-text">Студия</span>
+            </button>
+            <button class="nav-item" onclick="switchTab('trends')">
+                <span class="nav-icon">🔥</span>
+                <span class="nav-text">Тренды</span>
+            </button>
+            <button class="nav-item" onclick="switchTab('analytics')">
+                <span class="nav-icon">📈</span>
+                <span class="nav-text">Аналитика</span>
+            </button>
+            <button class="nav-item" onclick="switchTab('settings')">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-text">Настройки</span>
+            </button>
+        </nav>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
