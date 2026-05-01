@@ -125,6 +125,7 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
     const topic = document.getElementById('studio-topic').value.trim();
     const platform = document.getElementById('studio-platform').value;
     const tone = document.getElementById('studio-tone').value;
+    const model = document.getElementById('settings-model').value || 'gpt-4o';
 
     if (!topic) {
         tg.showAlert('Пожалуйста, введите тему или идею.');
@@ -140,7 +141,7 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
         const response = await fetch('/api/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ topic, platform, tone })
+            body: JSON.stringify({ topic, platform, tone, model })
         });
 
         if (!response.ok) throw new Error('Ошибка генерации');

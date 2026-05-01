@@ -7,13 +7,13 @@ const router = express.Router();
 
 router.post('/', async (req, res) => {
   try {
-    const { topic, platform, tone } = req.body;
+    const { topic, platform, tone, model } = req.body;
 
     if (!topic || !platform || !tone) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const content = await generateContent({ topic, platform, tone });
+    const content = await generateContent({ topic, platform, tone, model });
     const viralScore = calculateViralScore(content);
 
     const post = savePost({
