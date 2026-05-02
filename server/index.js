@@ -17,6 +17,17 @@ app.post('/api/webhook', async (req, res) => {
   try {
     const { Bot } = require('grammy');
     const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN);
+    const webAppUrl = process.env.WEBAPP_URL || 'https://example.com';
+    bot.command('start', async (ctx) => {
+      await ctx.reply('🚀 Добро пожаловать в Viral Maker AI!\nГотов создавать вирусный контент?', {
+        reply_markup: { inline_keyboard: [[{ text: '🚀 Открыть Viral Maker AI', web_app: { url: webAppUrl } }]] }
+      });
+    });
+    bot.command('generate', async (ctx) => {
+      await ctx.reply('Нажми кнопку ниже, чтобы открыть студию контента.', {
+        reply_markup: { inline_keyboard: [[{ text: 'Создать контент', web_app: { url: webAppUrl } }]] }
+      });
+    });
     await bot.handleUpdate(req.body);
   } catch (e) {
     console.error('Webhook error:', e.message);
@@ -84,12 +95,13 @@ app.get('/api/trends', (req, res) => {
 });
 
 // User info
-app.get('/api/user/:userId', (req, res) => {
+app.get('/api/user', (req, res) => {
   try {
     const fs = require('fs');
     let users = {};
     try { users = JSON.parse(fs.readFileSync('/tmp/users.json', 'utf8')); } catch(e) {}
-    const user = users[req.params.userId] || { plan: 'free', dailyCount: 0 };
+    const userId = req.query.userId || req.query.id || 'anonymous';
+    const user = users[userId] || { plan: 'free', dailyCount: 0 };
     res.json(user);
   } catch(e) {
     res.json({ plan: 'free', dailyCount: 0 });

@@ -47,7 +47,7 @@ async function loadDashboardData() {
 // --- User Data ---
 async function loadUserData() {
     try {
-        const response = await fetch(`/api/user/${userId}`);
+        const response = await fetch(`/api/user?userId=${userId}`);
         const data = await response.json();
         if (data) {
             updatePlanUI(data.plan);
