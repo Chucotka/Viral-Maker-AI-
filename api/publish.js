@@ -1,6 +1,9 @@
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).end();
   try {
+    if (!process.env.TELEGRAM_BOT_TOKEN) {
+      return res.status(500).json({ error: 'TELEGRAM_BOT_TOKEN is not configured.' });
+    }
     const { Bot } = require('grammy');
     const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN);
     const { content, channelUsername } = req.body;

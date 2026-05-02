@@ -15,8 +15,22 @@ app.get('/api/webhook', (req, res) => res.json({ ok: true, message: 'webhook end
 app.post('/api/webhook', async (req, res) => {
   res.sendStatus(200);
   try {
+    if (!process.env.TELEGRAM_BOT_TOKEN) {
+      console.error('Missing TELEGRAM_BOT_TOKEN');
+      return;
+    }
     const { Bot } = require('grammy');
-    const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN);
+    const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN, {
+      botInfo: {
+        id: 1,
+        is_bot: true,
+        first_name: "Viral Maker AI",
+        username: "viral_maker_ai_bot",
+        can_join_groups: true,
+        can_read_all_group_messages: true,
+        supports_inline_queries: false,
+      }
+    });
     const webAppUrl = process.env.WEBAPP_URL || 'https://example.com';
     bot.command('start', async (ctx) => {
       await ctx.reply('🚀 Добро пожаловать в Viral Maker AI!\nГотов создавать вирусный контент?', {
@@ -111,6 +125,9 @@ app.get('/api/user', (req, res) => {
 // Publish to channel
 app.post('/api/publish', async (req, res) => {
   try {
+    if (!process.env.TELEGRAM_BOT_TOKEN) {
+      return res.status(500).json({ error: 'TELEGRAM_BOT_TOKEN is not configured.' });
+    }
     const { Bot } = require('grammy');
     const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN);
     const { content, channelUsername } = req.body;
