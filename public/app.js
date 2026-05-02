@@ -34,79 +34,23 @@ function switchTab(tabId) {
 }
 
 // --- Dashboard & Analytics Data ---
+// In this MVP structure, the backend no longer returns history.
+// We will clear out the frontend representation gracefully.
 async function loadDashboardData() {
-    try {
-        const response = await fetch('/api/generate/history');
-        const data = await response.json();
-        const posts = data.posts || [];
-
-        // Helper function to escape HTML to prevent XSS
-        const escapeHTML = (str) => {
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-        };
-
-        // Update Dashboard
-        const postsList = document.getElementById('recent-posts-list');
-        if (posts.length === 0) {
-            postsList.innerHTML = '<p class="text-muted">История пуста.</p>';
-        } else {
-            postsList.innerHTML = posts.slice(0, 3).map(post => `
-                <div class="post-card">
-                    <div class="post-card-header">
-                        <span>${escapeHTML(post.platform)} • ${escapeHTML(post.tone)}</span>
-                        <span style="color: var(--warning)">🔥 ${escapeHTML(post.viralScore)}</span>
-                    </div>
-                    <div class="post-card-content">${escapeHTML(post.content)}</div>
-                </div>
-            `).join('');
-
-            // Set latest score as dashboard score
-            document.getElementById('dashboard-score').textContent = posts[0].viralScore;
-        }
-
-        // Update Analytics
-        document.getElementById('stat-total').textContent = posts.length;
-
-        if (posts.length > 0) {
-            const avgScore = Math.round(posts.reduce((acc, p) => acc + p.viralScore, 0) / posts.length);
-            document.getElementById('stat-avg').textContent = avgScore;
-
-            const topPost = posts.reduce((prev, current) => (prev.viralScore > current.viralScore) ? prev : current);
-            document.getElementById('top-post-card').innerHTML = `
-                <div class="post-card-header">
-                    <span>🔥 ${escapeHTML(topPost.viralScore)} Score</span>
-                </div>
-                <div class="post-card-content">${escapeHTML(topPost.content)}</div>
-            `;
-
-            // Simple Chart (last 7 posts for simplicity)
-            const chartData = posts.slice(0, 7).reverse();
-            const chartContainer = document.getElementById('analytics-chart');
-            chartContainer.innerHTML = chartData.map((p, i) => `
-                <div class="chart-bar-wrapper">
-                    <div class="chart-bar" style="height: ${p.viralScore}%"></div>
-                    <span class="chart-label">${i+1}</span>
-                </div>
-            `).join('');
-        }
-
-    } catch (error) {
-        console.error('Error loading history:', error);
-    }
+    document.getElementById('recent-posts-list').innerHTML = '<p class="text-muted">История пуста.</p>';
+    document.getElementById('stat-total').textContent = '0';
+    document.getElementById('stat-avg').textContent = '0';
+    document.getElementById('top-post-card').innerHTML = '<p class="text-muted">Нет данных</p>';
+    document.getElementById('analytics-chart').innerHTML = '';
 }
 
 // --- User Data ---
 async function loadUserData() {
     try {
-        const response = await fetch(`/api/user?userId=${userId}`);
+        const response = await fetch(`/api/user/${userId}`);
         const data = await response.json();
-        if (data.userData) {
-            updatePlanUI(data.userData.plan);
+        if (data) {
+            updatePlanUI(data.plan);
         }
     } catch (error) {
         console.error('Error loading user data:', error);
@@ -252,7 +196,7 @@ document.getElementById('btn-publish').addEventListener('click', async () => {
         const response = await fetch('/api/publish', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: currentGeneratedText, channel })
+            body: JSON.stringify({ content: currentGeneratedText, channelUsername: channel })
         });
 
         const data = await response.json();
