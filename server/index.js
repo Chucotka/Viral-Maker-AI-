@@ -20,9 +20,18 @@ try {
 
   app.get('/api/ping', (req, res) => res.send('pong'));
 
-  app.post('/api/webhook', async (req, res) => {
-    console.log('Webhook called:', JSON.stringify(req.body));
+  app.post('/api/webhook', (req, res) => {
     res.sendStatus(200);
+  });
+
+  app.get('/api/routes', (req, res) => {
+    const routes = [];
+    if (app && app._router && app._router.stack) {
+      app._router.stack.forEach(r => {
+        if (r.route) routes.push(r.route.path);
+      });
+    }
+    res.json(routes);
   });
 
   app.get('/health', (req, res) => res.json({ status: 'ok' }));
