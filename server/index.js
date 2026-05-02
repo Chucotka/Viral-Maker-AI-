@@ -11,6 +11,7 @@ app.get('/api/ping', (req, res) => res.send('pong'));
 app.get('/api/test', (req, res) => res.json({ ok: true, token: !!process.env.TELEGRAM_BOT_TOKEN, gemini: !!process.env.GEMINI_API_KEY }));
 
 // Webhook - standalone, no conditions
+app.get('/api/webhook', (req, res) => res.json({ ok: true, message: 'webhook endpoint is alive' }));
 app.post('/api/webhook', async (req, res) => {
   res.sendStatus(200);
   try {
