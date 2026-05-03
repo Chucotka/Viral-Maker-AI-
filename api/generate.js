@@ -1,65 +1,39 @@
-const https = require('https');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).end();
   try {
-    const { topic, platform = 'Telegram', tone = 'вирусный' } = req.body;
-    const apiKey = process.env.GEMINI_API_KEY;
+    const { topic, platform = 'Telegram', tone = 'вирусный', model = 'gemini-1.5-flash' } = req.body;
 
-    console.log("Raw Diagnostic starting...");
-
-    // Directly calling the API via HTTPS to see raw response
-    const data = JSON.stringify({
-      contents: [{ parts: [{ text: `Напиши короткий пост для ${platform} на тему ${topic}` }] }]
-    });
-
-    const options = {
-      hostname: 'generativelanguage.googleapis.com',
-      port: 4443, // Standard for some Google APIs or just 443
-      path: `/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': data.length
-      }
-    };
-
-    // Try normal 443 first
-    options.port = 443;
-
-    const rawRequest = () => new Promise((resolve, reject) => {
-      const request = https.request(options, (response) => {
-        let body = '';
-        response.on('data', (chunk) => body += chunk);
-        response.on('end', () => resolve({
-          statusCode: response.statusCode,
-          headers: response.headers,
-          body: body
-        }));
-      });
-      request.on('error', (e) => reject(e));
-      request.write(data);
-      request.end();
-    });
-
-    const result = await rawRequest();
-    console.log("Raw Response Status:", result.statusCode);
-    console.log("Raw Response Body:", result.body);
-
-    if (result.statusCode === 200) {
-      const parsed = JSON.parse(result.body);
-      const text = parsed.candidates[0].content.parts[0].text;
-      return res.json({ content: text, raw: parsed });
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: 'missing_api_key' });
     }
 
-    res.status(result.statusCode).json({ 
-      error: "Raw API call failed", 
-      status: result.statusCode,
-      body: result.body 
-    });
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    
+    // Use gemini-1.5-flash as default, it's fast and now we know it's there
+    const modelInstance = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
+    console.log(`Generating content for topic: ${topic.substring(0, 50)}...`);
+
+    const prompt = `Ты эксперт по вирусному контенту для ${platform}. Тон: ${tone}. Создай вирусный пост на тему: ${topic}. Добавь 3-5 эмодзи. Закончи призывом к действию. Максимум 1000 символов.`;
+    
+    const result = await modelInstance.generateContent(prompt);
+    const response = await result.response;
+    const content = response.text();
+
+    console.log("Generation successful!");
+
+    res.json({
+      content,
+      model: "gemini-1.5-flash"
+    });
   } catch(e) {
-    console.error('DIAGNOSTIC ERROR:', e.message);
+    console.error('FINAL ERROR:', e.message);
+    // Log more details to help debug if it fails again
+    if (e.response && e.response.data) {
+      console.error('Detailed Error Data:', JSON.stringify(e.response.data));
+    }
     res.status(500).json({ error: e.message });
   }
 };
