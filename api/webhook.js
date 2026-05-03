@@ -3,6 +3,7 @@ const fs = require('fs');
 
 module.exports = async (req, res) => {
   if (req.method === 'POST') {
+    console.log('Incoming Webhook Body:', JSON.stringify(req.body));
     try {
       if (!process.env.TELEGRAM_BOT_TOKEN) {
         res.status(200).end();
