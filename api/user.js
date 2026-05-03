@@ -1,14 +1,24 @@
 module.exports = (req, res) => {
   try {
     const fs = require('fs');
+    const usersPath = '/tmp/users.json';
     let users = {};
-    try { users = JSON.parse(fs.readFileSync('/tmp/users.json', 'utf8')); } catch(e) {}
+    
+    if (fs.existsSync(usersPath)) {
+      try {
+        users = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
+      } catch(e) {
+        console.error('Error parsing users.json:', e);
+      }
+    }
 
-    // In Vercel serverless functions, query params are parsed automatically
+    // Vercel handles query parsing automatically, req.query is already an object
     const userId = req.query.userId || req.query.id || 'anonymous';
     const user = users[userId] || { plan: 'free', dailyCount: 0 };
+    
     res.json(user);
   } catch(e) {
+    console.error('User API error:', e.message);
     res.json({ plan: 'free', dailyCount: 0 });
   }
 };
