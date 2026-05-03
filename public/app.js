@@ -113,7 +113,7 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
     const topic = document.getElementById('studio-topic').value.trim();
     const platform = document.getElementById('studio-platform').value;
     const tone = document.getElementById('studio-tone').value;
-    const model = document.getElementById('settings-model').value || 'gemini-1.5-pro';
+    const model = document.getElementById('settings-model').value || 'gemini-1.5-flash';
 
     const limitMsg = document.getElementById('limit-msg');
     limitMsg.classList.add('hidden');
@@ -154,6 +154,16 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
 
         document.getElementById('result-container').classList.remove('hidden');
         document.getElementById('publish-status').classList.add('hidden');
+
+        // Show remaining generations for free users
+        if (data.remainingToday !== undefined) {
+            const remaining = data.remainingToday;
+            if (remaining <= 2) {
+                limitMsg.innerHTML = `⚡️ Осталось генераций сегодня: <b>${remaining}</b> из 5.`;
+                limitMsg.classList.remove('hidden', 'error');
+                limitMsg.classList.add('warning');
+            }
+        }
 
     } catch (error) {
         console.error(error);

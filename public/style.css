@@ -151,6 +151,7 @@ input[type="text"]:focus, textarea:focus, select:focus {
 .status-msg { margin-top: 10px; font-size: 14px; text-align: center; }
 .status-msg.error { color: var(--danger); }
 .status-msg.success { color: var(--success); }
+.status-msg.warning { color: var(--warning); }
 
 /* Trends Tab */
 .search-container { margin-bottom: 20px; }
