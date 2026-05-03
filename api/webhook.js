@@ -10,6 +10,7 @@ module.exports = async (req, res) => {
         return;
       }
       const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN);
+      await bot.init(); // Initialize bot identity
       const webAppUrl = process.env.WEBAPP_URL || 'https://viral-maker-ai.vercel.app';
 
       // Commands
