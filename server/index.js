@@ -53,7 +53,7 @@ app.post('/api/generate', async (req, res) => {
   try {
     const { GoogleGenerativeAI } = require('@google/generative-ai');
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const { topic, platform = 'Telegram', tone = 'вирусный', model = 'gemini-1.5-flash', userId = 'anonymous' } = req.body;
+    const { topic, platform = 'Telegram', tone = 'вирусный', model = 'gemini-2.0-flash', userId = 'anonymous' } = req.body;
 
     const fs = require('fs');
     const usersPath = '/tmp/users.json';
@@ -69,7 +69,7 @@ app.post('/api/generate', async (req, res) => {
       return res.status(403).json({ error: 'limit_reached', message: 'Лимит исчерпан. Перейди на Pro.' });
     }
 
-    const selectedModel = genAI.getGenerativeModel({ model: users[userId].plan === 'free' ? 'gemini-1.5-flash' : model });
+    const selectedModel = genAI.getGenerativeModel({ model: users[userId].plan === 'free' ? 'gemini-2.0-flash' : model });
     const prompt = `Ты эксперт по вирусному контенту для ${platform}. Тон: ${tone}. Создай вирусный пост на тему: ${topic}. Добавь 3-5 эмодзи. Закончи призывом к действию. Максимум 1000 символов.`;
     const result = await selectedModel.generateContent(prompt);
     const content = result.response.text();
