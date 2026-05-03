@@ -1,39 +1,70 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const https = require('https');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).end();
+  
   try {
-    const { topic, platform = 'Telegram', tone = 'вирусный', model = 'gemini-1.5-flash' } = req.body;
+    const { topic, platform = 'Telegram', tone = 'вирусный' } = req.body;
+    const apiKey = process.env.GEMINI_API_KEY;
 
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(500).json({ error: 'missing_api_key' });
-    }
+    if (!apiKey) return res.status(500).json({ error: 'Missing GEMINI_API_KEY' });
 
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    
-    // Use gemini-1.5-flash as default, it's fast and now we know it's there
-    const modelInstance = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-    console.log(`Generating content for topic: ${topic.substring(0, 50)}...`);
-
-    const prompt = `Ты эксперт по вирусному контенту для ${platform}. Тон: ${tone}. Создай вирусный пост на тему: ${topic}. Добавь 3-5 эмодзи. Закончи призывом к действию. Максимум 1000 символов.`;
-    
-    const result = await modelInstance.generateContent(prompt);
-    const response = await result.response;
-    const content = response.text();
-
-    console.log("Generation successful!");
-
-    res.json({
-      content,
-      model: "gemini-1.5-flash"
+    // Preparing the exact JSON structure Google expects
+    const postData = JSON.stringify({
+      contents: [{
+        parts: [{
+          text: `Ты эксперт по вирусному контенту для ${platform}. Тон: ${tone}. Создай вирусный пост на тему: ${topic}. Добавь 3-5 эмодзи. Закончи призывом к действию. Максимум 1000 символов.`
+        }]
+      }]
     });
-  } catch(e) {
-    console.error('FINAL ERROR:', e.message);
-    // Log more details to help debug if it fails again
-    if (e.response && e.response.data) {
-      console.error('Detailed Error Data:', JSON.stringify(e.response.data));
+
+    const options = {
+      hostname: 'generativelanguage.googleapis.com',
+      path: `/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData)
+      }
+    };
+
+    const result = await new Promise((resolve, reject) => {
+      const gReq = https.request(options, (gRes) => {
+        let data = '';
+        gRes.on('data', (chunk) => data += chunk);
+        gRes.on('end', () => resolve({
+          statusCode: gRes.statusCode,
+          body: data
+        }));
+      });
+
+      gReq.on('error', (e) => reject(e));
+      gReq.write(postData);
+      gReq.end();
+    });
+
+    console.log("Response Status:", result.statusCode);
+
+    if (result.statusCode === 200) {
+      const parsed = JSON.parse(result.body);
+      if (parsed.candidates && parsed.candidates[0] && parsed.candidates[0].content) {
+        const text = parsed.candidates[0].content.parts[0].text;
+        return res.json({
+          content: text,
+          model: "gemini-1.5-flash (raw)"
+        });
+      }
     }
+
+    console.error("API Error Body:", result.body);
+    res.status(result.statusCode).json({
+      error: "Google API Error",
+      status: result.statusCode,
+      details: result.body
+    });
+
+  } catch (e) {
+    console.error('SERVER ERROR:', e.message);
     res.status(500).json({ error: e.message });
   }
 };
