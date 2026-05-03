@@ -53,7 +53,7 @@ app.post('/api/generate', async (req, res) => {
   try {
     const { GoogleGenerativeAI } = require('@google/generative-ai');
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const { topic, platform = 'Telegram', tone = 'вирусный', model = 'gemini-1.5-flash', userId = 'anonymous' } = req.body;
+    const { topic, platform = 'Telegram', tone = 'вирусный', model = 'gemini-2.0-flash', userId = 'anonymous' } = req.body;
 
     const fs = require('fs');
     const usersPath = '/tmp/users.json';
