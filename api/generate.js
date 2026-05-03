@@ -2,6 +2,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const fs = require('fs');
 
 module.exports = async (req, res) => {
+  console.log('GEMINI KEY:', process.env.GEMINI_API_KEY ? 'EXISTS' : 'MISSING');
   if (req.method !== 'POST') return res.status(405).end();
   try {
     const { topic, platform = 'Telegram', tone = 'вирусный', model = 'gemini-1.5-flash', userId = 'anonymous' } = req.body;
