@@ -14,7 +14,10 @@ module.exports = async (req, res) => {
         reply_markup: { inline_keyboard: [[{ text: '🚀 Открыть Студию', web_app: { url: webAppUrl } }]] }
       }));
 
-      bot.command('appss_verify', (ctx) => ctx.reply('appss_86a5bb'));
+      bot.command('appss_verify', async (ctx) => {
+        console.log('Verification command received!');
+        await ctx.reply('appss_86a5bb');
+      });
 
       // Payment logic: Stage 1 (Confirm intent)
       bot.on('pre_checkout_query', (ctx) => ctx.answerPreCheckoutQuery(true));
