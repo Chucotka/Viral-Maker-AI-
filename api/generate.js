@@ -36,6 +36,7 @@ module.exports = async (req, res) => {
 
     res.json({ content, viralScore: score });
   } catch(e) {
+    console.error('GEMINI ERROR:', e.message, e.status, JSON.stringify(e));
     res.status(500).json({ error: e.message });
   }
 };
