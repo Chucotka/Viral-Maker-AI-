@@ -1,43 +1,39 @@
 const { Bot } = require('grammy');
+const fs = require('fs');
 
 module.exports = async (req, res) => {
   if (req.method === 'POST') {
-    // Always respond 200 immediately so Telegram doesn't retry
     res.status(200).end();
     try {
-      if (!process.env.TELEGRAM_BOT_TOKEN) {
-        console.error('Missing TELEGRAM_BOT_TOKEN');
-        return;
-      }
-
+      if (!process.env.TELEGRAM_BOT_TOKEN) return;
+      const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN);
       const webAppUrl = process.env.WEBAPP_URL || 'https://viral-maker-ai.vercel.app';
 
-      // Fetch real botInfo to avoid errors with hardcoded id
-      const bot = new Bot(process.env.TELEGRAM_BOT_TOKEN);
+      // Commands
+      bot.command('start', (ctx) => ctx.reply('🚀 Добро пожаловать!', {
+        reply_markup: { inline_keyboard: [[{ text: '🚀 Открыть Студию', web_app: { url: webAppUrl } }]] }
+      }));
 
-      bot.command('start', async (ctx) => {
-        await ctx.reply('🚀 Добро пожаловать в Viral Maker AI!\nГотов создавать вирусный контент?', {
-          reply_markup: {
-            inline_keyboard: [[{ text: '🚀 Открыть Viral Maker AI', web_app: { url: webAppUrl } }]]
-          }
-        });
-      });
+      // Payment logic: Stage 1 (Confirm intent)
+      bot.on('pre_checkout_query', (ctx) => ctx.answerPreCheckoutQuery(true));
 
-      bot.command('generate', async (ctx) => {
-        await ctx.reply('Нажми кнопку ниже, чтобы открыть студию контента.', {
-          reply_markup: {
-            inline_keyboard: [[{ text: '✍️ Создать контент', web_app: { url: webAppUrl } }]]
-          }
-        });
-      });
+      // Payment logic: Stage 2 (Successful payment)
+      bot.on('message:successful_payment', async (ctx) => {
+        const payload = ctx.message.successful_payment.invoice_payload;
+        // payload format: plan_pro_USERID or plan_premium_USERID
+        const [_, plan, userId] = payload.split('_');
+        
+        console.log(`Payment success: User ${userId} bought ${plan}`);
 
-      bot.command('help', async (ctx) => {
-        await ctx.reply(
-          '📖 Команды бота:\n\n' +
-          '/start — Открыть приложение\n' +
-          '/generate — Перейти в студию контента\n' +
-          '/help — Показать эту справку'
-        );
+        // Save to temporary DB (WARNING: ephemeral)
+        const usersPath = '/tmp/users.json';
+        let users = {};
+        try { if (fs.existsSync(usersPath)) users = JSON.parse(fs.readFileSync(usersPath, 'utf8')); } catch(e) {}
+        
+        users[userId] = { ...users[userId], plan: plan, dailyCount: 0 };
+        try { fs.writeFileSync(usersPath, JSON.stringify(users)); } catch(e) {}
+
+        await ctx.reply(`✨ Ура! Подписка ${plan.toUpperCase()} активирована. Перезапусти приложение, чтобы применить изменения.`);
       });
 
       await bot.handleUpdate(req.body);
@@ -45,6 +41,6 @@ module.exports = async (req, res) => {
       console.error('Webhook error:', e.message);
     }
   } else {
-    res.status(200).json({ ok: true, message: 'webhook is alive' });
+    res.status(200).json({ ok: true });
   }
 };

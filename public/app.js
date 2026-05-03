@@ -72,8 +72,35 @@ function updatePlanUI(plan) {
     }
 }
 
+async function buyPlan(plan) {
+    try {
+        const response = await fetch('/api/create-invoice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, plan })
+        });
+        const data = await response.json();
+        if (data.link) {
+            tg.openInvoice(data.link, (status) => {
+                if (status === 'paid') {
+                    tg.showAlert('✨ Спасибо за покупку! Ваша подписка активирована.');
+                    loadUserData();
+                } else if (status === 'failed') {
+                    tg.showAlert('❌ Ошибка оплаты.');
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Payment error:', error);
+        tg.showAlert('Произошла ошибка при создании счета.');
+    }
+}
+
+document.getElementById('plan-pro').addEventListener('click', () => buyPlan('pro'));
+document.getElementById('plan-premium').addEventListener('click', () => buyPlan('premium'));
+
 document.getElementById('btn-upgrade-pro').addEventListener('click', () => {
-    tg.openLink('https://t.me/tribute');
+    buyPlan('pro');
 });
 
 // --- Trends Data ---
