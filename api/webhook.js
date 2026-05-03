@@ -13,12 +13,21 @@ module.exports = async (req, res) => {
       const webAppUrl = process.env.WEBAPP_URL || 'https://viral-maker-ai.vercel.app';
 
       // Commands
-      bot.command('start', (ctx) => ctx.reply('🚀 Добро пожаловать!', {
-        reply_markup: { inline_keyboard: [[{ text: '🚀 Открыть Студию', web_app: { url: webAppUrl } }]] }
-      }));
+      bot.command('start', async (ctx) => {
+        console.log('Start command received');
+        await ctx.reply('🚀 Бот работает! Открывай студию:', {
+          reply_markup: { inline_keyboard: [[{ text: '🚀 Открыть Студию', web_app: { url: webAppUrl } }]] }
+        });
+      });
 
       bot.command('appss_verify', async (ctx) => {
         await ctx.reply('appss_86a5bb');
+      });
+
+      // Catch-all for any message
+      bot.on('message', async (ctx) => {
+        console.log('Generic message received:', ctx.message.text);
+        await ctx.reply('Я тебя слышу! Текст: ' + ctx.message.text);
       });
 
       // Payment logic
