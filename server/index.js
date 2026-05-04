@@ -52,6 +52,7 @@ app.post('/api/webhook', async (req, res) => {
 app.post('/api/generate', async (req, res) => {
   try {
     const { GoogleGenerativeAI } = require('@google/generative-ai');
+    const { generateContentRobust, modelFallbackChain } = require('../lib/geminiRobust');
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const { topic, platform = 'Telegram', tone = 'вирусный', model = 'gemini-2.5-flash', userId = 'anonymous' } = req.body;
 
@@ -69,10 +70,11 @@ app.post('/api/generate', async (req, res) => {
       return res.status(403).json({ error: 'limit_reached', message: 'Лимит исчерпан. Перейди на Pro.' });
     }
 
-    const selectedModel = genAI.getGenerativeModel({ model: users[userId].plan === 'free' ? 'gemini-1.5-flash' : model });
+    const freeTier = users[userId].plan === 'free';
+    const preferred = freeTier ? 'gemini-1.5-flash' : model;
+    const modelChain = modelFallbackChain(preferred, { freeTier });
     const prompt = `Ты эксперт по вирусному контенту для ${platform}. Тон: ${tone}. Создай вирусный пост на тему: ${topic}. Добавь 3-5 эмодзи. Закончи призывом к действию. Максимум 1000 символов.`;
-    const result = await selectedModel.generateContent(prompt);
-    const content = result.response.text();
+    const { content, modelUsed } = await generateContentRobust(genAI, modelChain, prompt);
 
     users[userId].dailyCount++;
     fs.writeFileSync(usersPath, JSON.stringify(users));
@@ -89,7 +91,7 @@ app.post('/api/generate', async (req, res) => {
     if (content.includes('подписывайся') || content.includes('лайк') || content.includes('репост')) score += 20;
     score = Math.min(score, 100);
 
-    res.json({ content, viralScore: score });
+    res.json({ content, viralScore: score, model: modelUsed });
   } catch (e) {
     console.error('GEMINI ERROR:', e.message, e.status, JSON.stringify(e));
     res.status(500).json({ error: e.message });

@@ -1,5 +1,5 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const fs = require('fs');
+const { generateContentRobust, modelFallbackChain } = require('../lib/geminiRobust');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).end();
@@ -15,9 +15,7 @@ module.exports = async (req, res) => {
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    
-    // Using Gemini 2.5 Flash - the NEW modern standard in May 2026
-    const modelInstance = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const modelChain = modelFallbackChain(model);
 
     let prompt = `Ты эксперт по вирусному контенту для ${platform}. Тон: ${tone}. Создай вирусный пост на тему: ${topic}. Добавь 3-5 эмодзи. Закончи призывом к действию. Максимум 1000 символов.`;
     
@@ -48,13 +46,12 @@ module.exports = async (req, res) => {
       3. Описание для поста с видео.`;
     }
 
-    const result = await modelInstance.generateContent(prompt);
-    const content = result.response.text();
+    const { content, modelUsed } = await generateContentRobust(genAI, modelChain, prompt);
 
     res.json({
       content,
       viralScore: 85, // Fixed for now
-      model: "gemini-2.5-flash"
+      model: modelUsed
     });
 
   } catch(e) {

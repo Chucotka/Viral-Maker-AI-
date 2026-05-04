@@ -171,7 +171,10 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
             return;
         }
 
-        if (!response.ok) throw new Error('Ошибка генерации');
+        if (!response.ok) {
+            const errText = typeof data?.error === 'string' ? data.error : '';
+            throw new Error(errText || `Ошибка генерации (${response.status})`);
+        }
 
         currentGeneratedText = data.content;
         currentGeneratedScore = data.viralScore;
@@ -194,7 +197,16 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
 
     } catch (error) {
         console.error(error);
-        tg.showAlert('Произошла ошибка при генерации. Проверьте API ключ.');
+        const m = String(error.message || '');
+        let text = 'Произошла ошибка при генерации.';
+        if (/503|high demand|Service Unavailable|UNAVAILABLE/i.test(m)) {
+            text = 'Сервис Google временно перегружен (не ошибка ключа). Подождите минуту и нажмите снова или выберите другую модель.';
+        } else if (/API[_ ]?key|401|403|PERMISSION_DENIED|invalid api/i.test(m)) {
+            text = 'Проблема с ключом или доступом к API. Проверьте GEMINI_API_KEY на сервере.';
+        } else if (m && m.length < 280 && !/^Ошибка генерации \(\d+\)$/.test(m)) {
+            text = m;
+        }
+        tg.showAlert(text);
     } finally {
         btn.textContent = originalText;
         btn.disabled = false;
