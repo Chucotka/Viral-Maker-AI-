@@ -98,6 +98,66 @@ app.post('/api/generate', async (req, res) => {
   }
 });
 
+// Generate image (Gemini native image models, REST)
+app.post('/api/generate-image', async (req, res) => {
+  try {
+    const { generateGeminiImage } = require('../lib/geminiImageRest');
+    const { prompt: rawPrompt, aspectRatio = '1:1', style = '', userId = 'anonymous' } = req.body;
+
+    const prompt = String(rawPrompt || '').trim();
+    if (!prompt) {
+      return res.status(400).json({ error: 'prompt_required', message: 'Введите описание картинки.' });
+    }
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: 'missing_api_key' });
+    }
+
+    const fs = require('fs');
+    const usersPath = '/tmp/users.json';
+    let users = {};
+    try { users = JSON.parse(fs.readFileSync(usersPath, 'utf8')); } catch (e) {}
+
+    const today = new Date().toISOString().split('T')[0];
+    if (!users[userId]) users[userId] = { plan: 'free', dailyCount: 0, lastReset: today };
+    if (users[userId].lastReset !== today) {
+      users[userId].dailyCount = 0;
+      users[userId].lastReset = today;
+    }
+
+    const limit = users[userId].plan === 'pro' ? Infinity : 5;
+    if (users[userId].dailyCount >= limit) {
+      return res.status(403).json({ error: 'limit_reached', message: 'Лимит исчерпан. Перейди на Pro.' });
+    }
+
+    const styleBit = String(style || '').trim();
+    const fullPrompt = styleBit
+      ? `${prompt}. Стиль и настроение: ${styleBit}. Высокое качество, чёткие детали.`
+      : `${prompt}. Высокое качество, чёткие детали, яркая композиция.`;
+
+    const { mimeType, dataBase64, modelUsed } = await generateGeminiImage({
+      apiKey: process.env.GEMINI_API_KEY,
+      prompt: fullPrompt,
+      aspectRatio,
+    });
+
+    users[userId].dailyCount++;
+    fs.writeFileSync(usersPath, JSON.stringify(users));
+
+    const remainingToday = limit === Infinity ? undefined : Math.max(0, limit - users[userId].dailyCount);
+
+    res.json({
+      mimeType,
+      imageBase64: dataBase64,
+      dataUrl: `data:${mimeType};base64,${dataBase64}`,
+      model: modelUsed,
+      remainingToday,
+    });
+  } catch (e) {
+    console.error('GEMINI IMAGE ERROR:', e.message, e.status);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Trends
 app.get('/api/trends', (req, res) => {
   res.json({ trends: [

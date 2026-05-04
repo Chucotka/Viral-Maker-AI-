@@ -49,54 +49,94 @@
                 <h2>Студия Контента</h2>
             </header>
 
+            <div class="studio-mode-row" role="tablist" aria-label="Режим студии">
+                <button type="button" class="mode-pill active" id="mode-pill-text" data-studio-mode="text">Текст</button>
+                <button type="button" class="mode-pill" id="mode-pill-image" data-studio-mode="image">Картинка</button>
+            </div>
+            <p class="text-hint studio-mode-hint">Картинки и текст делят один дневной лимит на Free.</p>
+
             <div class="form-group">
-                <label>Опиши идею или вставь тему</label>
+                <label for="studio-topic" id="label-studio-topic">Опиши идею или вставь тему</label>
                 <textarea id="studio-topic" placeholder="Например: Как использовать AI для бизнеса в 2024 году..." rows="4"></textarea>
             </div>
 
-            <div class="form-row">
-                <div class="form-group half">
-                    <label>Платформа</label>
-                    <select id="studio-platform">
-                        <option value="Telegram">Telegram</option>
-                        <option value="Instagram">Instagram</option>
-                        <option value="TikTok">TikTok</option>
-                        <option value="YouTube Shorts">YouTube Shorts</option>
-                        <option value="YouTube">YouTube (Видео)</option>
-                        <option value="VK Клипы">VK Клипы</option>
-                        <option value="VK Видео">VK Видео</option>
-                    </select>
+            <div id="studio-text-options">
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label>Платформа</label>
+                        <select id="studio-platform">
+                            <option value="Telegram">Telegram</option>
+                            <option value="Instagram">Instagram</option>
+                            <option value="TikTok">TikTok</option>
+                            <option value="YouTube Shorts">YouTube Shorts</option>
+                            <option value="YouTube">YouTube (Видео)</option>
+                            <option value="VK Клипы">VK Клипы</option>
+                            <option value="VK Видео">VK Видео</option>
+                        </select>
+                    </div>
+                    <div class="form-group half">
+                        <label>Тон</label>
+                        <select id="studio-tone">
+                            <option value="вирусный">Вирусный 🚀</option>
+                            <option value="экспертный">Экспертный 🧠</option>
+                            <option value="провокационный">Провокационный 🔥</option>
+                            <option value="юмор">Юмор 😂</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="form-group half">
-                    <label>Тон</label>
-                    <select id="studio-tone">
-                        <option value="вирусный">Вирусный 🚀</option>
-                        <option value="экспертный">Экспертный 🧠</option>
-                        <option value="провокационный">Провокационный 🔥</option>
-                        <option value="юмор">Юмор 😂</option>
-                    </select>
-                </div>
+
+                <button class="btn btn-primary btn-full" id="btn-generate">Сгенерировать текст</button>
             </div>
 
-            <button class="btn btn-primary btn-full" id="btn-generate">Сгенерировать</button>
+            <div id="studio-image-options" class="hidden">
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label for="image-aspect">Формат</label>
+                        <select id="image-aspect">
+                            <option value="1:1">1:1 (пост)</option>
+                            <option value="9:16">9:16 (сторис)</option>
+                            <option value="16:9">16:9 (обложка)</option>
+                            <option value="3:4">3:4</option>
+                            <option value="4:3">4:3</option>
+                        </select>
+                    </div>
+                    <div class="form-group half">
+                        <label for="image-style">Стиль</label>
+                        <select id="image-style">
+                            <option value="">По умолчанию</option>
+                            <option value="минималистичная иллюстрация, плоские цвета">Минимализм</option>
+                            <option value="3D-рендер, мягкий свет, рекламный кадр">3D / реклама</option>
+                            <option value="фотореализм, кинематографичный свет">Фотореализм</option>
+                            <option value="яркий поп-арт, контраст, для соцсетей">Поп-арт</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-primary btn-full" id="btn-generate-image">Создать изображение</button>
+            </div>
+
             <p id="limit-msg" class="status-msg hidden"></p>
 
             <!-- Result Area -->
             <div class="result-area hidden" id="result-container">
                 <div class="result-header">
                     <h3>Результат</h3>
-                    <div class="score-badge small">
+                    <div class="score-badge small" id="result-score-wrap">
                         <span id="result-score">0</span>/100 Viral
                     </div>
                 </div>
-                <div class="result-content" id="result-text">
-                    <!-- Generated text goes here -->
+                <div class="result-content" id="result-text"></div>
+                <div id="result-image-wrap" class="hidden">
+                    <img id="result-image" alt="Сгенерированное изображение" class="result-image" />
                 </div>
 
-                <div class="action-buttons">
+                <div class="action-buttons" id="result-actions-text">
                     <button class="btn btn-secondary" id="btn-copy">Скопировать</button>
                     <button class="btn btn-accent" id="btn-publish">В канал 📢</button>
                     <button class="btn btn-secondary" id="btn-remake">Переделать</button>
+                </div>
+                <div class="action-buttons hidden" id="result-actions-image">
+                    <a class="btn btn-accent" id="btn-download-image" href="#" download="viral-maker-ai.png">Скачать</a>
+                    <button class="btn btn-secondary" id="btn-remake-image">Ещё раз</button>
                 </div>
                 <p id="publish-status" class="status-msg hidden"></p>
             </div>
