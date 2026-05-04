@@ -42,8 +42,14 @@ module.exports = async (req, res) => {
     const result = await new Promise((resolve, reject) => {
       const gReq = https.request(options, (gRes) => {
         let data = '';
-        gRes.on('data', (chunk) => data += chunk);
-        gRes.on('end') ; resolve(JSON.parse(data));
+        gRes.on('data', (chunk) => { data += chunk; });
+        gRes.on('end', () => {
+          try {
+            resolve(JSON.parse(data || '{}'));
+          } catch (err) {
+            reject(err);
+          }
+        });
       });
       gReq.on('error', (e) => reject(e));
       gReq.write(postData);
