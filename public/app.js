@@ -140,7 +140,7 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
     const topic = document.getElementById('studio-topic').value.trim();
     const platform = document.getElementById('studio-platform').value;
     const tone = document.getElementById('studio-tone').value;
-    const model = document.getElementById('settings-model').value || 'gemini-1.5-flash';
+    const model = document.getElementById('settings-model').value || 'gemini-2.0-flash';
 
     const limitMsg = document.getElementById('limit-msg');
     limitMsg.classList.add('hidden');
@@ -203,6 +203,8 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
             text = 'Сервис Google временно перегружен (не ошибка ключа). Подождите минуту и нажмите снова или выберите другую модель.';
         } else if (/API[_ ]?key|401|403|PERMISSION_DENIED|invalid api/i.test(m)) {
             text = 'Проблема с ключом или доступом к API. Проверьте GEMINI_API_KEY на сервере.';
+        } else if (/404|not found for API version|ListModels/i.test(m)) {
+            text = 'Эта модель недоступна для вашего ключа Google AI. Обновите приложение и выберите Gemini 2.0 или 2.5 в настройках.';
         } else if (m && m.length < 280 && !/^Ошибка генерации \(\d+\)$/.test(m)) {
             text = m;
         }
