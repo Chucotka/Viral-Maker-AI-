@@ -71,7 +71,7 @@ app.post('/api/generate', async (req, res) => {
     }
 
     const freeTier = users[userId].plan === 'free';
-    const preferred = freeTier ? 'gemini-2.0-flash' : model;
+    const preferred = freeTier ? 'gemini-2.5-flash' : model;
     const modelChain = modelFallbackChain(preferred, { freeTier });
     const prompt = `Ты эксперт по вирусному контенту для ${platform}. Тон: ${tone}. Создай вирусный пост на тему: ${topic}. Добавь 3-5 эмодзи. Закончи призывом к действию. Максимум 1000 символов.`;
     const { content, modelUsed } = await generateContentRobust(genAI, modelChain, prompt);
