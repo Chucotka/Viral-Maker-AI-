@@ -262,6 +262,30 @@ input[type="text"]:focus, textarea:focus, select:focus {
 .plan-card.active { border-color: var(--accent); opacity: 1; }
 .plan-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .plan-price { font-weight: bold; color: var(--warning); }
+.stars-help-card {
+    background: linear-gradient(180deg, rgba(255, 204, 0, 0.08), rgba(0, 122, 255, 0.08));
+    border: 1px solid rgba(255, 204, 0, 0.25);
+    border-radius: 14px;
+    padding: 16px;
+    margin-top: 14px;
+}
+.stars-help-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+.stars-help-text {
+    font-size: 13px;
+    line-height: 1.45;
+    margin-bottom: 12px;
+}
+.stars-help-actions {
+    display: flex;
+    gap: 10px;
+}
+.stars-help-actions .btn {
+    flex: 1;
+}
 
 /* Bottom Nav */
 .bottom-nav {

@@ -3,6 +3,8 @@ const tg = window.Telegram.WebApp;
 tg.expand();
 tg.ready();
 
+const PREMIUM_BOT_URL = 'https://t.me/PremiumBot';
+
 const HISTORY_KEY = 'vm_history_v1';
 const SETTINGS_KEY = 'vm_settings_v1';
 
@@ -74,6 +76,48 @@ let currentGeneratedText = '';
 let currentGeneratedScore = 0;
 let studioMode = 'text';
 let currentImageDataUrl = '';
+
+function isDesktopLikeClient() {
+    const platform = String(tg.platform || '').toLowerCase();
+    if (platform.includes('tdesktop') || platform.includes('macos') || platform.includes('windows') || platform.includes('linux')) {
+        return true;
+    }
+    const ua = navigator.userAgent || '';
+    return /\bMacintosh\b|\bWindows\b|\bLinux\b/i.test(ua) && !/\bAndroid\b|\biPhone\b|\biPad\b/i.test(ua);
+}
+
+function openPremiumBot() {
+    if (typeof tg.openTelegramLink === 'function') {
+        tg.openTelegramLink(PREMIUM_BOT_URL);
+        return;
+    }
+    if (typeof tg.openLink === 'function') {
+        tg.openLink(PREMIUM_BOT_URL);
+        return;
+    }
+    window.open(PREMIUM_BOT_URL, '_blank', 'noopener');
+}
+
+function showStarsHelp(plan) {
+    const planLabel = plan === 'premium' ? 'Premium' : 'Pro';
+    const platformHint = isDesktopLikeClient()
+        ? 'На компьютере Telegram иногда не открывает форму покупки Stars для такого товара.'
+        : 'На iPhone и Android встроенная покупка может быть недоступна или не сработать в вашем регионе.';
+    if (typeof tg.showPopup === 'function') {
+        tg.showPopup({
+            title: `${planLabel}: оплата через Stars`,
+            message: `${platformHint}\n\nОткройте @PremiumBot, пополните Stars и вернитесь к оплате подписки здесь.`,
+            buttons: [
+                { id: 'open-premiumbot', type: 'default', text: 'Купить Stars' },
+                { type: 'cancel', text: 'Позже' },
+            ],
+        }, (buttonId) => {
+            if (buttonId === 'open-premiumbot') openPremiumBot();
+        });
+        return;
+    }
+    tg.showAlert('Оплата подписки идет через Telegram Stars. Если форма не открывается на iPhone, Android или компьютере, пополните Stars через @PremiumBot и попробуйте снова.');
+}
 
 const savedSettings = loadSavedSettings();
 const settingsChannel = document.getElementById('settings-channel');
@@ -333,7 +377,7 @@ async function buyPlan(plan) {
                     tg.showAlert('✨ Спасибо за покупку! Ваша подписка активирована.');
                     loadUserData();
                 } else if (status === 'failed') {
-                    tg.showAlert('❌ Ошибка оплаты.');
+                    showStarsHelp(plan);
                 }
             });
         }
@@ -345,6 +389,7 @@ async function buyPlan(plan) {
 
 document.getElementById('plan-pro').addEventListener('click', () => buyPlan('pro'));
 document.getElementById('plan-premium').addEventListener('click', () => buyPlan('premium'));
+document.getElementById('btn-open-premiumbot').addEventListener('click', openPremiumBot);
 
 document.getElementById('btn-upgrade-pro').addEventListener('click', () => {
     buyPlan('pro');
