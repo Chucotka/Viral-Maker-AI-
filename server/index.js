@@ -404,7 +404,6 @@ app.post('/api/create-invoice', async (req, res) => {
       payload: `plan_${plan}_${userId}`,
       provider_token: '',
       currency: 'XTR',
-      subscription_period: 2592000,
       prices: [{ label: title, amount: price }],
     });
 

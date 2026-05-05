@@ -22,7 +22,7 @@
   "homepage": "https://github.com/Chucotka/Viral-Maker-AI-#readme",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
-    "@vercel/kv": "^3.0.0",
+    "@upstash/redis": "^1.37.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",

@@ -129,8 +129,8 @@ function alertFromGenerateError(message) {
         text = 'Модель недоступна для вашего ключа. Обновите приложение или проверьте доступ в Google AI Studio.';
     } else if (/missing_init_data|invalid_init_data|Откройте приложение из Telegram/i.test(m)) {
         text = 'Откройте мини-приложение из Telegram (кнопка в боте), чтобы подпись сессии передалась на сервер.';
-    } else if (/kv_required|Подключите Vercel KV/i.test(m)) {
-        text = 'На сервере не настроено хранилище Vercel KV. Добавьте интеграцию Redis/KV в проект Vercel и переменные окружения.';
+    } else if (/kv_required|Redis/i.test(m)) {
+        text = 'На сервере не настроено хранилище Redis. Добавьте Upstash Redis в Vercel и переменные окружения.';
     } else if (/rate_limit|429|Слишком много запросов/i.test(m)) {
         text = 'Слишком много запросов за короткое время. Подождите около минуты и попробуйте снова.';
     } else if (m && m.length < 320 && !/^Ошибка генерации \(\d+\)$/.test(m)) {
@@ -273,7 +273,7 @@ document.getElementById('btn-save-profile').addEventListener('click', async () =
         });
         const data = await response.json().catch(() => ({}));
         if (response.status === 503) {
-            tg.showAlert(data.message || 'Нужен Vercel KV для сохранения профиля на сервере.');
+            tg.showAlert(data.message || 'Нужен Upstash Redis для сохранения профиля на сервере.');
             return;
         }
         if (!response.ok) {

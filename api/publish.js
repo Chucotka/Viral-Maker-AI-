@@ -12,7 +12,7 @@ module.exports = async (req, res) => {
     if (!isKvConfigured()) {
       return res.status(503).json({
         error: 'kv_required',
-        message: 'Подключите Vercel KV для проверки тарифа.',
+        message: 'Подключите Upstash Redis для проверки тарифа.',
       });
     }
 
