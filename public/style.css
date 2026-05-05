@@ -126,6 +126,14 @@ input[type="text"]:focus, textarea:focus, select:focus {
     border: 1px solid var(--border);
     cursor: pointer;
 }
+.trend-chip,
+.trend-item,
+.mode-pill,
+.nav-item {
+    appearance: none;
+    -webkit-appearance: none;
+    font: inherit;
+}
 .recent-posts { display: flex; flex-direction: column; gap: 12px; }
 .post-card {
     background: var(--surface);

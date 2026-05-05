@@ -1,31 +1,40 @@
 const https = require('https');
+const { resolveTelegramUser } = require('../lib/miniAppAuth');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).end();
-  
+
   try {
-    const { userId, plan } = req.body;
+    const auth = resolveTelegramUser(req, res);
+    if (!auth) return;
+
+    const { plan } = req.body;
     const token = process.env.TELEGRAM_BOT_TOKEN;
 
-    if (!userId || !plan) return res.status(400).json({ error: 'Missing params' });
+    if (!plan) return res.status(400).json({ error: 'Missing plan' });
+    if (!token) return res.status(500).json({ error: 'Missing bot token' });
+
+    const userId = auth.userId;
 
     let title, description, price;
     if (plan === 'pro') {
       title = 'Viral Maker Pro';
       description = 'Безлимитные генерации + аналитика на 30 дней';
       price = 99;
-    } else {
+    } else if (plan === 'premium') {
       title = 'Viral Maker Premium';
-      description = 'Автопостинг + все платформы на 30 дней';
+      description = 'Публикация картинок в канал + увеличенный лимит генераций на 30 дней';
       price = 299;
+    } else {
+      return res.status(400).json({ error: 'Invalid plan' });
     }
 
     const postData = JSON.stringify({
-      title: title,
-      description: description,
-      payload: `plan_${plan}_${userId}`, // Data to identify the payment later
-      provider_token: "", // Empty for Telegram Stars
-      currency: "XTR", // XTR = Telegram Stars
+      title,
+      description,
+      payload: `plan_${plan}_${userId}`,
+      provider_token: '',
+      currency: 'XTR',
       prices: [{ label: title, amount: price }],
     });
 
@@ -35,14 +44,16 @@ module.exports = async (req, res) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(postData)
-      }
+        'Content-Length': Buffer.byteLength(postData),
+      },
     };
 
     const result = await new Promise((resolve, reject) => {
       const gReq = https.request(options, (gRes) => {
         let data = '';
-        gRes.on('data', (chunk) => { data += chunk; });
+        gRes.on('data', (chunk) => {
+          data += chunk;
+        });
         gRes.on('end', () => {
           try {
             resolve(JSON.parse(data || '{}'));
@@ -62,7 +73,6 @@ module.exports = async (req, res) => {
       console.error('Invoice error:', result);
       res.status(500).json({ error: 'Failed to create invoice' });
     }
-
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

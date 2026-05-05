@@ -1,24 +1,53 @@
-module.exports = (req, res) => {
+const { resolveTelegramUser } = require('../lib/miniAppAuth');
+const { isKvConfigured, getQuotaState, saveUserRecord } = require('../lib/kvUserStore');
+
+function sanitizeProfileBody(body) {
+  const niche = typeof body?.niche === 'string' ? body.niche.trim().slice(0, 120) : '';
+  const language = typeof body?.language === 'string' ? body.language.trim().slice(0, 40) : '';
+  const styleNote = typeof body?.styleNote === 'string' ? body.styleNote.trim().slice(0, 200) : '';
+  return { niche, language, styleNote };
+}
+
+module.exports = async (req, res) => {
   try {
-    const fs = require('fs');
-    const usersPath = '/tmp/users.json';
-    let users = {};
-    
-    if (fs.existsSync(usersPath)) {
-      try {
-        users = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
-      } catch(e) {
-        console.error('Error parsing users.json:', e);
-      }
+    if (!isKvConfigured()) {
+      return res.status(503).json({
+        error: 'kv_required',
+        message: 'Подключите Vercel KV.',
+      });
     }
 
-    // Vercel handles query parsing automatically, req.query is already an object
-    const userId = req.query.userId || req.query.id || 'anonymous';
-    const user = users[userId] || { plan: 'free', dailyCount: 0 };
-    
-    res.json(user);
-  } catch(e) {
+    const auth = resolveTelegramUser(req, res);
+    if (!auth) return;
+
+    if (req.method === 'GET') {
+      const { rec } = await getQuotaState(auth.userId);
+      return res.json({
+        plan: rec.plan,
+        dailyCount: rec.dailyCount,
+        userId: auth.userId,
+        planUntil: rec.planUntil || null,
+        profile: {
+          niche: rec.niche || '',
+          language: rec.language || '',
+          styleNote: rec.styleNote || '',
+        },
+      });
+    }
+
+    if (req.method === 'POST') {
+      const { niche, language, styleNote } = sanitizeProfileBody(req.body || {});
+      const { rec } = await getQuotaState(auth.userId);
+      await saveUserRecord(auth.userId, { ...rec, niche, language, styleNote });
+      return res.json({
+        ok: true,
+        profile: { niche, language, styleNote },
+      });
+    }
+
+    return res.status(405).end();
+  } catch (e) {
     console.error('User API error:', e.message);
-    res.json({ plan: 'free', dailyCount: 0 });
+    res.status(500).json({ error: e.message });
   }
 };

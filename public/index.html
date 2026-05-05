@@ -136,8 +136,10 @@
                 </div>
                 <div class="action-buttons hidden" id="result-actions-image">
                     <a class="btn btn-accent" id="btn-download-image" href="#" download="viral-maker-ai.png">Скачать</a>
+                    <button class="btn btn-accent" id="btn-publish-image">В канал 📢</button>
                     <button class="btn btn-secondary" id="btn-remake-image">Ещё раз</button>
                 </div>
+                <p class="text-hint hidden" id="hint-image-publish" style="margin-top:8px">Публикация картинки в канал — тариф <b>Premium</b> (текст в канал — на всех тарифах).</p>
                 <p id="publish-status" class="status-msg hidden"></p>
             </div>
         </section>
@@ -204,6 +206,15 @@
             </div>
 
             <div class="settings-group">
+                <label>Профиль автора</label>
+                <p class="text-hint" style="margin-bottom:10px">Сохраняется на сервере — учитывается в промптах генерации.</p>
+                <input type="text" id="profile-niche" placeholder="Ниша (например: финтех для фрилансеров)" maxlength="120">
+                <input type="text" id="profile-language" placeholder="Язык ответа (например: русский, короткие фразы)" maxlength="40" style="margin-top:10px">
+                <textarea id="profile-style" placeholder="Стиль и ограничения (тон, запреты, обращение на «ты»…)" maxlength="200" rows="3" style="margin-top:10px"></textarea>
+                <button type="button" class="btn btn-secondary btn-full" id="btn-save-profile" style="margin-top:12px">Сохранить профиль</button>
+            </div>
+
+            <div class="settings-group">
                 <label>Канал для автопостинга</label>
                 <input type="text" id="settings-channel" placeholder="@my_awesome_channel">
                 <p class="text-hint">Убедитесь, что бот является администратором.</p>
@@ -238,30 +249,30 @@
                         <h4>Premium</h4>
                         <span class="plan-price">299 Stars/мес</span>
                     </div>
-                    <p>Автопостинг + все платформы</p>
+                    <p>Картинки в канал + увеличенный лимит</p>
                 </div>
             </div>
         </section>
 
         <!-- Navigation -->
         <nav class="bottom-nav">
-            <button class="nav-item active" onclick="switchTab('dashboard')">
+            <button class="nav-item active" data-tab="dashboard" onclick="switchTab('dashboard')">
                 <span class="nav-icon">📊</span>
                 <span class="nav-text">Дашборд</span>
             </button>
-            <button class="nav-item" onclick="switchTab('studio')">
+            <button class="nav-item" data-tab="studio" onclick="switchTab('studio')">
                 <span class="nav-icon">✍️</span>
                 <span class="nav-text">Студия</span>
             </button>
-            <button class="nav-item" onclick="switchTab('trends')">
+            <button class="nav-item" data-tab="trends" onclick="switchTab('trends')">
                 <span class="nav-icon">🔥</span>
                 <span class="nav-text">Тренды</span>
             </button>
-            <button class="nav-item" onclick="switchTab('analytics')">
+            <button class="nav-item" data-tab="analytics" onclick="switchTab('analytics')">
                 <span class="nav-icon">📈</span>
                 <span class="nav-text">Аналитика</span>
             </button>
-            <button class="nav-item" onclick="switchTab('settings')">
+            <button class="nav-item" data-tab="settings" onclick="switchTab('settings')">
                 <span class="nav-icon">⚙️</span>
                 <span class="nav-text">Настройки</span>
             </button>

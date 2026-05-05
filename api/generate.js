@@ -1,10 +1,26 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { generateContentRobust, modelFallbackChain } = require('../lib/geminiRobust');
+const { resolveTelegramUser } = require('../lib/miniAppAuth');
+const { isKvConfigured, getQuotaState, incrementGenerationCount } = require('../lib/kvUserStore');
+const { appendUserHistory } = require('../lib/kvHistory');
+const { computeViralScore } = require('../lib/viralScore');
+const { buildStudioTextPrompt } = require('../lib/buildTextPrompt');
+const { assertGenerateRateLimit } = require('../lib/rateLimitKv');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).end();
   try {
-    const { topic, platform = 'Telegram', tone = 'вирусный', model = 'gemini-2.5-flash', userId = 'anonymous' } = req.body;
+    if (!isKvConfigured()) {
+      return res.status(503).json({
+        error: 'kv_required',
+        message: 'Подключите Vercel KV (KV_REST_API_URL / KV_REST_API_TOKEN) в проекте.',
+      });
+    }
+
+    const auth = resolveTelegramUser(req, res);
+    if (!auth) return;
+
+    const { topic, platform = 'Telegram', tone = 'вирусный', model = 'gemini-2.5-flash' } = req.body;
 
     if (!topic || topic.trim().length === 0) {
       return res.status(400).json({ error: 'topic_required', message: 'Тема не указана.' });
@@ -14,47 +30,46 @@ module.exports = async (req, res) => {
       return res.status(500).json({ error: 'missing_api_key' });
     }
 
+    const { rec, limit } = await getQuotaState(auth.userId);
+    if (rec.dailyCount >= limit) {
+      return res.status(403).json({ error: 'limit_reached', message: 'Лимит исчерпан. Перейди на Pro.' });
+    }
+
+    if (!(await assertGenerateRateLimit(auth.userId, res, rec.plan))) return;
+
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const modelChain = modelFallbackChain(model);
 
-    let prompt = `Ты эксперт по вирусному контенту для ${platform}. Тон: ${tone}. Создай вирусный пост на тему: ${topic}. Добавь 3-5 эмодзи. Закончи призывом к действию. Максимум 1000 символов.`;
-    
-    if (platform === 'YouTube Shorts') {
-      prompt = `Ты эксперт по YouTube Shorts. Создай сценарий для вирусного Shorts на тему: ${topic}. Тон: ${tone}. 
-      Структура:
-      1. Заголовок (крючок)
-      2. Сценарий (3-5 кадров с описанием действий и текста)
-      3. Описание и 5 тегов.`;
-    } else if (platform === 'YouTube') {
-      prompt = `Создай план для вирусного видео на YouTube. Тема: ${topic}. Тон: ${tone}.
-      Включи:
-      1. Кликабельный заголовок (3 варианта)
-      2. Структура видео (вступление, основные пункты, финал)
-      3. Описание для видео с ключевыми словами.`;
-    } else if (platform === 'VK Клипы') {
-      prompt = `Ты эксперт по VK Клипам. Создай сценарий для вирусного клипа на тему: ${topic}. Тон: ${tone}.
-      Важно: Сделай акцент на динамичном начале (первые 2 секунды).
-      Структура:
-      1. Текст на экране в начале
-      2. Описание действий и речи
-      3. Список из 5 целевых хештегов для VK.`;
-    } else if (platform === 'VK Видео') {
-      prompt = `Ты эксперт по продвижению в VK Видео. Создай структуру для видео на тему: ${topic}. Тон: ${tone}.
-      Включи:
-      1. Название, оптимизированное под поиск VK
-      2. Таймкоды (план видео)
-      3. Описание для поста с видео.`;
-    }
+    const prompt = buildStudioTextPrompt({
+      topic,
+      platform,
+      tone,
+      profile: rec,
+    });
 
     const { content, modelUsed } = await generateContentRobust(genAI, modelChain, prompt);
+    const { remainingToday } = await incrementGenerationCount(auth.userId, rec);
+    const viralScore = computeViralScore(content);
+
+    try {
+      await appendUserHistory(auth.userId, {
+        type: 'text',
+        topic: topic.trim().slice(0, 240),
+        text: content.slice(0, 4000),
+        score: viralScore,
+        platform,
+      });
+    } catch (histErr) {
+      console.error('appendUserHistory:', histErr.message);
+    }
 
     res.json({
       content,
-      viralScore: 85, // Fixed for now
-      model: modelUsed
+      viralScore,
+      model: modelUsed,
+      remainingToday,
     });
-
-  } catch(e) {
+  } catch (e) {
     console.error('ULTIMATE GENERATION ERROR:', e.message);
     res.status(500).json({ error: e.message });
   }
