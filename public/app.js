@@ -4,6 +4,7 @@ tg.expand();
 tg.ready();
 
 const PREMIUM_BOT_URL = 'https://t.me/PremiumBot';
+const PREMIUM_BOT_HANDLE = '@PremiumBot';
 
 const HISTORY_KEY = 'vm_history_v1';
 const SETTINGS_KEY = 'vm_settings_v1';
@@ -98,6 +99,31 @@ function openPremiumBot() {
     window.open(PREMIUM_BOT_URL, '_blank', 'noopener');
 }
 
+async function copyPremiumBotHandle() {
+    try {
+        await navigator.clipboard.writeText(PREMIUM_BOT_HANDLE);
+        if (typeof tg.showPopup === 'function') {
+            tg.showPopup({
+                title: 'Скопировано',
+                message: 'Скопировал @PremiumBot. Откройте поиск в Telegram, вставьте username, купите Stars и вернитесь сюда.',
+                buttons: [{ type: 'ok' }],
+            });
+            return;
+        }
+        tg.showAlert('Скопировал @PremiumBot. Откройте поиск в Telegram, вставьте username, купите Stars и вернитесь сюда.');
+    } catch (e) {
+        tg.showAlert('Откройте поиск в Telegram и найдите @PremiumBot вручную.');
+    }
+}
+
+function handlePremiumBotAction() {
+    if (isDesktopLikeClient()) {
+        copyPremiumBotHandle();
+        return;
+    }
+    openPremiumBot();
+}
+
 function showStarsHelp(plan) {
     const planLabel = plan === 'premium' ? 'Premium' : 'Pro';
     const platformHint = isDesktopLikeClient()
@@ -108,11 +134,16 @@ function showStarsHelp(plan) {
             title: `${planLabel}: оплата через Stars`,
             message: `${platformHint}\n\nОткройте @PremiumBot, пополните Stars и вернитесь к оплате подписки здесь.`,
             buttons: [
-                { id: 'open-premiumbot', type: 'default', text: 'Купить Stars' },
+                {
+                    id: isDesktopLikeClient() ? 'copy-premiumbot' : 'open-premiumbot',
+                    type: 'default',
+                    text: isDesktopLikeClient() ? 'Скопировать @PremiumBot' : 'Купить Stars',
+                },
                 { type: 'cancel', text: 'Позже' },
             ],
         }, (buttonId) => {
             if (buttonId === 'open-premiumbot') openPremiumBot();
+            if (buttonId === 'copy-premiumbot') copyPremiumBotHandle();
         });
         return;
     }
@@ -389,7 +420,12 @@ async function buyPlan(plan) {
 
 document.getElementById('plan-pro').addEventListener('click', () => buyPlan('pro'));
 document.getElementById('plan-premium').addEventListener('click', () => buyPlan('premium'));
-document.getElementById('btn-open-premiumbot').addEventListener('click', openPremiumBot);
+document.getElementById('btn-open-premiumbot').addEventListener('click', handlePremiumBotAction);
+
+if (isDesktopLikeClient()) {
+    const premiumBotBtn = document.getElementById('btn-open-premiumbot');
+    if (premiumBotBtn) premiumBotBtn.textContent = 'Скопировать @PremiumBot';
+}
 
 document.getElementById('btn-upgrade-pro').addEventListener('click', () => {
     buyPlan('pro');
