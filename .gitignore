@@ -2,3 +2,5 @@ node_modules/
 .env
 posts.json
 users.json
+._*
+.DS_Store

@@ -404,6 +404,7 @@ app.post('/api/create-invoice', async (req, res) => {
       payload: `plan_${plan}_${userId}`,
       provider_token: '',
       currency: 'XTR',
+      subscription_period: 2592000,
       prices: [{ label: title, amount: price }],
     });
 
@@ -440,7 +441,10 @@ app.post('/api/create-invoice', async (req, res) => {
       res.json({ link: result.result });
     } else {
       console.error('Invoice error:', result);
-      res.status(500).json({ error: 'Failed to create invoice' });
+      res.status(500).json({
+        error: 'Failed to create invoice',
+        message: result?.description || result?.error || 'Telegram rejected the invoice.',
+      });
     }
   } catch (e) {
     res.status(500).json({ error: e.message });
