@@ -352,6 +352,37 @@ function clearNode(node) {
     while (node.firstChild) node.removeChild(node.firstChild);
 }
 
+function buildTrendPrompt(topic) {
+    const topicText = String(topic || '').trim();
+    const lower = topicText.toLowerCase();
+    const platform = (studioPlatform && studioPlatform.value) || 'Telegram';
+    const tone = (studioTone && studioTone.value) || 'вирусный';
+
+    let angle = 'Сделай пост простым, конкретным и полезным.';
+    let structure = 'Структура: 1) сильный хук 2) 3 коротких тезиса 3) вывод 4) CTA.';
+
+    if (lower.includes('лайфстайл') || lower.includes('lifestyle')) {
+        angle = 'Сделай пост как заметку из жизни: привычки, день из жизни, маленькая победа или честная ошибка.';
+        structure = 'Структура: 1) хук про личный опыт 2) 3 бытовых наблюдения 3) короткий вывод 4) CTA с вопросом.';
+    } else if (lower.includes('ai') || lower.includes('нейросеть') || lower.includes('chatgpt')) {
+        angle = 'Покажи практическую пользу AI: проблема -> решение -> пример -> что делать дальше.';
+    } else if (lower.includes('крипт') || lower.includes('bitcoin') || lower.includes('биткоин')) {
+        angle = 'Сделай пост с ощущением упущенной возможности или инсайта, но без перегруза терминами.';
+    } else if (lower.includes('финанс') || lower.includes('деньги')) {
+        angle = 'Сделай пост про деньги через простой личный вывод, цифры и понятный совет.';
+    } else if (lower.includes('продуктив')) {
+        angle = 'Сделай пост про продуктивность через один полезный приём, который можно применить сегодня.';
+    }
+
+    return [
+        `Сгенерируй пост для ${platform} на тему "${topicText}".`,
+        `Тон: ${tone}.`,
+        angle,
+        structure,
+        'Сделай текст живым, без канцелярита, и закончи коротким CTA.',
+    ].join('\n');
+}
+
 // --- Dashboard & Analytics: сервер (KV) + кэш в localStorage ---
 async function loadDashboardData() {
     let list = null;
@@ -789,7 +820,17 @@ async function loadTrends() {
 
 function prefillStudio(topic) {
     setStudioMode('text');
-    document.getElementById('studio-topic').value = topic;
+    const prompt = buildTrendPrompt(topic);
+    const topicInput = document.getElementById('studio-topic');
+    if (topicInput) {
+        topicInput.value = prompt;
+        topicInput.focus();
+        topicInput.setSelectionRange(prompt.length, prompt.length);
+    }
+    const hint = document.getElementById('studio-trend-hint');
+    if (hint) {
+        hint.textContent = `Готовый запрос для «${topic}». Можете отредактировать его перед генерацией.`;
+    }
     switchTab('studio');
 }
 
