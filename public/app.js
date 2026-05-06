@@ -487,6 +487,35 @@ async function buyPlan(plan) {
     }
 }
 
+async function activateDebugPlan(plan) {
+    const secret = window.prompt('Введите DEBUG_ADMIN_SECRET');
+    if (!secret) return;
+    try {
+        const response = await fetch('/api/debug-plan', {
+            method: 'POST',
+            headers: {
+                ...miniAppHeaders(true),
+                'X-Debug-Secret': secret.trim(),
+            },
+            body: JSON.stringify({ plan }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            tg.showAlert(data.message || data.error || 'Не удалось активировать тестовый тариф.');
+            return;
+        }
+        tg.showPopup({
+            title: 'Готово',
+            message: `${data.plan === 'premium' ? 'Premium' : 'Pro'} активирован для текущего пользователя.`,
+            buttons: [{ type: 'ok' }],
+        });
+        await loadUserData({ silent: true });
+    } catch (error) {
+        console.error('Debug plan error:', error);
+        tg.showAlert('Ошибка при активации тестового тарифа.');
+    }
+}
+
 document.getElementById('plan-pro').addEventListener('click', () => buyPlan('pro'));
 document.getElementById('plan-premium').addEventListener('click', () => buyPlan('premium'));
 document.getElementById('btn-open-premiumbot').addEventListener('click', handlePremiumBotAction);
@@ -507,6 +536,9 @@ if (isDesktopLikeClient()) {
 document.getElementById('btn-upgrade-pro').addEventListener('click', () => {
     buyPlan('pro');
 });
+
+document.getElementById('btn-debug-pro').addEventListener('click', () => activateDebugPlan('pro'));
+document.getElementById('btn-debug-premium').addEventListener('click', () => activateDebugPlan('premium'));
 
 // --- Trends Data ---
 async function loadTrends() {

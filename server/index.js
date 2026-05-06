@@ -13,6 +13,7 @@ const { getWebhookBot } = require('../lib/webhookBot');
 const { appendLocalHistory, getLocalHistory } = require('../lib/localHistoryStore');
 const { getTributePlanConfig } = require('../lib/tributeConfig');
 const { handleTributeWebhook } = require('../lib/tributeWebhook');
+const { hasDebugAccess, normalizeDebugPlan, debugDurationDays } = require('../lib/debugPlan');
 const {
   isKvConfigured,
   getQuotaState,
@@ -58,6 +59,21 @@ function loadFileUsers() {
 
 function saveFileUsers(users) {
   fs.writeFileSync(USERS_PATH, JSON.stringify(users));
+}
+
+function setFileUserPlan(userId, plan) {
+  const today = new Date().toISOString().split('T')[0];
+  const users = loadFileUsers();
+  const days = debugDurationDays();
+  if (!users[userId]) {
+    users[userId] = { plan: 'free', dailyCount: 0, lastReset: today, planUntil: null };
+  }
+  users[userId].plan = plan === 'pro' || plan === 'premium' ? plan : 'free';
+  users[userId].planUntil = users[userId].plan === 'free' ? null : new Date(Date.now() + days * 864e5).toISOString();
+  users[userId].dailyCount = 0;
+  users[userId].lastReset = today;
+  saveFileUsers(users);
+  return users[userId];
 }
 
 function appendFileHistory(userId, entry) {
@@ -139,6 +155,39 @@ app.get('/api/tribute-link', (req, res) => {
   res.json({ plan: config.plan, link: config.webLink });
 });
 app.post('/api/tribute-webhook', handleTributeWebhook);
+app.post('/api/debug-plan', async (req, res) => {
+  try {
+    if (!hasDebugAccess(req)) {
+      return res.status(403).json({ error: 'forbidden' });
+    }
+
+    const plan = normalizeDebugPlan(req.body?.plan || req.query?.plan);
+    if (!plan) {
+      return res.status(400).json({ error: 'invalid_plan' });
+    }
+
+    const auth = isKvConfigured() ? resolveTelegramUser(req, res) : resolveStudioUser(req, res);
+    if (!auth) return;
+
+    if (isKvConfigured()) {
+      const { rec } = await getQuotaState(auth.userId);
+      await saveUserRecord(auth.userId, {
+        ...rec,
+        plan,
+        planUntil: new Date(Date.now() + debugDurationDays() * 864e5).toISOString(),
+        dailyCount: 0,
+      });
+    } else {
+      setFileUserPlan(auth.userId, plan);
+    }
+
+    console.info('Debug plan activated', { userId: auth.userId, plan });
+    return res.json({ ok: true, userId: auth.userId, plan });
+  } catch (e) {
+    console.error('Debug plan error:', e.message);
+    return res.status(500).json({ error: e.message });
+  }
+});
 app.post('/api/webhook', async (req, res) => {
   const updateId = req.body?.update_id;
   try {
