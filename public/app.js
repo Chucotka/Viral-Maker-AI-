@@ -518,6 +518,7 @@ async function activateDebugPlan(plan) {
 
 async function activateManualPlan(plan) {
     const targetInput = document.getElementById('manual-target');
+    const secretInput = document.getElementById('manual-secret');
     const statusEl = document.getElementById('manual-activate-status');
     const target = targetInput ? targetInput.value.trim() : '';
     if (!target) {
@@ -525,8 +526,12 @@ async function activateManualPlan(plan) {
         return;
     }
 
-    const secret = window.prompt('Введите DEBUG_ADMIN_SECRET');
-    if (!secret) return;
+    const secret = secretInput ? secretInput.value.trim() : '';
+    if (!secret) {
+        if (statusEl) statusEl.textContent = 'Введите DEBUG_ADMIN_SECRET в поле ниже @username/userId.';
+        tg.showAlert('Введите DEBUG_ADMIN_SECRET в поле ниже @username/userId.');
+        return;
+    }
 
     if (statusEl) statusEl.textContent = 'Активирую тариф...';
 
@@ -535,7 +540,7 @@ async function activateManualPlan(plan) {
             method: 'POST',
             headers: {
                 ...miniAppHeaders(true),
-                'X-Debug-Secret': secret.trim(),
+                'X-Debug-Secret': secret,
             },
             body: JSON.stringify({ plan, target }),
         });
@@ -564,8 +569,11 @@ async function activateManualPlan(plan) {
 }
 
 function getCleanupSecret() {
-    const input = document.getElementById('cleanup-secret');
-    return input ? input.value.trim() : '';
+    const cleanupInput = document.getElementById('cleanup-secret');
+    const manualInput = document.getElementById('manual-secret');
+    const cleanupSecret = cleanupInput ? cleanupInput.value.trim() : '';
+    if (cleanupSecret) return cleanupSecret;
+    return manualInput ? manualInput.value.trim() : '';
 }
 
 function renderCleanupList(items) {
