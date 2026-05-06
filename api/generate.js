@@ -20,7 +20,7 @@ module.exports = async (req, res) => {
     const auth = resolveTelegramUser(req, res);
     if (!auth) return;
 
-    const { topic, platform = 'Telegram', tone = 'вирусный', model = 'gemini-2.5-flash' } = req.body;
+    const { topic, platform = 'Telegram', tone = 'вирусный', model = 'gemini-2.5-flash', intent = 'auto' } = req.body;
 
     if (!topic || topic.trim().length === 0) {
       return res.status(400).json({ error: 'topic_required', message: 'Тема не указана.' });
@@ -44,6 +44,7 @@ module.exports = async (req, res) => {
       topic,
       platform,
       tone,
+      intent,
       profile: rec,
     });
 

@@ -8,6 +8,7 @@ const PREMIUM_BOT_HANDLE = '@PremiumBot';
 
 const HISTORY_KEY = 'vm_history_v1';
 const SETTINGS_KEY = 'vm_settings_v1';
+const DEFAULT_INTENT = 'auto';
 
 /** Заголовки для Vercel API: подпись Telegram Mini App (обязательно). */
 function miniAppHeaders(jsonBody = false) {
@@ -78,6 +79,12 @@ let currentGeneratedScore = 0;
 let studioMode = 'text';
 let currentImageDataUrl = '';
 let planRefreshTimer = null;
+let studioIntent = savedIntent();
+
+function savedIntent() {
+    const value = readLocalObject(SETTINGS_KEY, {}).intent;
+    return typeof value === 'string' && value ? value : DEFAULT_INTENT;
+}
 
 function isDesktopLikeClient() {
     const platform = String(tg.platform || '').toLowerCase();
@@ -215,6 +222,16 @@ const studioPlatform = document.getElementById('studio-platform');
 const studioTone = document.getElementById('studio-tone');
 const imageAspect = document.getElementById('image-aspect');
 const imageStyle = document.getElementById('image-style');
+const studioIntentHint = document.getElementById('studio-intent-hint');
+
+const INTENT_HINTS = {
+    auto: 'Авто: если идея сырая, приложение само достроит сильное ТЗ.',
+    sell: 'Продай идею: усиливает оффер, пользу и CTA.',
+    personal: 'Личный пост: делает текст живым, от первого лица и ближе к опыту.',
+    explain: 'Объясни просто: превращает тему в понятное объяснение без воды.',
+    provocative: 'Провокация: делает хук смелее и острее, но без трэша.',
+    surprise: 'Удиви меня: приложение само выберет сильный угол и напишет готовый пост.',
+};
 
 if (savedSettings.channel && settingsChannel) settingsChannel.value = savedSettings.channel;
 if (savedSettings.model && settingsModel) settingsModel.value = savedSettings.model;
@@ -230,6 +247,27 @@ if (studioTone) studioTone.addEventListener('change', () => updateSavedSettings(
 if (imageAspect) imageAspect.addEventListener('change', () => updateSavedSettings({ aspectRatio: imageAspect.value }));
 if (imageStyle) imageStyle.addEventListener('change', () => updateSavedSettings({ style: imageStyle.value }));
 
+function setStudioIntent(intent) {
+    const next = String(intent || DEFAULT_INTENT);
+    studioIntent = next;
+    updateSavedSettings({ intent: next });
+    document.querySelectorAll('.intent-pill').forEach((pill) => {
+        pill.classList.toggle('active', pill.dataset.intent === next);
+    });
+    if (studioIntentHint) {
+        studioIntentHint.textContent = INTENT_HINTS[next] || INTENT_HINTS.auto;
+    }
+    const topicInput = document.getElementById('studio-topic');
+    if (next === 'surprise' && topicInput && !topicInput.value.trim()) {
+        topicInput.value = 'Удиви меня';
+    }
+}
+
+document.querySelectorAll('.intent-pill').forEach((pill) => {
+    pill.addEventListener('click', () => setStudioIntent(pill.dataset.intent || DEFAULT_INTENT));
+});
+setStudioIntent(studioIntent);
+
 function setStudioMode(mode) {
     studioMode = mode;
     const isText = mode === 'text';
@@ -237,6 +275,8 @@ function setStudioMode(mode) {
     document.getElementById('mode-pill-image').classList.toggle('active', !isText);
     document.getElementById('studio-text-options').classList.toggle('hidden', !isText);
     document.getElementById('studio-image-options').classList.toggle('hidden', isText);
+    const intentGroup = document.getElementById('studio-intent-group');
+    if (intentGroup) intentGroup.classList.toggle('hidden', !isText);
     const label = document.getElementById('label-studio-topic');
     const ta = document.getElementById('studio-topic');
     if (isText) {
@@ -820,6 +860,7 @@ async function loadTrends() {
 
 function prefillStudio(topic) {
     setStudioMode('text');
+    setStudioIntent('auto');
     const prompt = buildTrendPrompt(topic);
     const topicInput = document.getElementById('studio-topic');
     if (topicInput) {
@@ -832,6 +873,37 @@ function prefillStudio(topic) {
         hint.textContent = `Готовый запрос для «${topic}». Можете отредактировать его перед генерацией.`;
     }
     switchTab('studio');
+}
+
+function buildRefinePrompt(mode, sourceText) {
+    const base = String(sourceText || '').trim();
+    const platform = studioPlatform.value;
+    const tone = studioTone.value;
+    const map = {
+        concrete: 'Перепиши текст так, чтобы стало больше конкретики, пользы, деталей и сильнее хук.',
+        shorter: 'Перепиши текст короче, плотнее и динамичнее. Убери всё лишнее.',
+        lively: 'Перепиши текст живее, теплее и человечнее. Меньше общих фраз, больше энергии.',
+        expert: 'Перепиши текст более экспертно и убедительно, но всё ещё понятно и без занудства.',
+    };
+    return [
+        map[mode] || 'Перепиши текст лучше.',
+        `Платформа: ${platform}.`,
+        `Тон: ${tone}.`,
+        'Вот исходный текст:',
+        base,
+    ].join('\n');
+}
+
+function runRefine(mode) {
+    if (!currentGeneratedText.trim()) {
+        tg.showAlert('Сначала сгенерируйте текст.');
+        return;
+    }
+    const topicInput = document.getElementById('studio-topic');
+    if (!topicInput) return;
+    topicInput.value = buildRefinePrompt(mode, currentGeneratedText);
+    setStudioIntent('auto');
+    document.getElementById('btn-generate').click();
 }
 
 // --- Content Generation ---
@@ -858,7 +930,7 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
         const response = await fetch('/api/generate', {
             method: 'POST',
             headers: miniAppHeaders(true),
-            body: JSON.stringify({ topic, platform, tone, model }),
+            body: JSON.stringify({ topic, platform, tone, model, intent: studioIntent }),
         });
 
         const data = await response.json();
@@ -886,6 +958,7 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
         document.getElementById('result-image-wrap').classList.add('hidden');
         document.getElementById('result-score-wrap').classList.remove('hidden');
         document.getElementById('result-actions-text').classList.remove('hidden');
+        document.getElementById('result-refine-text').classList.remove('hidden');
         document.getElementById('result-actions-image').classList.add('hidden');
         document.getElementById('result-score').textContent = currentGeneratedScore;
 
@@ -969,6 +1042,7 @@ async function runImageGeneration() {
         document.getElementById('result-image-wrap').classList.remove('hidden');
         document.getElementById('result-score-wrap').classList.add('hidden');
         document.getElementById('result-actions-text').classList.add('hidden');
+        document.getElementById('result-refine-text').classList.add('hidden');
         document.getElementById('result-actions-image').classList.remove('hidden');
 
         document.getElementById('result-container').classList.remove('hidden');
@@ -1007,6 +1081,10 @@ document.getElementById('btn-copy').addEventListener('click', () => {
 document.getElementById('btn-remake').addEventListener('click', () => {
     document.getElementById('btn-generate').click();
 });
+document.getElementById('btn-refine-concrete').addEventListener('click', () => runRefine('concrete'));
+document.getElementById('btn-refine-shorter').addEventListener('click', () => runRefine('shorter'));
+document.getElementById('btn-refine-lively').addEventListener('click', () => runRefine('lively'));
+document.getElementById('btn-refine-expert').addEventListener('click', () => runRefine('expert'));
 
 document.getElementById('btn-publish').addEventListener('click', async () => {
     const channel = settingsChannel.value.trim();

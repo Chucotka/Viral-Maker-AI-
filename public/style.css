@@ -200,10 +200,47 @@ input[type="text"]:focus, textarea:focus, select:focus {
 .result-content { font-size: 15px; line-height: 1.5; margin-bottom: 16px; white-space: pre-wrap; }
 .action-buttons { display: flex; gap: 8px; }
 .action-buttons .btn { flex: 1; padding: 10px; font-size: 14px; }
+.quick-refine-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+.chip-btn {
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text);
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-size: 13px;
+    cursor: pointer;
+}
+.chip-btn:active { opacity: 0.7; }
 .status-msg { margin-top: 10px; font-size: 14px; text-align: center; }
 .status-msg.error { color: var(--danger); }
 .status-msg.success { color: var(--success); }
 .status-msg.warning { color: var(--warning); }
+
+.intent-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.intent-pill {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    border-radius: 999px;
+    padding: 9px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.intent-pill.active {
+    background: rgba(0, 122, 255, 0.16);
+    color: #fff;
+    border-color: var(--accent);
+}
 
 /* Trends Tab */
 .search-container { margin-bottom: 20px; }

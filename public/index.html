@@ -58,7 +58,20 @@
             <div class="form-group">
                 <label for="studio-topic" id="label-studio-topic">Опиши идею или вставь тему</label>
                 <textarea id="studio-topic" placeholder="Например: Как использовать AI для бизнеса в 2024 году..." rows="4"></textarea>
-                <p class="text-hint" id="studio-trend-hint">Выберите тренд, и мы подставим готовый шаблон: хук, структура и CTA.</p>
+                <p class="text-hint" id="studio-trend-hint">Выберите тренд, режим или просто напишите короткую мысль. Мы усилим запрос сами.</p>
+            </div>
+
+            <div class="form-group" id="studio-intent-group">
+                <label>Режим</label>
+                <div class="intent-pills" id="studio-intents">
+                    <button type="button" class="intent-pill active" data-intent="auto">Авто</button>
+                    <button type="button" class="intent-pill" data-intent="sell">Продай идею</button>
+                    <button type="button" class="intent-pill" data-intent="personal">Личный пост</button>
+                    <button type="button" class="intent-pill" data-intent="explain">Объясни просто</button>
+                    <button type="button" class="intent-pill" data-intent="provocative">Провокация</button>
+                    <button type="button" class="intent-pill" data-intent="surprise">Удиви меня</button>
+                </div>
+                <p class="text-hint" id="studio-intent-hint">Авто: если идея сырая, приложение само достроит сильное ТЗ.</p>
             </div>
 
             <div id="studio-text-options">
@@ -134,6 +147,12 @@
                     <button class="btn btn-secondary" id="btn-copy">Скопировать</button>
                     <button class="btn btn-accent" id="btn-publish">В канал 📢</button>
                     <button class="btn btn-secondary" id="btn-remake">Переделать</button>
+                </div>
+                <div class="quick-refine-row" id="result-refine-text">
+                    <button type="button" class="chip-btn" id="btn-refine-concrete">Конкретнее</button>
+                    <button type="button" class="chip-btn" id="btn-refine-shorter">Короче</button>
+                    <button type="button" class="chip-btn" id="btn-refine-lively">Живее</button>
+                    <button type="button" class="chip-btn" id="btn-refine-expert">Экспертнее</button>
                 </div>
                 <div class="action-buttons hidden" id="result-actions-image">
                     <a class="btn btn-accent" id="btn-download-image" href="#" download="viral-maker-ai.png">Скачать</a>
