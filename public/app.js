@@ -77,6 +77,7 @@ let currentGeneratedText = '';
 let currentGeneratedScore = 0;
 let studioMode = 'text';
 let currentImageDataUrl = '';
+let planRefreshTimer = null;
 
 function isDesktopLikeClient() {
     const platform = String(tg.platform || '').toLowerCase();
@@ -133,6 +134,7 @@ async function buyPlanViaTribute(plan) {
             return;
         }
         if (data.link) {
+            startPlanRefreshPolling();
             if (typeof tg.openLink === 'function') {
                 tg.openLink(data.link);
             } else {
@@ -143,6 +145,35 @@ async function buyPlanViaTribute(plan) {
         console.error('Tribute payment error:', error);
         tg.showAlert('Произошла ошибка при открытии Tribute.');
     }
+}
+
+function stopPlanRefreshPolling() {
+    if (planRefreshTimer) {
+        clearInterval(planRefreshTimer);
+        planRefreshTimer = null;
+    }
+}
+
+function startPlanRefreshPolling() {
+    stopPlanRefreshPolling();
+    let attempts = 0;
+    planRefreshTimer = setInterval(async () => {
+        attempts += 1;
+        const previousPlan = userPlan;
+        await loadUserData({ silent: true });
+        if (userPlan !== previousPlan && (userPlan === 'pro' || userPlan === 'premium')) {
+            stopPlanRefreshPolling();
+            tg.showPopup({
+                title: 'Подписка активирована',
+                message: userPlan === 'premium' ? 'Premium уже доступен в приложении.' : 'Pro уже доступен в приложении.',
+                buttons: [{ type: 'ok' }],
+            });
+            return;
+        }
+        if (attempts >= 20) {
+            stopPlanRefreshPolling();
+        }
+    }, 4000);
 }
 
 function showStarsHelp(plan) {
@@ -339,14 +370,15 @@ async function loadDashboardData() {
 }
 
 // --- User Data ---
-async function loadUserData() {
+async function loadUserData(options = {}) {
+    const { silent = false } = options;
     try {
         const response = await fetch('/api/user', { headers: miniAppHeaders(false) });
         const data = await response.json().catch(() => ({}));
         if (response.status === 401 || response.status === 503) {
             const msg = data.message || data.error || 'Проверьте настройки сервера (KV, Telegram).';
             console.warn('loadUserData:', response.status, msg);
-            if (response.status === 401) tg.showAlert('Откройте приложение из Telegram, чтобы загрузить профиль.');
+            if (response.status === 401 && !silent) tg.showAlert('Откройте приложение из Telegram, чтобы загрузить профиль.');
             return;
         }
         if (data && data.plan) {
@@ -362,6 +394,16 @@ async function loadUserData() {
         console.error('Error loading user data:', error);
     }
 }
+
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+        loadUserData({ silent: true });
+    }
+});
+
+window.addEventListener('focus', () => {
+    loadUserData({ silent: true });
+});
 
 document.getElementById('btn-save-profile').addEventListener('click', async () => {
     const niche = document.getElementById('profile-niche').value.trim();
