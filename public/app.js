@@ -309,6 +309,7 @@ function renderDashboardFromList(list) {
     }
 
     const textItems = list.filter((i) => i.type === 'text' && typeof i.score === 'number');
+    updateDashboardScore(textItems.length ? textItems[0].score : null);
     document.getElementById('stat-total').textContent = String(list.length);
     const avg = textItems.length
         ? Math.round(textItems.reduce((s, i) => s + i.score, 0) / textItems.length)
@@ -335,6 +336,16 @@ function renderDashboardFromList(list) {
             return `<div class="chart-bar-wrapper"><div class="chart-bar" style="height:${h}%"></div><div class="chart-label">${i.score}</div></div>`;
         }).join('');
     }
+}
+
+function updateDashboardScore(score) {
+    const el = document.getElementById('dashboard-score');
+    if (!el) return;
+    if (Number.isFinite(score)) {
+        el.textContent = String(Math.max(0, Math.min(100, Math.round(score))));
+        return;
+    }
+    el.textContent = '—';
 }
 
 function clearNode(node) {
@@ -826,6 +837,7 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
         currentGeneratedText = data.content;
         currentGeneratedScore = data.viralScore;
         currentImageDataUrl = '';
+        updateDashboardScore(currentGeneratedScore);
 
         const resultText = document.getElementById('result-text');
         resultText.textContent = currentGeneratedText;
