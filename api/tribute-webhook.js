@@ -1,4 +1,5 @@
 const { handleTributeWebhook } = require('../lib/tributeWebhook');
+const querystring = require('querystring');
 
 async function readRawBody(req) {
   const chunks = [];
@@ -8,14 +9,24 @@ async function readRawBody(req) {
   return Buffer.concat(chunks);
 }
 
+function parseBody(rawBody) {
+  const text = Buffer.isBuffer(rawBody) ? rawBody.toString('utf8') : String(rawBody || '');
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    const parsed = querystring.parse(text);
+    if (parsed && Object.keys(parsed).length > 0) {
+      return parsed;
+    }
+    return {};
+  }
+}
+
 module.exports = async (req, res) => {
   if (req.method === 'POST') {
     req.rawBody = await readRawBody(req);
-    try {
-      req.body = JSON.parse(req.rawBody.toString('utf8') || '{}');
-    } catch {
-      req.body = {};
-    }
+    req.body = parseBody(req.rawBody);
   }
   return handleTributeWebhook(req, res);
 };
