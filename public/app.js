@@ -563,6 +563,129 @@ async function activateManualPlan(plan) {
     }
 }
 
+function getCleanupSecret(promptIfMissing = true) {
+    const input = document.getElementById('cleanup-secret');
+    let secret = input ? input.value.trim() : '';
+    if (!secret && promptIfMissing) {
+        secret = (window.prompt('Введите DEBUG_ADMIN_SECRET') || '').trim();
+        if (secret && input) input.value = secret;
+    }
+    return secret;
+}
+
+function renderCleanupList(items) {
+    const listEl = document.getElementById('cleanup-list');
+    if (!listEl) return;
+
+    if (!Array.isArray(items) || !items.length) {
+        listEl.innerHTML = '<p class="text-muted">Активных подписок не найдено.</p>';
+        listEl.classList.remove('hidden');
+        return;
+    }
+
+    listEl.innerHTML = items.map((item) => {
+        const username = item.telegramUsername ? `@${escapeHtml(item.telegramUsername)}` : 'без username';
+        const until = item.planUntil ? new Date(item.planUntil).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+        const planLabel = item.plan === 'premium' ? 'Premium' : 'Pro';
+        return `
+            <div class="cleanup-item">
+                <div class="cleanup-item-main">
+                    <div class="cleanup-item-title">${username}</div>
+                    <div class="cleanup-item-meta">
+                        userId: <code>${escapeHtml(item.userId)}</code><br>
+                        Тариф: <b>${planLabel}</b><br>
+                        До: ${escapeHtml(until)}
+                    </div>
+                </div>
+                <button type="button" class="btn btn-secondary btn-inline cleanup-reset-btn" data-user-id="${escapeHtml(item.userId)}" data-username="${escapeHtml(item.telegramUsername || '')}">Сбросить</button>
+            </div>
+        `;
+    }).join('');
+    listEl.classList.remove('hidden');
+
+    listEl.querySelectorAll('.cleanup-reset-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            resetCleanupPlan(btn.dataset.userId, btn.dataset.username || '');
+        });
+    });
+}
+
+async function loadCleanupPlans() {
+    const statusEl = document.getElementById('cleanup-status');
+    const secret = getCleanupSecret(true);
+    if (!secret) return;
+
+    if (statusEl) statusEl.textContent = 'Загружаю активные подписки...';
+
+    try {
+        const response = await fetch('/api/manual-plan?action=list', {
+            method: 'GET',
+            headers: {
+                ...miniAppHeaders(false),
+                'X-Debug-Secret': secret,
+            },
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            const message = data.message || data.error || 'Не удалось получить список.';
+            if (statusEl) statusEl.textContent = message;
+            tg.showAlert(message);
+            return;
+        }
+
+        const items = Array.isArray(data.items) ? data.items : [];
+        renderCleanupList(items);
+        if (statusEl) statusEl.textContent = items.length ? `Найдено ${items.length} активных подписок.` : 'Активных подписок нет.';
+    } catch (error) {
+        console.error('Cleanup list error:', error);
+        if (statusEl) statusEl.textContent = 'Ошибка при загрузке списка.';
+        tg.showAlert('Ошибка при загрузке списка подписок.');
+    }
+}
+
+async function resetCleanupPlan(userId, username = '') {
+    const statusEl = document.getElementById('cleanup-status');
+    const secret = getCleanupSecret(true);
+    if (!secret) return;
+
+    const label = username ? `@${username}` : userId;
+    const confirmed = window.confirm(`Сбросить подписку пользователя ${label} в Free?`);
+    if (!confirmed) return;
+
+    if (statusEl) statusEl.textContent = `Сбрасываю ${label}...`;
+
+    try {
+        const response = await fetch('/api/manual-plan', {
+            method: 'POST',
+            headers: {
+                ...miniAppHeaders(true),
+                'X-Debug-Secret': secret,
+            },
+            body: JSON.stringify({ action: 'reset', target: userId }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            const message = data.message || data.error || 'Не удалось сбросить тариф.';
+            if (statusEl) statusEl.textContent = message;
+            tg.showAlert(message);
+            return;
+        }
+
+        if (statusEl) statusEl.textContent = `Пользователь ${label} сброшен в Free.`;
+        tg.showPopup({
+            title: 'Готово',
+            message: `Тариф пользователя ${label} сброшен в Free.`,
+            buttons: [{ type: 'ok' }],
+        });
+        await loadCleanupPlans();
+        await loadUserData({ silent: true });
+    } catch (error) {
+        console.error('Cleanup reset error:', error);
+        if (statusEl) statusEl.textContent = 'Ошибка при сбросе тарифа.';
+        tg.showAlert('Ошибка при сбросе тарифа.');
+    }
+}
+
 document.getElementById('plan-pro').addEventListener('click', () => buyPlan('pro'));
 document.getElementById('plan-premium').addEventListener('click', () => buyPlan('premium'));
 document.getElementById('btn-open-premiumbot').addEventListener('click', handlePremiumBotAction);
@@ -588,6 +711,16 @@ document.getElementById('btn-debug-pro').addEventListener('click', () => activat
 document.getElementById('btn-debug-premium').addEventListener('click', () => activateDebugPlan('premium'));
 document.getElementById('btn-manual-pro').addEventListener('click', () => activateManualPlan('pro'));
 document.getElementById('btn-manual-premium').addEventListener('click', () => activateManualPlan('premium'));
+document.getElementById('btn-cleanup-load').addEventListener('click', () => loadCleanupPlans());
+document.getElementById('btn-cleanup-clear').addEventListener('click', () => {
+    const listEl = document.getElementById('cleanup-list');
+    const statusEl = document.getElementById('cleanup-status');
+    if (listEl) {
+        listEl.innerHTML = '';
+        listEl.classList.add('hidden');
+    }
+    if (statusEl) statusEl.textContent = '';
+});
 
 // --- Trends Data ---
 async function loadTrends() {

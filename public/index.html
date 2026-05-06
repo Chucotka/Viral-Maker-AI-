@@ -226,6 +226,18 @@
             </div>
 
             <div class="settings-group">
+                <label>Очистка тестовых подписок</label>
+                <p class="text-hint" style="margin-bottom:10px">Показывает активные Pro/Premium и позволяет сбросить их в Free без ручного поиска по Redis.</p>
+                <input type="password" id="cleanup-secret" placeholder="DEBUG_ADMIN_SECRET" autocomplete="off">
+                <div class="plan-actions" style="margin-top:12px">
+                    <button type="button" class="btn btn-secondary btn-inline" id="btn-cleanup-load">Показать активные</button>
+                    <button type="button" class="btn btn-secondary btn-inline" id="btn-cleanup-clear">Скрыть список</button>
+                </div>
+                <p class="text-hint" id="cleanup-status" style="margin-top:8px"></p>
+                <div id="cleanup-list" class="cleanup-list hidden"></div>
+            </div>
+
+            <div class="settings-group">
                 <label>Профиль автора</label>
                 <p class="text-hint" style="margin-bottom:10px">Сохраняется на сервере — учитывается в промптах генерации.</p>
                 <input type="text" id="profile-niche" placeholder="Ниша (например: финтех для фрилансеров)" maxlength="120">

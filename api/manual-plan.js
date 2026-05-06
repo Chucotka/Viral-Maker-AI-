@@ -5,6 +5,8 @@ const {
   planDurationDays,
   getUserRecord,
   findUserIdByTelegramUsername,
+  clearUserPlan,
+  listActivePaidUsers,
 } = require('../lib/kvUserStore');
 
 function parseTarget(value) {
@@ -16,6 +18,13 @@ function parseTarget(value) {
   const username = raw.replace(/^@+/, '').trim();
   if (!username) return null;
   return { type: 'username', value: username };
+}
+
+function parseAction(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (!raw) return '';
+  if (raw === 'list' || raw === 'reset') return raw;
+  return '';
 }
 
 module.exports = async (req, res) => {
@@ -45,10 +54,11 @@ module.exports = async (req, res) => {
       return res.status(403).json({ error: 'forbidden' });
     }
 
-    const plan = normalizeDebugPlan(req.body?.plan || req.query?.plan);
-    if (!plan) {
-      console.warn('Manual plan ignored: invalid_plan', { plan: req.body?.plan || req.query?.plan });
-      return res.status(400).json({ error: 'invalid_plan' });
+    const action = parseAction(req.body?.action || req.query?.action);
+    if (action === 'list') {
+      const items = await listActivePaidUsers({ limit: 100, scanCount: 100 });
+      console.info('Manual plan list returned', { count: items.length });
+      return res.json({ ok: true, items, count: items.length });
     }
 
     const target = parseTarget(req.body?.target || req.body?.userId || req.body?.username || req.query?.target);
@@ -67,6 +77,29 @@ module.exports = async (req, res) => {
         error: 'target_not_found',
         message: 'Пользователь не найден. Попросите его хотя бы один раз открыть mini app.',
       });
+    }
+
+    if (action === 'reset' || String(req.body?.plan || req.query?.plan || '').trim().toLowerCase() === 'free') {
+      await clearUserPlan(userId);
+      const rec = await getUserRecord(userId);
+      console.info('Manual plan reset', {
+        userId,
+        telegramUsername: rec.telegramUsername || null,
+      });
+      return res.json({
+        ok: true,
+        action: 'reset',
+        userId,
+        plan: 'free',
+        telegramUsername: rec.telegramUsername || null,
+        planUntil: null,
+      });
+    }
+
+    const plan = normalizeDebugPlan(req.body?.plan || req.query?.plan);
+    if (!plan) {
+      console.warn('Manual plan ignored: invalid_plan', { plan: req.body?.plan || req.query?.plan });
+      return res.status(400).json({ error: 'invalid_plan' });
     }
 
     await setUserPlan(userId, plan, { durationDays: planDurationDays() });
