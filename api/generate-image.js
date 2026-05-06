@@ -2,7 +2,7 @@ const { generateGeminiImage } = require('../lib/geminiImageRest');
 const { resolveTelegramUser } = require('../lib/miniAppAuth');
 const { isKvConfigured, getQuotaState, incrementGenerationCount } = require('../lib/kvUserStore');
 const { appendUserHistory } = require('../lib/kvHistory');
-const { profileImageHint } = require('../lib/buildTextPrompt');
+const { profileImageHint, buildSurpriseImagePrompt, isSurpriseRequest } = require('../lib/buildTextPrompt');
 const { assertGenerateRateLimit } = require('../lib/rateLimitKv');
 
 module.exports = async (req, res) => {
@@ -38,9 +38,11 @@ module.exports = async (req, res) => {
 
     const styleBit = String(style || '').trim();
     const profileHint = profileImageHint(rec);
-    const fullPrompt = styleBit
-      ? `${prompt}. Стиль и настроение: ${styleBit}. Высокое качество, чёткие детали.${profileHint}`
-      : `${prompt}. Высокое качество, чёткие детали, яркая композиция.${profileHint}`;
+    const fullPrompt = isSurpriseRequest(prompt)
+      ? buildSurpriseImagePrompt({ aspectRatio, style: styleBit, profile: rec })
+      : styleBit
+        ? `${prompt}. Стиль и настроение: ${styleBit}. Высокое качество, чёткие детали.${profileHint}`
+        : `${prompt}. Высокое качество, чёткие детали, яркая композиция.${profileHint}`;
 
     const { mimeType, dataBase64, modelUsed } = await generateGeminiImage({
       apiKey: process.env.GEMINI_API_KEY,
