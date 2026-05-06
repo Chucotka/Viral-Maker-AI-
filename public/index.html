@@ -215,6 +215,17 @@
             </div>
 
             <div class="settings-group">
+                <label>Ручная активация после Tribute</label>
+                <p class="text-hint" style="margin-bottom:10px">Введи <b>@username</b> или <b>userId</b>. Пользователь должен хотя бы раз открыть mini app, чтобы связка сохранилась.</p>
+                <input type="text" id="manual-target" placeholder="@username или 123456789">
+                <div class="plan-actions" style="margin-top:12px">
+                    <button type="button" class="btn btn-secondary btn-inline" id="btn-manual-pro">Выдать Pro</button>
+                    <button type="button" class="btn btn-secondary btn-inline" id="btn-manual-premium">Выдать Premium</button>
+                </div>
+                <p class="text-hint" id="manual-activate-status" style="margin-top:10px"></p>
+            </div>
+
+            <div class="settings-group">
                 <label>Профиль автора</label>
                 <p class="text-hint" style="margin-bottom:10px">Сохраняется на сервере — учитывается в промптах генерации.</p>
                 <input type="text" id="profile-niche" placeholder="Ниша (например: финтех для фрилансеров)" maxlength="120">

@@ -516,6 +516,53 @@ async function activateDebugPlan(plan) {
     }
 }
 
+async function activateManualPlan(plan) {
+    const targetInput = document.getElementById('manual-target');
+    const statusEl = document.getElementById('manual-activate-status');
+    const target = targetInput ? targetInput.value.trim() : '';
+    if (!target) {
+        tg.showAlert('Введите @username или userId.');
+        return;
+    }
+
+    const secret = window.prompt('Введите DEBUG_ADMIN_SECRET');
+    if (!secret) return;
+
+    if (statusEl) statusEl.textContent = 'Активирую тариф...';
+
+    try {
+        const response = await fetch('/api/manual-plan', {
+            method: 'POST',
+            headers: {
+                ...miniAppHeaders(true),
+                'X-Debug-Secret': secret.trim(),
+            },
+            body: JSON.stringify({ plan, target }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            const message = data.message || data.error || 'Не удалось активировать тариф.';
+            if (statusEl) statusEl.textContent = message;
+            tg.showAlert(message);
+            return;
+        }
+
+        const targetLabel = data.telegramUsername ? `@${data.telegramUsername}` : data.userId;
+        const until = data.planUntil ? new Date(data.planUntil).toLocaleDateString('ru-RU') : '';
+        const text = `${data.plan === 'premium' ? 'Premium' : 'Pro'} выдан пользователю ${targetLabel}${until ? ` до ${until}` : ''}.`;
+        if (statusEl) statusEl.textContent = text;
+        tg.showPopup({
+            title: 'Готово',
+            message: text,
+            buttons: [{ type: 'ok' }],
+        });
+    } catch (error) {
+        console.error('Manual plan error:', error);
+        if (statusEl) statusEl.textContent = 'Ошибка при ручной активации тарифа.';
+        tg.showAlert('Ошибка при ручной активации тарифа.');
+    }
+}
+
 document.getElementById('plan-pro').addEventListener('click', () => buyPlan('pro'));
 document.getElementById('plan-premium').addEventListener('click', () => buyPlan('premium'));
 document.getElementById('btn-open-premiumbot').addEventListener('click', handlePremiumBotAction);
@@ -539,6 +586,8 @@ document.getElementById('btn-upgrade-pro').addEventListener('click', () => {
 
 document.getElementById('btn-debug-pro').addEventListener('click', () => activateDebugPlan('pro'));
 document.getElementById('btn-debug-premium').addEventListener('click', () => activateDebugPlan('premium'));
+document.getElementById('btn-manual-pro').addEventListener('click', () => activateManualPlan('pro'));
+document.getElementById('btn-manual-premium').addEventListener('click', () => activateManualPlan('premium'));
 
 // --- Trends Data ---
 async function loadTrends() {

@@ -1,5 +1,5 @@
 const { resolveTelegramUser } = require('../lib/miniAppAuth');
-const { isKvConfigured, getQuotaState, saveUserRecord } = require('../lib/kvUserStore');
+const { isKvConfigured, getQuotaState, saveUserRecord, saveTelegramIdentity } = require('../lib/kvUserStore');
 
 function sanitizeProfileBody(body) {
   const niche = typeof body?.niche === 'string' ? body.niche.trim().slice(0, 120) : '';
@@ -19,6 +19,7 @@ module.exports = async (req, res) => {
 
     const auth = resolveTelegramUser(req, res);
     if (!auth) return;
+    await saveTelegramIdentity(auth.userId, auth.user);
 
     if (req.method === 'GET') {
       const { rec } = await getQuotaState(auth.userId);
