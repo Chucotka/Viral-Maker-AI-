@@ -262,6 +262,16 @@ input[type="text"]:focus, textarea:focus, select:focus {
 .plan-card.active { border-color: var(--accent); opacity: 1; }
 .plan-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .plan-price { font-weight: bold; color: var(--warning); }
+.plan-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 10px;
+}
+.btn-inline {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 14px;
+}
 .stars-help-card {
     background: linear-gradient(180deg, rgba(255, 204, 0, 0.08), rgba(0, 122, 255, 0.08));
     border: 1px solid rgba(255, 204, 0, 0.25);

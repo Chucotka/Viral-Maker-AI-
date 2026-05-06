@@ -124,6 +124,27 @@ function handlePremiumBotAction() {
     openPremiumBot();
 }
 
+async function buyPlanViaTribute(plan) {
+    try {
+        const response = await fetch(`/api/tribute-link?plan=${encodeURIComponent(plan)}`);
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            tg.showAlert(data.message || data.error || 'Не удалось открыть Tribute.');
+            return;
+        }
+        if (data.link) {
+            if (typeof tg.openLink === 'function') {
+                tg.openLink(data.link);
+            } else {
+                window.open(data.link, '_blank', 'noopener');
+            }
+        }
+    } catch (error) {
+        console.error('Tribute payment error:', error);
+        tg.showAlert('Произошла ошибка при открытии Tribute.');
+    }
+}
+
 function showStarsHelp(plan) {
     const planLabel = plan === 'premium' ? 'Premium' : 'Pro';
     const platformHint = isDesktopLikeClient()
@@ -132,8 +153,13 @@ function showStarsHelp(plan) {
     if (typeof tg.showPopup === 'function') {
         tg.showPopup({
             title: `${planLabel}: оплата через Stars`,
-            message: `${platformHint}\n\nОткройте @PremiumBot, пополните Stars и вернитесь к оплате подписки здесь.`,
+            message: `${platformHint}\n\nМожно оплатить картой через Tribute или купить Stars через @PremiumBot.`,
             buttons: [
+                {
+                    id: `open-tribute-${plan}`,
+                    type: 'default',
+                    text: 'Оплатить картой',
+                },
                 {
                     id: isDesktopLikeClient() ? 'copy-premiumbot' : 'open-premiumbot',
                     type: 'default',
@@ -144,10 +170,11 @@ function showStarsHelp(plan) {
         }, (buttonId) => {
             if (buttonId === 'open-premiumbot') openPremiumBot();
             if (buttonId === 'copy-premiumbot') copyPremiumBotHandle();
+            if (buttonId === `open-tribute-${plan}`) buyPlanViaTribute(plan);
         });
         return;
     }
-    tg.showAlert('Оплата подписки идет через Telegram Stars. Если форма не открывается на iPhone, Android или компьютере, пополните Stars через @PremiumBot и попробуйте снова.');
+    tg.showAlert('Оплата подписки идет через Telegram Stars. Если форма не открывается, оплатите картой через Tribute или купите Stars через @PremiumBot.');
 }
 
 const savedSettings = loadSavedSettings();
@@ -421,6 +448,14 @@ async function buyPlan(plan) {
 document.getElementById('plan-pro').addEventListener('click', () => buyPlan('pro'));
 document.getElementById('plan-premium').addEventListener('click', () => buyPlan('premium'));
 document.getElementById('btn-open-premiumbot').addEventListener('click', handlePremiumBotAction);
+document.getElementById('plan-pro-tribute').addEventListener('click', (e) => {
+    e.stopPropagation();
+    buyPlanViaTribute('pro');
+});
+document.getElementById('plan-premium-tribute').addEventListener('click', (e) => {
+    e.stopPropagation();
+    buyPlanViaTribute('premium');
+});
 
 if (isDesktopLikeClient()) {
     const premiumBotBtn = document.getElementById('btn-open-premiumbot');

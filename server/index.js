@@ -11,6 +11,8 @@ const { resolveTelegramUser, readInitDataString } = require('../lib/miniAppAuth'
 const { validateInitData } = require('../lib/telegramInitData');
 const { getWebhookBot } = require('../lib/webhookBot');
 const { appendLocalHistory, getLocalHistory } = require('../lib/localHistoryStore');
+const { getTributePlanConfig } = require('../lib/tributeConfig');
+const { handleTributeWebhook } = require('../lib/tributeWebhook');
 const {
   isKvConfigured,
   getQuotaState,
@@ -26,7 +28,13 @@ const { canPublishImageToChannel } = require('../lib/planFeatures');
 const app = express();
 const USERS_PATH = '/tmp/users.json';
 
-app.use(express.json());
+app.use(
+  express.json({
+    verify: (req, res, buf) => {
+      req.rawBody = Buffer.from(buf);
+    },
+  }),
+);
 app.use(express.static(path.join(__dirname, '../public')));
 
 function paidPlan(plan) {
@@ -118,6 +126,19 @@ app.get('/api/test', (req, res) =>
 );
 
 app.get('/api/webhook', (req, res) => res.json({ ok: true, message: 'webhook endpoint is alive' }));
+app.get('/api/tribute-link', (req, res) => {
+  const plan = String(req.query?.plan || '').toLowerCase();
+  const config = getTributePlanConfig(plan);
+  if (!config) return res.status(400).json({ error: 'invalid_plan' });
+  if (!config.webLink) {
+    return res.status(503).json({
+      error: 'tribute_not_configured',
+      message: 'Добавьте TRIBUTE_PRO_WEBLINK / TRIBUTE_PREMIUM_WEBLINK в Vercel.',
+    });
+  }
+  res.json({ plan: config.plan, link: config.webLink });
+});
+app.post('/api/tribute-webhook', handleTributeWebhook);
 app.post('/api/webhook', async (req, res) => {
   const updateId = req.body?.update_id;
   try {
