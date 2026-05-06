@@ -44,6 +44,21 @@ module.exports = async (req, res) => {
       });
     }
 
+    const action = parseAction(req.body?.action || req.query?.action);
+    if (action === 'list') {
+      if (req.method !== 'GET' && req.method !== 'POST') {
+        console.warn('Manual plan ignored: method_not_allowed');
+        return res.status(405).end();
+      }
+      if (!hasDebugAccess(req)) {
+        console.warn('Manual plan ignored: forbidden');
+        return res.status(403).json({ error: 'forbidden' });
+      }
+      const items = await listActivePaidUsers({ limit: 100, scanCount: 100 });
+      console.info('Manual plan list returned', { count: items.length });
+      return res.json({ ok: true, items, count: items.length });
+    }
+
     if (req.method !== 'POST') {
       console.warn('Manual plan ignored: method_not_allowed');
       return res.status(405).end();
@@ -52,13 +67,6 @@ module.exports = async (req, res) => {
     if (!hasDebugAccess(req)) {
       console.warn('Manual plan ignored: forbidden');
       return res.status(403).json({ error: 'forbidden' });
-    }
-
-    const action = parseAction(req.body?.action || req.query?.action);
-    if (action === 'list') {
-      const items = await listActivePaidUsers({ limit: 100, scanCount: 100 });
-      console.info('Manual plan list returned', { count: items.length });
-      return res.json({ ok: true, items, count: items.length });
     }
 
     const target = parseTarget(req.body?.target || req.body?.userId || req.body?.username || req.query?.target);
