@@ -563,14 +563,9 @@ async function activateManualPlan(plan) {
     }
 }
 
-function getCleanupSecret(promptIfMissing = true) {
+function getCleanupSecret() {
     const input = document.getElementById('cleanup-secret');
-    let secret = input ? input.value.trim() : '';
-    if (!secret && promptIfMissing) {
-        secret = (window.prompt('Введите DEBUG_ADMIN_SECRET') || '').trim();
-        if (secret && input) input.value = secret;
-    }
-    return secret;
+    return input ? input.value.trim() : '';
 }
 
 function renderCleanupList(items) {
@@ -612,8 +607,12 @@ function renderCleanupList(items) {
 
 async function loadCleanupPlans() {
     const statusEl = document.getElementById('cleanup-status');
-    const secret = getCleanupSecret(true);
-    if (!secret) return;
+    const secret = getCleanupSecret();
+    if (!secret) {
+        if (statusEl) statusEl.textContent = 'Введите DEBUG_ADMIN_SECRET в поле выше.';
+        tg.showAlert('Введите DEBUG_ADMIN_SECRET в поле выше.');
+        return;
+    }
 
     if (statusEl) statusEl.textContent = 'Загружаю активные подписки...';
 
@@ -645,8 +644,12 @@ async function loadCleanupPlans() {
 
 async function resetCleanupPlan(userId, username = '') {
     const statusEl = document.getElementById('cleanup-status');
-    const secret = getCleanupSecret(true);
-    if (!secret) return;
+    const secret = getCleanupSecret();
+    if (!secret) {
+        if (statusEl) statusEl.textContent = 'Введите DEBUG_ADMIN_SECRET в поле выше.';
+        tg.showAlert('Введите DEBUG_ADMIN_SECRET в поле выше.');
+        return;
+    }
 
     const label = username ? `@${username}` : userId;
     const confirmed = window.confirm(`Сбросить подписку пользователя ${label} в Free?`);
