@@ -41,6 +41,35 @@ function appendHistoryEntry(entry) {
     } catch (e) { /* ignore */ }
 }
 
+function readHistoryCache() {
+    try {
+        const raw = localStorage.getItem(HISTORY_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function historyItemKey(item) {
+    const ts = item && typeof item.ts === 'number' ? item.ts : '';
+    const type = String(item?.type || '');
+    const text = String(item?.text || item?.prompt || item?.topic || '');
+    return `${ts}|${type}|${text}`;
+}
+
+function mergeHistoryLists(serverList, localList) {
+    const merged = new Map();
+    const add = (item) => {
+        if (!item || typeof item !== 'object') return;
+        const key = historyItemKey(item);
+        const prev = merged.get(key);
+        merged.set(key, prev ? { ...prev, ...item } : item);
+    };
+    (Array.isArray(serverList) ? serverList : []).forEach(add);
+    (Array.isArray(localList) ? localList : []).forEach(add);
+    return [...merged.values()].sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 40);
+}
+
 function readLocalObject(key, fallback = {}) {
     try {
         const raw = localStorage.getItem(key);
@@ -342,10 +371,19 @@ function renderDashboardFromList(list) {
             const date = new Date(item.ts).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
             const kind = item.type === 'image' ? 'Картинка' : 'Текст';
             const preview = item.type === 'image'
-                ? `<div class="post-card-content text-muted">🖼 ${escapeHtml((item.prompt || '').slice(0, 140))}${(item.prompt || '').length > 140 ? '…' : ''}</div>`
+                ? item.dataUrl
+                    ? `<div class="post-card-preview"><img src="${escapeHtml(item.dataUrl)}" alt="Превью картинки"></div>`
+                    : `<div class="post-card-content text-muted">🖼 ${escapeHtml((item.prompt || '').slice(0, 140))}${(item.prompt || '').length > 140 ? '…' : ''}</div>`
                 : `<div class="post-card-content">${escapeHtml((item.text || '').slice(0, 140))}${(item.text || '').length > 140 ? '…' : ''}</div>`;
-            return `<div class="post-card"><div class="post-card-header"><span>${date}</span><span>${kind}</span></div>${preview}</div>`;
+            return `<div class="post-card clickable" data-history-key="${escapeHtml(historyItemKey(item))}"><div class="post-card-header"><span>${date}</span><span>${kind}</span></div>${preview}</div>`;
         }).join('');
+        postsEl.querySelectorAll('.post-card.clickable').forEach((card) => {
+            card.addEventListener('click', () => {
+                const key = card.dataset.historyKey || '';
+                const item = list.find((x) => historyItemKey(x) === key);
+                if (item) openHistoryItem(item);
+            });
+        });
     }
 
     const textItems = list.filter((i) => i.type === 'text' && typeof i.score === 'number');
@@ -376,6 +414,57 @@ function renderDashboardFromList(list) {
             return `<div class="chart-bar-wrapper"><div class="chart-bar" style="height:${h}%"></div><div class="chart-label">${i.score}</div></div>`;
         }).join('');
     }
+}
+
+function openHistoryItem(item) {
+    if (!item || typeof item !== 'object') return;
+    switchTab('studio');
+    const resultContainer = document.getElementById('result-container');
+    const resultText = document.getElementById('result-text');
+    const resultImageWrap = document.getElementById('result-image-wrap');
+    const resultImage = document.getElementById('result-image');
+    const scoreWrap = document.getElementById('result-score-wrap');
+    const scoreValue = document.getElementById('result-score');
+    const actionsText = document.getElementById('result-actions-text');
+    const actionsImage = document.getElementById('result-actions-image');
+    const publishStatus = document.getElementById('publish-status');
+
+    if (item.type === 'image') {
+        currentImageDataUrl = item.dataUrl || '';
+        currentGeneratedText = '';
+        currentGeneratedScore = 0;
+        if (item.dataUrl && resultImage) {
+            resultImage.src = item.dataUrl;
+        }
+        const dl = document.getElementById('btn-download-image');
+        if (dl && item.dataUrl) {
+            dl.href = item.dataUrl;
+            dl.download = `viral-maker-ai.${String(item.mimeType || '').includes('jpeg') ? 'jpg' : 'png'}`;
+        }
+        if (resultText) resultText.classList.add('hidden');
+        if (resultImageWrap) resultImageWrap.classList.remove('hidden');
+        if (scoreWrap) scoreWrap.classList.add('hidden');
+        if (actionsText) actionsText.classList.add('hidden');
+        if (actionsImage) actionsImage.classList.remove('hidden');
+        if (publishStatus) publishStatus.classList.add('hidden');
+        if (resultContainer) resultContainer.classList.remove('hidden');
+        return;
+    }
+
+    currentGeneratedText = item.text || '';
+    currentGeneratedScore = Number(item.score) || 0;
+    updateDashboardScore(currentGeneratedScore);
+    if (resultText) {
+        resultText.textContent = currentGeneratedText || (item.topic ? String(item.topic) : '');
+        resultText.classList.remove('hidden');
+    }
+    if (resultImageWrap) resultImageWrap.classList.add('hidden');
+    if (scoreWrap) scoreWrap.classList.remove('hidden');
+    if (scoreValue) scoreValue.textContent = String(currentGeneratedScore);
+    if (actionsText) actionsText.classList.remove('hidden');
+    if (actionsImage) actionsImage.classList.add('hidden');
+    if (publishStatus) publishStatus.classList.add('hidden');
+    if (resultContainer) resultContainer.classList.remove('hidden');
 }
 
 function updateDashboardScore(score) {
@@ -431,7 +520,8 @@ async function loadDashboardData() {
         if (res.ok) {
             const data = await res.json().catch(() => ({}));
             if (Array.isArray(data.items)) {
-                list = data.items;
+                const localList = readHistoryCache();
+                list = mergeHistoryLists(data.items, localList);
                 try {
                     localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, 40)));
                 } catch (e) { /* ignore */ }
@@ -1048,7 +1138,12 @@ async function runImageGeneration() {
         document.getElementById('result-container').classList.remove('hidden');
         document.getElementById('publish-status').classList.add('hidden');
 
-        appendHistoryEntry({ type: 'image', prompt: prompt.slice(0, 240) });
+        appendHistoryEntry({
+            type: 'image',
+            prompt: prompt.slice(0, 240),
+            dataUrl: data.dataUrl,
+            mimeType: data.mimeType,
+        });
         if (document.getElementById('tab-dashboard').classList.contains('active')) loadDashboardData();
 
         if (data.remainingToday !== undefined) {
