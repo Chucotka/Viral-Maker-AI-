@@ -32,6 +32,21 @@ function parseDataUrl(dataUrl) {
     return { mimeType: m[1], imageBase64: m[2] };
 }
 
+function normalizeChannelInput(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    if (/^-?\d+$/.test(raw)) return raw;
+    if (raw.startsWith('@')) return `@${raw.slice(1).trim().replace(/^@+/, '').toLowerCase()}`;
+    const tmeMatch = raw.match(/^(?:https?:\/\/)?t\.me\/([^/?#]+)/i);
+    if (tmeMatch) {
+        const slug = String(tmeMatch[1] || '').trim().replace(/^@+/, '');
+        return slug ? `@${slug.toLowerCase()}` : '';
+    }
+    const slug = raw.replace(/^@+/, '').trim();
+    if (/^[A-Za-z0-9_]{4,}$/i.test(slug)) return `@${slug.toLowerCase()}`;
+    return raw;
+}
+
 function appendHistoryEntry(entry) {
     try {
         const raw = localStorage.getItem(HISTORY_KEY);
@@ -1182,7 +1197,7 @@ document.getElementById('btn-refine-lively').addEventListener('click', () => run
 document.getElementById('btn-refine-expert').addEventListener('click', () => runRefine('expert'));
 
 document.getElementById('btn-publish').addEventListener('click', async () => {
-    const channel = settingsChannel.value.trim();
+    const channel = normalizeChannelInput(settingsChannel.value);
     const statusEl = document.getElementById('publish-status');
 
     statusEl.classList.remove('hidden', 'success', 'error');
@@ -1211,7 +1226,7 @@ document.getElementById('btn-publish').addEventListener('click', async () => {
             statusEl.textContent = 'Успешно опубликовано! ✅';
             statusEl.classList.add('success');
         } else {
-            statusEl.textContent = data.error || 'Ошибка публикации';
+            statusEl.textContent = data.message || data.error || 'Ошибка публикации';
             statusEl.classList.add('error');
         }
     } catch (error) {
@@ -1223,7 +1238,7 @@ document.getElementById('btn-publish').addEventListener('click', async () => {
 });
 
 document.getElementById('btn-publish-image').addEventListener('click', async () => {
-    const channel = settingsChannel.value.trim();
+    const channel = normalizeChannelInput(settingsChannel.value);
     const statusEl = document.getElementById('publish-status');
     const parts = parseDataUrl(currentImageDataUrl);
     if (!parts) {
