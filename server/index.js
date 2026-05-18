@@ -4,13 +4,12 @@ const fs = require('fs');
 const https = require('https');
 const { InputFile } = require('grammy');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { generateContentRobust, modelFallbackChain } = require('../lib/geminiRobust');
+const { modelFallbackChain, generateContentRobust } = require('../lib/geminiRobust');
 const { generateGeminiImage } = require('../lib/geminiImageRest');
-const { computeViralScore } = require('../lib/viralScore');
 const { resolveTelegramUser, readInitDataString } = require('../lib/miniAppAuth');
 const { validateInitData } = require('../lib/telegramInitData');
 const { getWebhookBot } = require('../lib/webhookBot');
-const { appendLocalHistory, getLocalHistory } = require('../lib/localHistoryStore');
+const { appendLocalHistory, getLocalHistory, updateLocalHistoryEntry } = require('../lib/localHistoryStore');
 const { getTributePlanConfig } = require('../lib/tributeConfig');
 const { handleTributeWebhook } = require('../lib/tributeWebhook');
 const { hasDebugAccess, normalizeDebugPlan, debugDurationDays } = require('../lib/debugPlan');
@@ -20,8 +19,16 @@ const {
   saveUserRecord,
   incrementGenerationCount,
 } = require('../lib/kvUserStore');
-const { appendUserHistory, getUserHistory } = require('../lib/kvHistory');
-const { buildStudioTextPrompt, profileImageHint } = require('../lib/buildTextPrompt');
+const { appendUserHistory, getUserHistory, updateUserHistoryEntry } = require('../lib/kvHistory');
+const {
+  buildStudioTextPrompt,
+  buildImageGenerationPrompt,
+  buildImageCriticPrompt,
+  buildSurpriseImagePrompt,
+  inferPostGoal,
+  isSurpriseRequest,
+} = require('../lib/buildTextPrompt');
+const { generateBestTextContent } = require('../lib/textGeneration');
 const { assertGenerateRateLimit } = require('../lib/rateLimitKv');
 const { getTrendsList } = require('../lib/trendsProvider');
 const { canPublishImageToChannel } = require('../lib/planFeatures');
@@ -83,6 +90,10 @@ function appendFileHistory(userId, entry) {
 
 function getFileHistory(userId, limit = 40) {
   return getLocalHistory(userId, limit);
+}
+
+function updateFileHistory(userId, ts, mutation) {
+  return updateLocalHistoryEntry(userId, ts, mutation);
 }
 
 /** Как в Vercel API: с KV — только initData; без KV — initData или userId из query/body. */
@@ -214,7 +225,7 @@ app.post('/api/generate', async (req, res) => {
     const auth = resolveStudioUser(req, res);
     if (!auth) return;
 
-    const { topic, platform = 'Telegram', tone = 'вирусный', model = 'gemini-2.5-flash' } = req.body;
+    const { topic, platform = 'Telegram', tone = 'вирусный', model = 'gemini-2.5-flash', intent = 'auto', risk = 'balanced' } = req.body;
 
     if (!topic || topic.trim().length === 0) {
       return res.status(400).json({ error: 'topic_required', message: 'Тема не указана.' });
@@ -231,27 +242,92 @@ app.post('/api/generate', async (req, res) => {
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const modelChain = modelFallbackChain(model);
+    let recentHistory = [];
+    try {
+      recentHistory =
+        ctx.mode === 'kv' ? await getUserHistory(auth.userId, 20) : await getLocalHistory(auth.userId, 20);
+    } catch (histErr) {
+      console.error('recentHistory:', histErr.message);
+    }
 
     const profileRec = ctx.mode === 'kv' ? ctx.rec : ctx.users[ctx.userId] || {};
+    const goal = inferPostGoal({
+      topic,
+      intent,
+      profile: profileRec,
+      recentHistory,
+      risk,
+    });
     const prompt = buildStudioTextPrompt({
       topic,
       platform,
       tone,
       profile: profileRec,
+      recentHistory,
+      risk,
+      goal,
     });
 
-    const { content, modelUsed } = await generateContentRobust(genAI, modelChain, prompt);
+    const {
+      content,
+      modelUsed,
+      viralScore,
+      draftScore,
+      rewriteApplied,
+      selectedAngle,
+      candidateCount,
+      candidateSummary,
+      criticScore,
+      criticNeedsRewrite,
+      criticVerdict,
+      criticIssues,
+      criticStrengths,
+      criticBreakdown,
+      alternateContent,
+      alternateAngle,
+      alternateScore,
+      goal: detectedGoal,
+    } = await generateBestTextContent(
+      genAI,
+      modelChain,
+      prompt,
+      {
+        topic,
+        platform,
+        tone,
+        intent,
+        risk,
+        profile: profileRec,
+        recentHistory,
+        goal,
+      },
+    );
     const { remainingToday } = await bumpQuota(auth.userId, ctx);
-    const viralScore = computeViralScore(content);
 
+    const historyTs = Date.now();
     if (ctx.mode === 'kv') {
       try {
         await appendUserHistory(auth.userId, {
+          ts: historyTs,
           type: 'text',
           topic: topic.trim().slice(0, 240),
           text: content.slice(0, 4000),
           score: viralScore,
           platform,
+          risk,
+          goal: detectedGoal || goal,
+          selectedAngle,
+          rewriteApplied: !!rewriteApplied,
+          candidateCount: Number(candidateCount) || 0,
+          criticScore: Number(criticScore) || 0,
+          criticNeedsRewrite: !!criticNeedsRewrite,
+          criticVerdict: criticVerdict || '',
+          criticIssues: Array.isArray(criticIssues) ? criticIssues.slice(0, 4) : [],
+          criticStrengths: Array.isArray(criticStrengths) ? criticStrengths.slice(0, 4) : [],
+          criticBreakdown: criticBreakdown || {},
+          alternateText: alternateContent || '',
+          alternateAngle: alternateAngle || '',
+          alternateScore: Number(alternateScore) || 0,
         });
       } catch (histErr) {
         console.error('appendUserHistory:', histErr.message);
@@ -259,11 +335,26 @@ app.post('/api/generate', async (req, res) => {
     } else {
       try {
         await appendFileHistory(auth.userId, {
+          ts: historyTs,
           type: 'text',
           topic: topic.trim().slice(0, 240),
           text: content.slice(0, 4000),
           score: viralScore,
           platform,
+          risk,
+          goal: detectedGoal || goal,
+          selectedAngle,
+          rewriteApplied: !!rewriteApplied,
+          candidateCount: Number(candidateCount) || 0,
+          criticScore: Number(criticScore) || 0,
+          criticNeedsRewrite: !!criticNeedsRewrite,
+          criticVerdict: criticVerdict || '',
+          criticIssues: Array.isArray(criticIssues) ? criticIssues.slice(0, 4) : [],
+          criticStrengths: Array.isArray(criticStrengths) ? criticStrengths.slice(0, 4) : [],
+          criticBreakdown: criticBreakdown || {},
+          alternateText: alternateContent || '',
+          alternateAngle: alternateAngle || '',
+          alternateScore: Number(alternateScore) || 0,
         });
       } catch (histErr) {
         console.error('appendFileHistory:', histErr.message);
@@ -273,7 +364,24 @@ app.post('/api/generate', async (req, res) => {
     res.json({
       content,
       viralScore,
+      draftScore,
       model: modelUsed,
+      risk,
+      goal: detectedGoal || goal,
+      rewriteApplied,
+      selectedAngle,
+      candidateCount,
+      candidateSummary,
+      criticScore,
+      criticNeedsRewrite,
+      criticVerdict,
+      criticIssues,
+      criticStrengths,
+      criticBreakdown,
+      alternateContent,
+      alternateAngle,
+      alternateScore,
+      historyTs,
       ...(remainingToday !== undefined ? { remainingToday } : {}),
     });
   } catch (e) {
@@ -287,7 +395,7 @@ app.post('/api/generate-image', async (req, res) => {
     const auth = resolveStudioUser(req, res);
     if (!auth) return;
 
-    const { prompt: rawPrompt, aspectRatio = '1:1', style = '' } = req.body;
+    const { prompt: rawPrompt, aspectRatio = '1:1', style = '', risk = 'balanced' } = req.body;
     const prompt = String(rawPrompt || '').trim();
     if (!prompt) {
       return res.status(400).json({ error: 'prompt_required', message: 'Введите описание картинки.' });
@@ -304,24 +412,61 @@ app.post('/api/generate-image', async (req, res) => {
 
     const styleBit = String(style || '').trim();
     const profileRec = ctx.mode === 'kv' ? ctx.rec : ctx.users[ctx.userId] || {};
-    const profileHint = profileImageHint(profileRec);
-    const fullPrompt = styleBit
-      ? `${prompt}. Стиль и настроение: ${styleBit}. Высокое качество, чёткие детали.${profileHint}`
-      : `${prompt}. Высокое качество, чёткие детали, яркая композиция.${profileHint}`;
+    let recentHistory = [];
+    try {
+      recentHistory =
+        ctx.mode === 'kv' ? await getUserHistory(auth.userId, 20) : await getLocalHistory(auth.userId, 20);
+    } catch (histErr) {
+      console.error('recentHistory:', histErr.message);
+    }
+    const fullPrompt = isSurpriseRequest(prompt)
+      ? buildSurpriseImagePrompt({ aspectRatio, style: styleBit, profile: profileRec, recentHistory, risk })
+      : buildImageGenerationPrompt({
+          prompt,
+          aspectRatio,
+          style: styleBit,
+          profile: profileRec,
+          recentHistory,
+          risk,
+        });
+    let finalPrompt = fullPrompt;
+    let directorApplied = false;
+    try {
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      const criticPrompt = buildImageCriticPrompt({
+        basePrompt: fullPrompt,
+        aspectRatio,
+        style: styleBit,
+        profile: profileRec,
+        recentHistory,
+        risk,
+      });
+      const critique = await generateContentRobust(genAI, modelFallbackChain('gemini-2.5-flash'), criticPrompt, {});
+      const revised = String(critique.content || '').trim();
+      if (revised) {
+        finalPrompt = revised;
+        directorApplied = true;
+      }
+    } catch (criticErr) {
+      console.error('image director:', criticErr.message);
+    }
 
     const { mimeType, dataBase64, modelUsed } = await generateGeminiImage({
       apiKey: process.env.GEMINI_API_KEY,
-      prompt: fullPrompt,
+      prompt: finalPrompt,
       aspectRatio,
     });
 
     const { remainingToday } = await bumpQuota(auth.userId, ctx);
 
+    const historyTs = Date.now();
     if (ctx.mode === 'kv') {
       try {
         await appendUserHistory(auth.userId, {
+          ts: historyTs,
           type: 'image',
           prompt: prompt.slice(0, 400),
+          directorApplied: !!directorApplied,
         });
       } catch (histErr) {
         console.error('appendUserHistory:', histErr.message);
@@ -329,8 +474,10 @@ app.post('/api/generate-image', async (req, res) => {
     } else {
       try {
         await appendFileHistory(auth.userId, {
+          ts: historyTs,
           type: 'image',
           prompt: prompt.slice(0, 400),
+          directorApplied: !!directorApplied,
         });
       } catch (histErr) {
         console.error('appendFileHistory:', histErr.message);
@@ -342,6 +489,8 @@ app.post('/api/generate-image', async (req, res) => {
       imageBase64: dataBase64,
       dataUrl: `data:${mimeType};base64,${dataBase64}`,
       model: modelUsed,
+      directorApplied,
+      historyTs,
       ...(remainingToday !== undefined ? { remainingToday } : {}),
     });
   } catch (e) {
@@ -362,6 +511,26 @@ app.get('/api/history', async (req, res) => {
   }
 });
 
+app.post('/api/history', async (req, res) => {
+  try {
+    const auth = resolveStudioUser(req, res);
+    if (!auth) return;
+    const ts = Number(req.body?.ts);
+    const mutation = req.body?.mutation && typeof req.body.mutation === 'object' ? req.body.mutation : {};
+    if (!Number.isFinite(ts)) {
+      return res.status(400).json({ error: 'invalid_ts' });
+    }
+    const item = isKvConfigured()
+      ? await updateUserHistoryEntry(auth.userId, ts, mutation)
+      : await updateFileHistory(auth.userId, ts, mutation);
+    if (!item) return res.status(404).json({ error: 'history_item_not_found' });
+    res.json({ ok: true, item });
+  } catch (e) {
+    console.error('History feedback API error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/trends', async (req, res) => {
   try {
     const trends = await getTrendsList();
@@ -376,7 +545,8 @@ function sanitizeProfileBody(body) {
   const niche = typeof body?.niche === 'string' ? body.niche.trim().slice(0, 120) : '';
   const language = typeof body?.language === 'string' ? body.language.trim().slice(0, 40) : '';
   const styleNote = typeof body?.styleNote === 'string' ? body.styleNote.trim().slice(0, 200) : '';
-  return { niche, language, styleNote };
+  const brandMemory = typeof body?.brandMemory === 'string' ? body.brandMemory.trim().slice(0, 1000) : '';
+  return { niche, language, styleNote, brandMemory };
 }
 
 app.get('/api/user', async (req, res) => {
@@ -395,6 +565,7 @@ app.get('/api/user', async (req, res) => {
           niche: rec.niche || '',
           language: rec.language || '',
           styleNote: rec.styleNote || '',
+          brandMemory: rec.brandMemory || '',
         },
       });
     }
@@ -410,6 +581,7 @@ app.get('/api/user', async (req, res) => {
         niche: typeof u.niche === 'string' ? u.niche : '',
         language: typeof u.language === 'string' ? u.language : '',
         styleNote: typeof u.styleNote === 'string' ? u.styleNote : '',
+        brandMemory: typeof u.brandMemory === 'string' ? u.brandMemory : '',
       },
     });
   } catch (e) {
@@ -423,20 +595,20 @@ app.post('/api/user', async (req, res) => {
     const auth = resolveStudioUser(req, res);
     if (!auth) return;
 
-    const { niche, language, styleNote } = sanitizeProfileBody(req.body || {});
+    const { niche, language, styleNote, brandMemory } = sanitizeProfileBody(req.body || {});
 
     if (isKvConfigured()) {
       const { rec } = await getQuotaState(auth.userId);
-      await saveUserRecord(auth.userId, { ...rec, niche, language, styleNote });
-      return res.json({ ok: true, profile: { niche, language, styleNote } });
+      await saveUserRecord(auth.userId, { ...rec, niche, language, styleNote, brandMemory });
+      return res.json({ ok: true, profile: { niche, language, styleNote, brandMemory } });
     }
 
     const users = loadFileUsers();
     const today = new Date().toISOString().split('T')[0];
     if (!users[auth.userId]) users[auth.userId] = { plan: 'free', dailyCount: 0, lastReset: today };
-    Object.assign(users[auth.userId], { niche, language, styleNote });
+    Object.assign(users[auth.userId], { niche, language, styleNote, brandMemory });
     saveFileUsers(users);
-    res.json({ ok: true, profile: { niche, language, styleNote } });
+    res.json({ ok: true, profile: { niche, language, styleNote, brandMemory } });
   } catch (e) {
     console.error('User POST error:', e.message);
     res.status(500).json({ error: e.message });

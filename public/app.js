@@ -9,6 +9,7 @@ const PREMIUM_BOT_HANDLE = '@PremiumBot';
 const HISTORY_KEY = 'vm_history_v1';
 const SETTINGS_KEY = 'vm_settings_v1';
 const DEFAULT_INTENT = 'auto';
+const DEFAULT_RISK = 'balanced';
 
 /** Заголовки для Vercel API: подпись Telegram Mini App (обязательно). */
 function miniAppHeaders(jsonBody = false) {
@@ -32,6 +33,50 @@ function parseDataUrl(dataUrl) {
     return { mimeType: m[1], imageBase64: m[2] };
 }
 
+function formatStrategyLabel(angle) {
+    const map = {
+        story: 'история',
+        insight: 'инсайт',
+        practical: 'практика',
+        proof: 'доказательство',
+        offer: 'оффер',
+        urgency: 'срочность',
+        reflection: 'рефлексия',
+        detail: 'деталь',
+        simple: 'простой разбор',
+        myth: 'миф vs правда',
+        steps: 'пошагово',
+        hot_take: 'смелый take',
+        contrarian: 'контраргумент',
+        debate: 'повод для спора',
+        unexpected: 'неожиданный ход',
+        contrast: 'контраст',
+        fresh: 'свежий угол',
+        fallback: 'fallback',
+    };
+    return map[String(angle || '').toLowerCase()] || String(angle || '').toLowerCase();
+}
+
+function formatRiskLabel(risk) {
+    const map = {
+        calm: 'спокойнее',
+        balanced: 'баланс',
+        bold: 'смелее',
+    };
+    return map[String(risk || '').toLowerCase()] || String(risk || '').toLowerCase();
+}
+
+function formatGoalLabel(goal) {
+    const map = {
+        reach: 'охват',
+        trust: 'доверие',
+        warmup: 'прогрев',
+        sale: 'продажа',
+        auto: 'авто',
+    };
+    return map[String(goal || '').toLowerCase()] || String(goal || '').toLowerCase();
+}
+
 function normalizeChannelInput(value) {
     const raw = String(value || '').trim();
     if (!raw) return '';
@@ -47,13 +92,125 @@ function normalizeChannelInput(value) {
     return raw;
 }
 
+function buildResultMetaText(meta, variantLabel = 'A') {
+    const parts = [];
+    if (variantLabel) {
+        parts.push(`Вариант ${variantLabel}`);
+    }
+    if (meta && meta.selectedAngle) {
+        parts.push(`Угол: ${formatStrategyLabel(meta.selectedAngle)}`);
+    } else {
+        parts.push('Угол: авто');
+    }
+    if (meta && meta.goal) {
+        parts.push(`Цель: ${formatGoalLabel(meta.goal)}`);
+    }
+    parts.push(meta && meta.rewriteApplied ? 'Переписано' : 'Без переписывания');
+    if (meta && typeof meta.candidateCount === 'number') {
+        parts.push(`Вариантов: ${meta.candidateCount}`);
+    }
+    if (meta && typeof meta.criticScore === 'number') {
+        parts.push(`Критик: ${meta.criticScore}/100`);
+    }
+    if (meta && meta.risk) {
+        parts.push(`Подача: ${formatRiskLabel(meta.risk)}`);
+    }
+    return parts.filter(Boolean).join(' · ');
+}
+
+function buildCriticText(meta) {
+    if (!meta) return '';
+    const parts = [];
+    if (meta.criticVerdict) parts.push(meta.criticVerdict);
+    if (Array.isArray(meta.criticStrengths) && meta.criticStrengths.length) {
+        parts.push(`Сильные стороны: ${meta.criticStrengths.join('; ')}`);
+    }
+    const b = meta.criticBreakdown || {};
+    const breakdown = [];
+    if (typeof b.hook === 'number') breakdown.push(`Хук ${b.hook}/10`);
+    if (typeof b.novelty === 'number') breakdown.push(`Новизна ${b.novelty}/10`);
+    if (typeof b.clarity === 'number') breakdown.push(`Ясность ${b.clarity}/10`);
+    if (typeof b.cta === 'number') breakdown.push(`CTA ${b.cta}/10`);
+    if (typeof b.fit === 'number') breakdown.push(`Фит ${b.fit}/10`);
+    if (breakdown.length) parts.push(breakdown.join(' · '));
+    if (Array.isArray(meta.criticIssues) && meta.criticIssues.length) {
+        parts.push(`Слабые места: ${meta.criticIssues.join('; ')}`);
+    }
+    return parts.filter(Boolean).join(' · ');
+}
+
+function syncVariantToggleButton() {
+    const btn = document.getElementById('btn-toggle-variant');
+    if (!btn) return;
+    const hasAlternative = !!String(currentAlternativeText || '').trim();
+    btn.classList.toggle('hidden', !hasAlternative);
+    btn.textContent = currentDisplayedVariant === 'A' ? 'Показать B' : 'Показать A';
+}
+
+function renderTextResultView() {
+    const resultText = document.getElementById('result-text');
+    const resultScore = document.getElementById('result-score');
+    const resultMeta = document.getElementById('result-meta');
+    const resultCritic = document.getElementById('result-critic');
+    const resultScoreWrap = document.getElementById('result-score-wrap');
+    if (!resultText || !resultScore || !resultMeta || !resultScoreWrap) return;
+
+    resultText.textContent = currentGeneratedText || '';
+    resultText.classList.remove('hidden');
+    document.getElementById('result-image-wrap').classList.add('hidden');
+    resultScoreWrap.classList.remove('hidden');
+    document.getElementById('result-actions-text').classList.remove('hidden');
+    document.getElementById('result-refine-text').classList.remove('hidden');
+    document.getElementById('result-actions-image').classList.add('hidden');
+    resultScore.textContent = String(currentGeneratedScore || 0);
+    resultMeta.textContent = buildResultMetaText(currentGeneratedMeta, currentDisplayedVariant);
+    resultMeta.classList.toggle('hidden', !resultMeta.textContent);
+    if (resultCritic) {
+        const criticText = currentDisplayedVariant === 'A'
+            ? (currentGeneratedCriticText || buildCriticText(currentGeneratedMeta))
+            : '';
+        resultCritic.textContent = criticText;
+        resultCritic.classList.toggle('hidden', !resultCritic.textContent);
+    }
+    syncVariantToggleButton();
+}
+
+function syncCurrentHistoryFromItem(item) {
+    if (!item || typeof item !== 'object') return;
+    currentHistoryTs = Number(item.ts) || 0;
+    currentHistoryType = String(item.type || '');
+}
+
+function trackHistoryFeedback(mutation = {}) {
+    if (!currentHistoryTs) return;
+    updateHistoryCacheEntry(currentHistoryTs, mutation);
+    pushHistoryFeedback(currentHistoryTs, mutation).catch(() => {});
+}
+
+function activateTextVariant(variant) {
+    const next = String(variant || 'A');
+    const hasAlt = !!String(currentAlternativeText || '').trim();
+    if (next === currentDisplayedVariant || !hasAlt) {
+      renderTextResultView();
+      return;
+    }
+    [currentGeneratedText, currentAlternativeText] = [currentAlternativeText, currentGeneratedText];
+    [currentGeneratedScore, currentAlternativeScore] = [currentAlternativeScore, currentGeneratedScore];
+    [currentGeneratedMeta, currentAlternativeMeta] = [currentAlternativeMeta, currentGeneratedMeta];
+    currentDisplayedVariant = next;
+    renderTextResultView();
+}
+
 function appendHistoryEntry(entry) {
     try {
         const raw = localStorage.getItem(HISTORY_KEY);
         const list = raw ? JSON.parse(raw) : [];
-        list.unshift({ ...entry, ts: Date.now() });
+        const saved = { ...entry, ts: Number(entry?.ts) || Date.now() };
+        list.unshift(saved);
         localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, 40)));
+        return saved;
     } catch (e) { /* ignore */ }
+    return null;
 }
 
 function readHistoryCache() {
@@ -70,6 +227,47 @@ function historyItemKey(item) {
     const type = String(item?.type || '');
     const text = String(item?.text || item?.prompt || item?.topic || '');
     return `${ts}|${type}|${text}`;
+}
+
+function applyHistoryMutation(item, mutation = {}) {
+    const set = mutation && typeof mutation.set === 'object' ? mutation.set : {};
+    const increments = mutation && typeof mutation.increments === 'object' ? mutation.increments : {};
+    const next = { ...item };
+    Object.entries(set).forEach(([key, value]) => {
+        next[key] = value;
+    });
+    Object.entries(increments).forEach(([key, value]) => {
+        const delta = Number(value);
+        if (!Number.isFinite(delta) || delta === 0) return;
+        next[key] = (Number(next[key]) || 0) + delta;
+    });
+    return next;
+}
+
+function updateHistoryCacheEntry(ts, mutation = {}) {
+    const targetTs = Number(ts);
+    if (!Number.isFinite(targetTs)) return null;
+    try {
+        const raw = localStorage.getItem(HISTORY_KEY);
+        const list = raw ? JSON.parse(raw) : [];
+        const index = list.findIndex((item) => Number(item?.ts) === targetTs);
+        if (index < 0) return null;
+        const updated = applyHistoryMutation(list[index], mutation);
+        list[index] = updated;
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, 40)));
+        return updated;
+    } catch (e) {
+        return null;
+    }
+}
+
+async function pushHistoryFeedback(ts, mutation = {}) {
+    const response = await fetch('/api/history', {
+        method: 'POST',
+        headers: miniAppHeaders(true),
+        body: JSON.stringify({ ts, mutation }),
+    });
+    return response.ok;
 }
 
 function mergeHistoryLists(serverList, localList) {
@@ -120,14 +318,28 @@ let userPlan = 'free';
 // Global state
 let currentGeneratedText = '';
 let currentGeneratedScore = 0;
+let currentGeneratedMeta = null;
+let currentGeneratedCriticText = '';
+let currentAlternativeText = '';
+let currentAlternativeScore = 0;
+let currentAlternativeMeta = null;
+let currentDisplayedVariant = 'A';
+let currentHistoryTs = 0;
+let currentHistoryType = '';
 let studioMode = 'text';
 let currentImageDataUrl = '';
 let planRefreshTimer = null;
 let studioIntent = savedIntent();
+let studioRiskLevel = savedRisk();
 
 function savedIntent() {
     const value = readLocalObject(SETTINGS_KEY, {}).intent;
     return typeof value === 'string' && value ? value : DEFAULT_INTENT;
+}
+
+function savedRisk() {
+    const value = readLocalObject(SETTINGS_KEY, {}).risk;
+    return typeof value === 'string' && value ? value : DEFAULT_RISK;
 }
 
 function isDesktopLikeClient() {
@@ -264,6 +476,7 @@ const settingsChannel = document.getElementById('settings-channel');
 const settingsModel = document.getElementById('settings-model');
 const studioPlatform = document.getElementById('studio-platform');
 const studioTone = document.getElementById('studio-tone');
+const studioRisk = document.getElementById('studio-risk');
 const imageAspect = document.getElementById('image-aspect');
 const imageStyle = document.getElementById('image-style');
 const studioIntentHint = document.getElementById('studio-intent-hint');
@@ -281,13 +494,19 @@ if (savedSettings.channel && settingsChannel) settingsChannel.value = savedSetti
 if (savedSettings.model && settingsModel) settingsModel.value = savedSettings.model;
 if (savedSettings.platform && studioPlatform) studioPlatform.value = savedSettings.platform;
 if (savedSettings.tone && studioTone) studioTone.value = savedSettings.tone;
+if (savedSettings.risk && studioRisk) studioRisk.value = savedSettings.risk;
 if (savedSettings.aspectRatio && imageAspect) imageAspect.value = savedSettings.aspectRatio;
 if (savedSettings.style && imageStyle) imageStyle.value = savedSettings.style;
+if (studioRisk) studioRiskLevel = studioRisk.value;
 
 if (settingsChannel) settingsChannel.addEventListener('input', () => updateSavedSettings({ channel: settingsChannel.value.trim() }));
 if (settingsModel) settingsModel.addEventListener('change', () => updateSavedSettings({ model: settingsModel.value }));
 if (studioPlatform) studioPlatform.addEventListener('change', () => updateSavedSettings({ platform: studioPlatform.value }));
 if (studioTone) studioTone.addEventListener('change', () => updateSavedSettings({ tone: studioTone.value }));
+if (studioRisk) studioRisk.addEventListener('change', () => {
+    studioRiskLevel = studioRisk.value;
+    updateSavedSettings({ risk: studioRisk.value });
+});
 if (imageAspect) imageAspect.addEventListener('change', () => updateSavedSettings({ aspectRatio: imageAspect.value }));
 if (imageStyle) imageStyle.addEventListener('change', () => updateSavedSettings({ style: imageStyle.value }));
 
@@ -443,11 +662,20 @@ function openHistoryItem(item) {
     const actionsText = document.getElementById('result-actions-text');
     const actionsImage = document.getElementById('result-actions-image');
     const publishStatus = document.getElementById('publish-status');
+    const resultMeta = document.getElementById('result-meta');
+    const resultCritic = document.getElementById('result-critic');
 
     if (item.type === 'image') {
+        syncCurrentHistoryFromItem(item);
         currentImageDataUrl = item.dataUrl || '';
         currentGeneratedText = '';
         currentGeneratedScore = 0;
+        currentGeneratedMeta = null;
+        currentGeneratedCriticText = '';
+        currentAlternativeText = '';
+        currentAlternativeScore = 0;
+        currentAlternativeMeta = null;
+        currentDisplayedVariant = 'A';
         if (item.dataUrl && resultImage) {
             resultImage.src = item.dataUrl;
         }
@@ -462,16 +690,63 @@ function openHistoryItem(item) {
         if (actionsText) actionsText.classList.add('hidden');
         if (actionsImage) actionsImage.classList.remove('hidden');
         if (publishStatus) publishStatus.classList.add('hidden');
+        if (resultMeta) {
+            resultMeta.textContent = item.directorApplied ? 'Визуальный директор: активен · анти-повторы включены' : '';
+            resultMeta.classList.toggle('hidden', !resultMeta.textContent);
+        }
+        if (resultCritic) {
+            resultCritic.textContent = '';
+            resultCritic.classList.add('hidden');
+        }
+        const variantBtn = document.getElementById('btn-toggle-variant');
+        if (variantBtn) variantBtn.classList.add('hidden');
         if (resultContainer) resultContainer.classList.remove('hidden');
+        trackHistoryFeedback({
+            increments: { openedCount: 1 },
+            set: { lastOpenedAt: Date.now(), lastOpenedType: 'image' },
+        });
         return;
     }
 
+    syncCurrentHistoryFromItem(item);
     currentGeneratedText = item.text || '';
     currentGeneratedScore = Number(item.score) || 0;
+    currentGeneratedMeta = {
+        goal: item.goal || '',
+        selectedAngle: item.selectedAngle || '',
+        rewriteApplied: !!item.rewriteApplied,
+        candidateCount: Number(item.candidateCount) || 0,
+        criticScore: Number(item.criticScore) || 0,
+        criticVerdict: item.criticVerdict || '',
+        criticIssues: Array.isArray(item.criticIssues) ? item.criticIssues : [],
+        criticStrengths: Array.isArray(item.criticStrengths) ? item.criticStrengths : [],
+        criticBreakdown: item.criticBreakdown || {},
+        risk: item.risk || DEFAULT_RISK,
+        alternateAngle: item.alternateAngle || '',
+    };
+    currentGeneratedCriticText = buildCriticText({
+        criticVerdict: item.criticVerdict || '',
+        criticIssues: Array.isArray(item.criticIssues) ? item.criticIssues : [],
+        criticStrengths: Array.isArray(item.criticStrengths) ? item.criticStrengths : [],
+        criticBreakdown: item.criticBreakdown || {},
+    });
+    currentAlternativeText = item.alternateText || '';
+    currentAlternativeScore = Number(item.alternateScore) || 0;
+    currentAlternativeMeta = item.alternateText
+        ? {
+            goal: item.goal || '',
+            selectedAngle: item.alternateAngle || '',
+            rewriteApplied: false,
+            candidateCount: Number(item.candidateCount) || 0,
+            criticScore: null,
+            risk: item.risk || DEFAULT_RISK,
+        }
+        : null;
+    currentDisplayedVariant = 'A';
     updateDashboardScore(currentGeneratedScore);
+    renderTextResultView();
     if (resultText) {
         resultText.textContent = currentGeneratedText || (item.topic ? String(item.topic) : '');
-        resultText.classList.remove('hidden');
     }
     if (resultImageWrap) resultImageWrap.classList.add('hidden');
     if (scoreWrap) scoreWrap.classList.remove('hidden');
@@ -480,6 +755,14 @@ function openHistoryItem(item) {
     if (actionsImage) actionsImage.classList.add('hidden');
     if (publishStatus) publishStatus.classList.add('hidden');
     if (resultContainer) resultContainer.classList.remove('hidden');
+    if (resultCritic) {
+        resultCritic.textContent = currentGeneratedCriticText;
+        resultCritic.classList.toggle('hidden', !currentGeneratedCriticText);
+    }
+    trackHistoryFeedback({
+        increments: { openedCount: 1 },
+        set: { lastOpenedAt: Date.now(), lastOpenedType: 'text' },
+    });
 }
 
 function updateDashboardScore(score) {
@@ -576,6 +859,7 @@ async function loadUserData(options = {}) {
             document.getElementById('profile-niche').value = data.profile.niche || '';
             document.getElementById('profile-language').value = data.profile.language || '';
             document.getElementById('profile-style').value = data.profile.styleNote || '';
+            document.getElementById('profile-brand-memory').value = data.profile.brandMemory || '';
         }
     } catch (error) {
         console.error('Error loading user data:', error);
@@ -596,11 +880,12 @@ document.getElementById('btn-save-profile').addEventListener('click', async () =
     const niche = document.getElementById('profile-niche').value.trim();
     const language = document.getElementById('profile-language').value.trim();
     const styleNote = document.getElementById('profile-style').value.trim();
+    const brandMemory = document.getElementById('profile-brand-memory').value.trim();
     try {
         const response = await fetch('/api/user', {
             method: 'POST',
             headers: miniAppHeaders(true),
-            body: JSON.stringify({ niche, language, styleNote }),
+            body: JSON.stringify({ niche, language, styleNote, brandMemory }),
         });
         const data = await response.json().catch(() => ({}));
         if (response.status === 503) {
@@ -1016,6 +1301,7 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
     const topic = document.getElementById('studio-topic').value.trim();
     const platform = studioPlatform.value;
     const tone = studioTone.value;
+    const risk = (studioRisk && studioRisk.value) || studioRiskLevel || DEFAULT_RISK;
     const model = settingsModel.value || 'gemini-2.5-flash';
 
     const limitMsg = document.getElementById('limit-msg');
@@ -1035,7 +1321,7 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
         const response = await fetch('/api/generate', {
             method: 'POST',
             headers: miniAppHeaders(true),
-            body: JSON.stringify({ topic, platform, tone, model, intent: studioIntent }),
+            body: JSON.stringify({ topic, platform, tone, risk, model, intent: studioIntent }),
         });
 
         const data = await response.json();
@@ -1054,28 +1340,69 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
 
         currentGeneratedText = data.content;
         currentGeneratedScore = data.viralScore;
+        currentGeneratedMeta = {
+            goal: data.goal || '',
+            selectedAngle: data.selectedAngle || '',
+            rewriteApplied: !!data.rewriteApplied,
+            candidateCount: Number(data.candidateCount) || 0,
+            criticScore: Number(data.criticScore) || 0,
+            criticNeedsRewrite: !!data.criticNeedsRewrite,
+            criticVerdict: data.criticVerdict || '',
+            criticIssues: Array.isArray(data.criticIssues) ? data.criticIssues : [],
+            criticStrengths: Array.isArray(data.criticStrengths) ? data.criticStrengths : [],
+            criticBreakdown: data.criticBreakdown || {},
+            risk,
+            alternateAngle: data.alternateAngle || '',
+            alternateScore: Number(data.alternateScore) || 0,
+        };
+        currentGeneratedCriticText = buildCriticText({
+            criticVerdict: data.criticVerdict || '',
+            criticIssues: Array.isArray(data.criticIssues) ? data.criticIssues : [],
+            criticStrengths: Array.isArray(data.criticStrengths) ? data.criticStrengths : [],
+            criticBreakdown: data.criticBreakdown || {},
+        });
+        currentAlternativeText = data.alternateContent || '';
+        currentAlternativeScore = Number(data.alternateScore) || 0;
+        currentAlternativeMeta = currentAlternativeText
+            ? {
+                goal: data.goal || '',
+                selectedAngle: data.alternateAngle || '',
+                rewriteApplied: false,
+                candidateCount: Number(data.candidateCount) || 0,
+                criticScore: null,
+                risk,
+            }
+            : null;
+        currentDisplayedVariant = 'A';
         currentImageDataUrl = '';
         updateDashboardScore(currentGeneratedScore);
-
-        const resultText = document.getElementById('result-text');
-        resultText.textContent = currentGeneratedText;
-        resultText.classList.remove('hidden');
-        document.getElementById('result-image-wrap').classList.add('hidden');
-        document.getElementById('result-score-wrap').classList.remove('hidden');
-        document.getElementById('result-actions-text').classList.remove('hidden');
-        document.getElementById('result-refine-text').classList.remove('hidden');
-        document.getElementById('result-actions-image').classList.add('hidden');
-        document.getElementById('result-score').textContent = currentGeneratedScore;
+        renderTextResultView();
 
         document.getElementById('result-container').classList.remove('hidden');
         document.getElementById('publish-status').classList.add('hidden');
 
-        appendHistoryEntry({
+        const historyEntry = appendHistoryEntry({
+            ts: Number(data.historyTs) || Date.now(),
             type: 'text',
             topic: topic.slice(0, 240),
             text: currentGeneratedText,
             score: currentGeneratedScore,
+            goal: data.goal || '',
+            selectedAngle: data.selectedAngle || '',
+            rewriteApplied: !!data.rewriteApplied,
+            candidateCount: Number(data.candidateCount) || 0,
+            criticScore: Number(data.criticScore) || 0,
+            criticNeedsRewrite: !!data.criticNeedsRewrite,
+            criticVerdict: data.criticVerdict || '',
+            criticIssues: Array.isArray(data.criticIssues) ? data.criticIssues.slice(0, 4) : [],
+            criticStrengths: Array.isArray(data.criticStrengths) ? data.criticStrengths.slice(0, 4) : [],
+            criticBreakdown: data.criticBreakdown || {},
+            risk,
+            alternateText: data.alternateContent || '',
+            alternateAngle: data.alternateAngle || '',
+            alternateScore: Number(data.alternateScore) || 0,
         });
+        syncCurrentHistoryFromItem(historyEntry || { ts: Date.now(), type: 'text' });
         if (document.getElementById('tab-dashboard').classList.contains('active')) loadDashboardData();
 
         // Show remaining generations for free users
@@ -1101,6 +1428,7 @@ async function runImageGeneration() {
     const prompt = document.getElementById('studio-topic').value.trim();
     const aspectRatio = imageAspect.value;
     const style = imageStyle.value;
+    const risk = (studioRisk && studioRisk.value) || studioRiskLevel || DEFAULT_RISK;
 
     const limitMsg = document.getElementById('limit-msg');
     limitMsg.classList.add('hidden');
@@ -1119,7 +1447,7 @@ async function runImageGeneration() {
         const response = await fetch('/api/generate-image', {
             method: 'POST',
             headers: miniAppHeaders(true),
-            body: JSON.stringify({ prompt, aspectRatio, style }),
+            body: JSON.stringify({ prompt, aspectRatio, style, risk }),
         });
 
         const data = await response.json();
@@ -1137,6 +1465,14 @@ async function runImageGeneration() {
         }
 
         currentImageDataUrl = data.dataUrl;
+        currentGeneratedText = '';
+        currentGeneratedScore = 0;
+        currentGeneratedMeta = null;
+        currentGeneratedCriticText = '';
+        currentAlternativeText = '';
+        currentAlternativeScore = 0;
+        currentAlternativeMeta = null;
+        currentDisplayedVariant = 'A';
         document.getElementById('result-image').src = data.dataUrl;
         const dl = document.getElementById('btn-download-image');
         dl.href = data.dataUrl;
@@ -1149,16 +1485,32 @@ async function runImageGeneration() {
         document.getElementById('result-actions-text').classList.add('hidden');
         document.getElementById('result-refine-text').classList.add('hidden');
         document.getElementById('result-actions-image').classList.remove('hidden');
+        const resultMeta = document.getElementById('result-meta');
+        if (resultMeta) {
+            resultMeta.textContent = data.directorApplied ? 'Визуальный директор: активен · анти-повторы включены' : 'Анти-повторы включены';
+            resultMeta.classList.remove('hidden');
+        }
+        const resultCritic = document.getElementById('result-critic');
+        if (resultCritic) {
+            resultCritic.textContent = '';
+            resultCritic.classList.add('hidden');
+        }
+        const variantBtn = document.getElementById('btn-toggle-variant');
+        if (variantBtn) variantBtn.classList.add('hidden');
 
         document.getElementById('result-container').classList.remove('hidden');
         document.getElementById('publish-status').classList.add('hidden');
 
-        appendHistoryEntry({
+        const historyEntry = appendHistoryEntry({
+            ts: Number(data.historyTs) || Date.now(),
             type: 'image',
             prompt: prompt.slice(0, 240),
             dataUrl: data.dataUrl,
             mimeType: data.mimeType,
+            directorApplied: !!data.directorApplied,
+            risk,
         });
+        syncCurrentHistoryFromItem(historyEntry || { ts: Date.now(), type: 'image' });
         if (document.getElementById('tab-dashboard').classList.contains('active')) loadDashboardData();
 
         if (data.remainingToday !== undefined) {
@@ -1179,17 +1531,38 @@ async function runImageGeneration() {
 }
 
 document.getElementById('btn-generate-image').addEventListener('click', () => runImageGeneration());
-document.getElementById('btn-remake-image').addEventListener('click', () => runImageGeneration());
+document.getElementById('btn-remake-image').addEventListener('click', () => {
+    trackHistoryFeedback({
+        increments: { remakeCount: 1 },
+        set: { lastRemadeAt: Date.now(), lastRemadeType: 'image' },
+    });
+    runImageGeneration();
+});
 
 // --- Studio Actions ---
 document.getElementById('btn-copy').addEventListener('click', () => {
     navigator.clipboard.writeText(currentGeneratedText).then(() => {
+        trackHistoryFeedback({
+            increments: { copiedCount: 1 },
+            set: { lastCopiedAt: Date.now(), lastCopiedVariant: currentDisplayedVariant },
+        });
         tg.showPopup({ title: 'Скопировано', message: 'Текст скопирован в буфер обмена.' });
     });
 });
 
 document.getElementById('btn-remake').addEventListener('click', () => {
+    trackHistoryFeedback({
+        increments: { remakeCount: 1 },
+        set: { lastRemadeAt: Date.now(), lastRemadeType: 'text' },
+    });
     document.getElementById('btn-generate').click();
+});
+document.getElementById('btn-toggle-variant').addEventListener('click', () => {
+    activateTextVariant(currentDisplayedVariant === 'A' ? 'B' : 'A');
+    trackHistoryFeedback({
+        increments: currentDisplayedVariant === 'B' ? { variantBCount: 1 } : { variantACount: 1 },
+        set: { lastVariantViewedAt: Date.now(), preferredVariant: currentDisplayedVariant },
+    });
 });
 document.getElementById('btn-refine-concrete').addEventListener('click', () => runRefine('concrete'));
 document.getElementById('btn-refine-shorter').addEventListener('click', () => runRefine('shorter'));
@@ -1225,6 +1598,10 @@ document.getElementById('btn-publish').addEventListener('click', async () => {
         if (response.ok) {
             statusEl.textContent = 'Успешно опубликовано! ✅';
             statusEl.classList.add('success');
+            trackHistoryFeedback({
+                increments: { publishCount: 1 },
+                set: { lastPublishedAt: Date.now(), lastPublishedVariant: currentDisplayedVariant, lastPublishedChannel: channel },
+            });
         } else {
             statusEl.textContent = data.message || data.error || 'Ошибка публикации';
             statusEl.classList.add('error');
@@ -1281,6 +1658,10 @@ document.getElementById('btn-publish-image').addEventListener('click', async () 
         if (response.ok) {
             statusEl.textContent = 'Картинка в канале! ✅';
             statusEl.classList.add('success');
+            trackHistoryFeedback({
+                increments: { publishCount: 1 },
+                set: { lastPublishedAt: Date.now(), lastPublishedChannel: channel },
+            });
         } else {
             statusEl.textContent = data.message || data.error || 'Ошибка публикации';
             statusEl.classList.add('error');
@@ -1291,6 +1672,13 @@ document.getElementById('btn-publish-image').addEventListener('click', async () 
     } finally {
         btn.disabled = false;
     }
+});
+
+document.getElementById('btn-download-image').addEventListener('click', () => {
+    trackHistoryFeedback({
+        increments: { downloadCount: 1 },
+        set: { lastDownloadedAt: Date.now() },
+    });
 });
 
 // Trend Search Filter

@@ -74,6 +74,15 @@
                 <p class="text-hint" id="studio-intent-hint">Авто: если идея сырая, приложение само достроит сильное ТЗ.</p>
             </div>
 
+            <div class="form-group">
+                <label for="studio-risk">Смелость подачи</label>
+                <select id="studio-risk">
+                    <option value="balanced">Баланс</option>
+                    <option value="calm">Спокойнее</option>
+                    <option value="bold">Смелее</option>
+                </select>
+            </div>
+
             <div id="studio-text-options">
                 <div class="form-row">
                     <div class="form-group half">
@@ -138,6 +147,8 @@
                         <span id="result-score">0</span>/100 Viral
                     </div>
                 </div>
+                <p class="text-hint hidden" id="result-meta" style="margin-top:-6px;margin-bottom:8px"></p>
+                <p class="text-hint hidden" id="result-critic" style="margin-top:-2px;margin-bottom:8px"></p>
                 <div class="result-content" id="result-text"></div>
                 <div id="result-image-wrap" class="hidden">
                     <img id="result-image" alt="Сгенерированное изображение" class="result-image" />
@@ -146,6 +157,7 @@
                 <div class="action-buttons" id="result-actions-text">
                     <button class="btn btn-secondary" id="btn-copy">Скопировать</button>
                     <button class="btn btn-accent" id="btn-publish">В канал 📢</button>
+                    <button class="btn btn-secondary hidden" id="btn-toggle-variant">Вариант B</button>
                     <button class="btn btn-secondary" id="btn-remake">Переделать</button>
                 </div>
                 <div class="quick-refine-row" id="result-refine-text">
@@ -264,6 +276,7 @@
                 <input type="text" id="profile-niche" placeholder="Ниша (например: финтех для фрилансеров)" maxlength="120">
                 <input type="text" id="profile-language" placeholder="Язык ответа (например: русский, короткие фразы)" maxlength="40" style="margin-top:10px">
                 <textarea id="profile-style" placeholder="Стиль и ограничения (тон, запреты, обращение на «ты»…)" maxlength="200" rows="3" style="margin-top:10px"></textarea>
+                <textarea id="profile-brand-memory" placeholder="Память бренда (ЦА, оффер, сильные темы, что нельзя повторять)" maxlength="1000" rows="4" style="margin-top:10px"></textarea>
                 <button type="button" class="btn btn-secondary btn-full" id="btn-save-profile" style="margin-top:12px">Сохранить профиль</button>
             </div>
 

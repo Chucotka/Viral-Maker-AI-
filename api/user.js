@@ -5,7 +5,8 @@ function sanitizeProfileBody(body) {
   const niche = typeof body?.niche === 'string' ? body.niche.trim().slice(0, 120) : '';
   const language = typeof body?.language === 'string' ? body.language.trim().slice(0, 40) : '';
   const styleNote = typeof body?.styleNote === 'string' ? body.styleNote.trim().slice(0, 200) : '';
-  return { niche, language, styleNote };
+  const brandMemory = typeof body?.brandMemory === 'string' ? body.brandMemory.trim().slice(0, 1000) : '';
+  return { niche, language, styleNote, brandMemory };
 }
 
 module.exports = async (req, res) => {
@@ -32,17 +33,18 @@ module.exports = async (req, res) => {
           niche: rec.niche || '',
           language: rec.language || '',
           styleNote: rec.styleNote || '',
+          brandMemory: rec.brandMemory || '',
         },
       });
     }
 
     if (req.method === 'POST') {
-      const { niche, language, styleNote } = sanitizeProfileBody(req.body || {});
+      const { niche, language, styleNote, brandMemory } = sanitizeProfileBody(req.body || {});
       const { rec } = await getQuotaState(auth.userId);
-      await saveUserRecord(auth.userId, { ...rec, niche, language, styleNote });
+      await saveUserRecord(auth.userId, { ...rec, niche, language, styleNote, brandMemory });
       return res.json({
         ok: true,
-        profile: { niche, language, styleNote },
+        profile: { niche, language, styleNote, brandMemory },
       });
     }
 

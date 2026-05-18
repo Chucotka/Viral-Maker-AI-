@@ -1,10 +1,10 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { generateContentRobust, modelFallbackChain } = require('../lib/geminiRobust');
+const { modelFallbackChain } = require('../lib/geminiRobust');
 const { resolveTelegramUser } = require('../lib/miniAppAuth');
 const { isKvConfigured, getQuotaState, incrementGenerationCount } = require('../lib/kvUserStore');
-const { appendUserHistory } = require('../lib/kvHistory');
-const { computeViralScore } = require('../lib/viralScore');
-const { buildStudioTextPrompt } = require('../lib/buildTextPrompt');
+const { appendUserHistory, getUserHistory } = require('../lib/kvHistory');
+const { buildStudioTextPrompt, inferPostGoal } = require('../lib/buildTextPrompt');
+const { generateBestTextContent } = require('../lib/textGeneration');
 const { assertGenerateRateLimit } = require('../lib/rateLimitKv');
 
 module.exports = async (req, res) => {
@@ -20,7 +20,7 @@ module.exports = async (req, res) => {
     const auth = resolveTelegramUser(req, res);
     if (!auth) return;
 
-    const { topic, platform = 'Telegram', tone = 'вирусный', model = 'gemini-2.5-flash', intent = 'auto' } = req.body;
+    const { topic, platform = 'Telegram', tone = 'вирусный', model = 'gemini-2.5-flash', intent = 'auto', risk = 'balanced' } = req.body;
 
     if (!topic || topic.trim().length === 0) {
       return res.status(400).json({ error: 'topic_required', message: 'Тема не указана.' });
@@ -39,26 +39,90 @@ module.exports = async (req, res) => {
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const modelChain = modelFallbackChain(model);
+    let recentHistory = [];
+    try {
+      recentHistory = await getUserHistory(auth.userId, 20);
+    } catch (histErr) {
+      console.error('getUserHistory:', histErr.message);
+    }
 
+    const goal = inferPostGoal({
+      topic,
+      intent,
+      profile: rec,
+      recentHistory,
+      risk,
+    });
     const prompt = buildStudioTextPrompt({
       topic,
       platform,
       tone,
       intent,
+      risk,
       profile: rec,
+      recentHistory,
+      goal,
     });
 
-    const { content, modelUsed } = await generateContentRobust(genAI, modelChain, prompt);
+    const {
+      content,
+      modelUsed,
+      viralScore,
+      draftScore,
+      rewriteApplied,
+      selectedAngle,
+      candidateCount,
+      candidateSummary,
+      criticScore,
+      criticNeedsRewrite,
+      criticVerdict,
+      criticIssues,
+      criticStrengths,
+      criticBreakdown,
+      alternateContent,
+      alternateAngle,
+      alternateScore,
+      goal: detectedGoal,
+    } = await generateBestTextContent(
+      genAI,
+      modelChain,
+      prompt,
+      {
+        topic,
+        platform,
+        tone,
+        intent,
+        risk,
+        profile: rec,
+        recentHistory,
+        goal,
+      },
+    );
     const { remainingToday } = await incrementGenerationCount(auth.userId, rec);
-    const viralScore = computeViralScore(content);
 
+    const historyTs = Date.now();
     try {
       await appendUserHistory(auth.userId, {
+        ts: historyTs,
         type: 'text',
         topic: topic.trim().slice(0, 240),
         text: content.slice(0, 4000),
         score: viralScore,
         platform,
+        risk,
+        goal: detectedGoal || goal,
+        selectedAngle,
+        rewriteApplied: !!rewriteApplied,
+        candidateCount: Number(candidateCount) || 0,
+        criticScore: Number(criticScore) || 0,
+        criticNeedsRewrite: !!criticNeedsRewrite,
+        criticVerdict: criticVerdict || '',
+        criticIssues: Array.isArray(criticIssues) ? criticIssues.slice(0, 4) : [],
+        criticStrengths: Array.isArray(criticStrengths) ? criticStrengths.slice(0, 4) : [],
+        criticBreakdown: criticBreakdown || {},
+        alternateText: alternateContent || '',
+        alternateAngle: alternateAngle || '',
+        alternateScore: Number(alternateScore) || 0,
       });
     } catch (histErr) {
       console.error('appendUserHistory:', histErr.message);
@@ -67,7 +131,24 @@ module.exports = async (req, res) => {
     res.json({
       content,
       viralScore,
+      draftScore,
       model: modelUsed,
+      risk,
+      goal: detectedGoal || goal,
+      rewriteApplied,
+      selectedAngle,
+      candidateCount,
+      candidateSummary,
+      criticScore,
+      criticNeedsRewrite,
+      criticVerdict,
+      criticIssues,
+      criticStrengths,
+      criticBreakdown,
+      alternateContent,
+      alternateAngle,
+      alternateScore,
+      historyTs,
       remainingToday,
     });
   } catch (e) {

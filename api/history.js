@@ -1,15 +1,33 @@
 const { resolveTelegramUser } = require('../lib/miniAppAuth');
 const { isKvConfigured } = require('../lib/kvUserStore');
-const { getUserHistory } = require('../lib/kvHistory');
+const { getUserHistory, updateUserHistoryEntry } = require('../lib/kvHistory');
 const { getLocalHistory } = require('../lib/localHistoryStore');
 
 module.exports = async (req, res) => {
-  if (req.method !== 'GET') return res.status(405).end();
   try {
     const auth = resolveTelegramUser(req, res);
     if (!auth) return;
-    const items = isKvConfigured() ? await getUserHistory(auth.userId, 40) : await getLocalHistory(auth.userId, 40);
-    res.json({ items });
+
+    if (req.method === 'GET') {
+      const items = isKvConfigured() ? await getUserHistory(auth.userId, 40) : await getLocalHistory(auth.userId, 40);
+      return res.json({ items });
+    }
+
+    if (req.method === 'POST') {
+      const ts = Number(req.body?.ts);
+      const mutation = req.body?.mutation && typeof req.body.mutation === 'object' ? req.body.mutation : {};
+      if (!Number.isFinite(ts)) {
+        return res.status(400).json({ error: 'invalid_ts' });
+      }
+      if (!isKvConfigured()) {
+        return res.status(503).json({ error: 'kv_required', message: 'History feedback requires Redis in this environment.' });
+      }
+      const item = await updateUserHistoryEntry(auth.userId, ts, mutation);
+      if (!item) return res.status(404).json({ error: 'history_item_not_found' });
+      return res.json({ ok: true, item });
+    }
+
+    return res.status(405).end();
   } catch (e) {
     console.error('History API error:', e.message);
     res.status(500).json({ error: e.message });
