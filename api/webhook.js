@@ -14,7 +14,7 @@ module.exports = async (req, res) => {
       res.status(200).json({ ok: true });
     } catch (e) {
       console.error('Webhook error:', e.message, updateId ? `update_id=${updateId}` : '');
-      res.status(200).json({ ok: false });
+      res.status(200).json({ ok: false, error: 'webhook_handler_failed' });
     }
   } else {
     res.status(200).json({ ok: true });
