@@ -540,23 +540,38 @@ document.querySelectorAll('.intent-pill').forEach((pill) => {
 });
 setStudioIntent(studioIntent);
 
+const STUDIO_MODE_HINTS = {
+    text: 'Картинки и текст делят один дневной лимит на Free.',
+    script: 'Сценарий для Reels, TikTok и Shorts: хук, кадры, CTA и хэштеги.',
+    image: 'Картинки и текст делят один дневной лимит на Free.',
+};
+
 function setStudioMode(mode) {
     studioMode = mode;
     const isText = mode === 'text';
+    const isScript = mode === 'script';
+    const isImage = mode === 'image';
     document.getElementById('mode-pill-text').classList.toggle('active', isText);
-    document.getElementById('mode-pill-image').classList.toggle('active', !isText);
+    document.getElementById('mode-pill-script').classList.toggle('active', isScript);
+    document.getElementById('mode-pill-image').classList.toggle('active', isImage);
     document.getElementById('studio-text-options').classList.toggle('hidden', !isText);
-    document.getElementById('studio-image-options').classList.toggle('hidden', isText);
+    document.getElementById('studio-script-options').classList.toggle('hidden', !isScript);
+    document.getElementById('studio-image-options').classList.toggle('hidden', !isImage);
     const intentGroup = document.getElementById('studio-intent-group');
-    if (intentGroup) intentGroup.classList.toggle('hidden', !isText);
+    if (intentGroup) intentGroup.classList.toggle('hidden', !isText && !isScript);
+    const modeHint = document.getElementById('studio-mode-hint');
+    if (modeHint) modeHint.textContent = STUDIO_MODE_HINTS[mode] || STUDIO_MODE_HINTS.text;
     const label = document.getElementById('label-studio-topic');
     const ta = document.getElementById('studio-topic');
-    if (isText) {
-        label.textContent = 'Опиши идею или вставь тему';
-        ta.placeholder = 'Например: Как использовать AI для бизнеса в 2026 году...';
-    } else {
+    if (isImage) {
         label.textContent = 'Опиши, что должно быть на картинке';
         ta.placeholder = 'Например: яркий постер про нейросети, неон, тёмный фон...';
+    } else if (isScript) {
+        label.textContent = 'Тема ролика или ключевая мысль';
+        ta.placeholder = 'Например: 3 ошибки при запуске Telegram-канала...';
+    } else {
+        label.textContent = 'Опиши идею или вставь тему';
+        ta.placeholder = 'Например: Как использовать AI для бизнеса в 2026 году...';
     }
     document.getElementById('result-container').classList.add('hidden');
 }
@@ -601,7 +616,7 @@ function setStudioGenerating(active, label) {
     const labelEl = document.getElementById('studio-generating-label');
     if (banner) banner.classList.toggle('hidden', !active);
     if (labelEl && label) labelEl.textContent = label;
-    ['btn-generate', 'btn-generate-image'].forEach((id) => {
+    ['btn-generate', 'btn-generate-script', 'btn-generate-image'].forEach((id) => {
         const el = document.getElementById(id);
         if (el) el.disabled = !!active;
     });
@@ -680,15 +695,18 @@ function startRecoveryPolling(kind, seq, sinceAt) {
     }, RECOVERY_POLL_INTERVAL_MS);
 }
 
-function beginGenerationSession(kind) {
+function beginGenerationSession(kind, opts = {}) {
     generationSeq += 1;
     const seq = generationSeq;
     activeGenerationSeq = seq;
     generationStartedAt = Date.now();
     saveActiveGenerationSession(kind, generationStartedAt, seq);
-    const label = kind === 'image'
-        ? 'Создаём изображение… Обычно 20–90 секунд. Не сворачивайте Telegram.'
-        : 'Генерируем текст… Обычно 30–90 секунд (несколько шагов AI). Не сворачивайте Telegram.';
+    let label = 'Генерируем текст… Обычно 30–90 секунд (несколько шагов AI). Не сворачивайте Telegram.';
+    if (kind === 'image') {
+        label = 'Создаём изображение… Обычно 20–90 секунд. Не сворачивайте Telegram.';
+    } else if (opts.script) {
+        label = 'Собираем сценарий… Хук, кадры и CTA. Обычно 30–90 секунд. Не сворачивайте Telegram.';
+    }
     setStudioGenerating(true, label);
     startRecoveryPolling(kind, seq, generationStartedAt);
     return seq;
@@ -848,6 +866,7 @@ async function recoverActiveGenerationOnLoad() {
 }
 
 document.getElementById('mode-pill-text').addEventListener('click', () => setStudioMode('text'));
+document.getElementById('mode-pill-script').addEventListener('click', () => setStudioMode('script'));
 document.getElementById('mode-pill-image').addEventListener('click', () => setStudioMode('image'));
 
 // --- Tab Navigation ---
@@ -1569,30 +1588,42 @@ function runRefine(mode) {
 }
 
 // --- Content Generation ---
-document.getElementById('btn-generate').addEventListener('click', async () => {
+async function runTextGeneration(opts = {}) {
     const topic = document.getElementById('studio-topic').value.trim();
-    const platform = studioPlatform.value;
-    const tone = studioTone.value;
+    const platform = opts.platform ?? studioPlatform.value;
+    const tone = opts.tone ?? studioTone.value;
     const risk = (studioRisk && studioRisk.value) || studioRiskLevel || DEFAULT_RISK;
     const model = settingsModel.value || 'gemini-2.5-flash';
+    const scriptDuration = opts.scriptDuration;
+    const scriptFormat = opts.scriptFormat;
 
     const limitMsg = document.getElementById('limit-msg');
     limitMsg.classList.add('hidden');
 
     if (!topic) {
-        tg.showAlert('Пожалуйста, введите тему или идею.');
+        tg.showAlert(opts.emptyTopicMessage || 'Пожалуйста, введите тему или идею.');
         return;
     }
 
-    const btn = document.getElementById('btn-generate');
-    const originalText = btn.textContent;
-    const seq = beginGenerationSession('text');
+    const btnId = opts.buttonId || 'btn-generate';
+    const btn = document.getElementById(btnId);
+    const originalText = btn ? btn.textContent : '';
+    const seq = beginGenerationSession('text', { script: scriptDuration != null });
 
     try {
         const response = await fetch('/api/generate', {
             method: 'POST',
             headers: miniAppHeaders(true),
-            body: JSON.stringify({ topic, platform, tone, risk, model, intent: studioIntent }),
+            body: JSON.stringify({
+                topic,
+                platform,
+                tone,
+                risk,
+                model,
+                intent: studioIntent,
+                ...(scriptDuration != null ? { scriptDuration } : {}),
+                ...(scriptFormat ? { scriptFormat } : {}),
+            }),
         });
 
         const data = await parseJsonResponse(response);
@@ -1625,8 +1656,25 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
         if (!recovered) alertFromGenerateError(error.message);
     } finally {
         endGenerationSession(seq);
-        btn.textContent = originalText;
+        if (btn) btn.textContent = originalText;
     }
+}
+
+document.getElementById('btn-generate').addEventListener('click', () => runTextGeneration());
+
+document.getElementById('btn-generate-script').addEventListener('click', () => {
+    const scriptPlatform = document.getElementById('script-platform');
+    const scriptDuration = document.getElementById('script-duration');
+    const scriptFormat = document.getElementById('script-format');
+    const scriptTone = document.getElementById('script-tone');
+    runTextGeneration({
+        platform: scriptPlatform ? scriptPlatform.value : 'Reels / Shorts (сценарий)',
+        tone: scriptTone ? scriptTone.value : studioTone.value,
+        scriptDuration: scriptDuration ? scriptDuration.value : '30',
+        scriptFormat: scriptFormat ? scriptFormat.value : 'mixed',
+        buttonId: 'btn-generate-script',
+        emptyTopicMessage: 'Введите тему ролика.',
+    });
 });
 
 async function runImageGeneration() {

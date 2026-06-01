@@ -51,9 +51,10 @@
 
             <div class="studio-mode-row" role="tablist" aria-label="Режим студии">
                 <button type="button" class="mode-pill active" id="mode-pill-text" data-studio-mode="text">Текст</button>
+                <button type="button" class="mode-pill" id="mode-pill-script" data-studio-mode="script">Сценарий</button>
                 <button type="button" class="mode-pill" id="mode-pill-image" data-studio-mode="image">Картинка</button>
             </div>
-            <p class="text-hint studio-mode-hint">Картинки и текст делят один дневной лимит на Free.</p>
+            <p class="text-hint studio-mode-hint" id="studio-mode-hint">Картинки и текст делят один дневной лимит на Free.</p>
 
             <div class="form-group">
                 <label for="studio-topic" id="label-studio-topic">Опиши идею или вставь тему</label>
@@ -112,6 +113,50 @@
                 </div>
 
                 <button class="btn btn-primary btn-full" id="btn-generate">Сгенерировать текст</button>
+            </div>
+
+            <div id="studio-script-options" class="hidden">
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label for="script-platform">Площадка</label>
+                        <select id="script-platform">
+                            <option value="Reels / Shorts (сценарий)">Reels / Shorts</option>
+                            <option value="Instagram Reels">Instagram Reels</option>
+                            <option value="TikTok (сценарий)">TikTok</option>
+                            <option value="YouTube Shorts">YouTube Shorts</option>
+                        </select>
+                    </div>
+                    <div class="form-group half">
+                        <label for="script-duration">Длина</label>
+                        <select id="script-duration">
+                            <option value="15">15 сек</option>
+                            <option value="30" selected>30 сек</option>
+                            <option value="45">45 сек</option>
+                            <option value="60">60 сек</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label for="script-format">Формат съёмки</label>
+                        <select id="script-format">
+                            <option value="mixed">Смешанный</option>
+                            <option value="talking_head">Говорящая голова</option>
+                            <option value="broll">Больше b-roll</option>
+                        </select>
+                    </div>
+                    <div class="form-group half">
+                        <label for="script-tone">Тон</label>
+                        <select id="script-tone">
+                            <option value="вирусный">Вирусный 🚀</option>
+                            <option value="экспертный">Экспертный 🧠</option>
+                            <option value="провокационный">Провокационный 🔥</option>
+                            <option value="юмор">Юмор 😂</option>
+                        </select>
+                    </div>
+                </div>
+                <p class="text-hint">Хук, покадровка, удержание, CTA и хэштеги — одним нажатием.</p>
+                <button type="button" class="btn btn-primary btn-full" id="btn-generate-script">Создать сценарий</button>
             </div>
 
             <div id="studio-image-options" class="hidden">
