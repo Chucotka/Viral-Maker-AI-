@@ -90,8 +90,11 @@
                         <select id="studio-platform">
                             <option value="Telegram">Telegram</option>
                             <option value="Instagram">Instagram</option>
+                            <option value="Instagram Reels">Instagram Reels</option>
                             <option value="TikTok">TikTok</option>
+                            <option value="TikTok (сценарий)">TikTok (сценарий)</option>
                             <option value="YouTube Shorts">YouTube Shorts</option>
+                            <option value="Reels / Shorts (сценарий)">Reels / Shorts (сценарий)</option>
                             <option value="YouTube">YouTube (Видео)</option>
                             <option value="VK Клипы">VK Клипы</option>
                             <option value="VK Видео">VK Видео</option>
@@ -135,6 +138,11 @@
                     </div>
                 </div>
                 <button class="btn btn-primary btn-full" id="btn-generate-image">Создать изображение</button>
+            </div>
+
+            <div id="studio-generating-banner" class="studio-generating-banner hidden" role="status" aria-live="polite">
+                <span class="studio-generating-spinner" aria-hidden="true"></span>
+                <span id="studio-generating-label">Генерация…</span>
             </div>
 
             <p id="limit-msg" class="status-msg hidden"></p>

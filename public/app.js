@@ -327,6 +327,15 @@ let currentDisplayedVariant = 'A';
 let currentHistoryTs = 0;
 let currentHistoryType = '';
 let studioMode = 'text';
+let generationSeq = 0;
+let activeGenerationSeq = 0;
+let generationStartedAt = 0;
+const ACTIVE_GENERATION_KEY = 'vm_active_generation_v1';
+let recoveryPollTimer = null;
+let recoveryPollSeq = 0;
+let recoveryPollAttempts = 0;
+const RECOVERY_POLL_INTERVAL_MS = 3000;
+const RECOVERY_POLL_MAX_ATTEMPTS = 50; // ~150 сек
 let currentImageDataUrl = '';
 let planRefreshTimer = null;
 let studioIntent = savedIntent();
@@ -569,10 +578,273 @@ function alertFromGenerateError(message) {
         text = 'На сервере не настроено хранилище Redis. Добавьте Upstash Redis в Vercel и переменные окружения.';
     } else if (/rate_limit|429|Слишком много запросов/i.test(m)) {
         text = 'Слишком много запросов за короткое время. Подождите около минуты и попробуйте снова.';
+    } else if (/504|FUNCTION_INVOCATION_TIMEOUT|timeout|timed out|aborted/i.test(m)) {
+        text = 'Сервер не успел ответить. Загляните в Дашборд — результат мог сохраниться в истории.';
     } else if (m && m.length < 320 && !/^Ошибка генерации \(\d+\)$/.test(m)) {
         text = m;
     }
     tg.showAlert(text);
+}
+
+async function parseJsonResponse(response) {
+    const raw = await response.text();
+    if (!raw || !raw.trim()) return {};
+    try {
+        return JSON.parse(raw);
+    } catch {
+        throw new Error('Сервер вернул неверный ответ. Попробуйте ещё раз.');
+    }
+}
+
+function setStudioGenerating(active, label) {
+    const banner = document.getElementById('studio-generating-banner');
+    const labelEl = document.getElementById('studio-generating-label');
+    if (banner) banner.classList.toggle('hidden', !active);
+    if (labelEl && label) labelEl.textContent = label;
+    ['btn-generate', 'btn-generate-image'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = !!active;
+    });
+}
+
+function saveActiveGenerationSession(kind, startedAt, seq) {
+    try {
+        localStorage.setItem(
+            ACTIVE_GENERATION_KEY,
+            JSON.stringify({ kind, startedAt, seq: Number(seq) || 0 }),
+        );
+    } catch (e) {
+        /* ignore */
+    }
+}
+
+function clearActiveGenerationSession() {
+    try {
+        localStorage.removeItem(ACTIVE_GENERATION_KEY);
+    } catch (e) {
+        /* ignore */
+    }
+}
+
+function stopRecoveryPolling() {
+    if (recoveryPollTimer) {
+        clearInterval(recoveryPollTimer);
+        recoveryPollTimer = null;
+    }
+    recoveryPollSeq = 0;
+    recoveryPollAttempts = 0;
+}
+
+async function tryRecoverGenerationResultSince(kind, sinceAt) {
+    try {
+        const res = await fetch('/api/history', { headers: miniAppHeaders(false) });
+        if (!res.ok) return false;
+        const data = await parseJsonResponse(res);
+        const items = Array.isArray(data.items) ? data.items : [];
+        const latest = items.find((it) => it && Number(it.ts) >= sinceAt && it.type === kind);
+        if (!latest) return false;
+        if (kind === 'text' && !String(latest.text || '').trim()) return false;
+        if (kind === 'image' && !latest.dataUrl) return false;
+        openHistoryItem(latest);
+        tg.showPopup({
+            title: 'Результат готов',
+            message: 'Ответ уже был на сервере — открыли последнюю генерацию из истории.',
+        });
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function startRecoveryPolling(kind, seq, sinceAt) {
+    stopRecoveryPolling();
+    recoveryPollSeq = seq;
+    recoveryPollAttempts = 0;
+    recoveryPollTimer = setInterval(async () => {
+        // Если запустили другую генерацию — не мешаем.
+        if (seq !== activeGenerationSeq) {
+            stopRecoveryPolling();
+            return;
+        }
+        recoveryPollAttempts += 1;
+        if (recoveryPollAttempts > RECOVERY_POLL_MAX_ATTEMPTS) {
+            stopRecoveryPolling();
+            return;
+        }
+        const ok = await tryRecoverGenerationResultSince(kind, sinceAt);
+        if (ok) {
+            stopRecoveryPolling();
+            clearActiveGenerationSession();
+            setStudioGenerating(false);
+        }
+    }, RECOVERY_POLL_INTERVAL_MS);
+}
+
+function beginGenerationSession(kind) {
+    generationSeq += 1;
+    const seq = generationSeq;
+    activeGenerationSeq = seq;
+    generationStartedAt = Date.now();
+    saveActiveGenerationSession(kind, generationStartedAt, seq);
+    const label = kind === 'image'
+        ? 'Создаём изображение… Обычно 20–90 секунд. Не сворачивайте Telegram.'
+        : 'Генерируем текст… Обычно 30–90 секунд (несколько шагов AI). Не сворачивайте Telegram.';
+    setStudioGenerating(true, label);
+    startRecoveryPolling(kind, seq, generationStartedAt);
+    return seq;
+}
+
+function endGenerationSession(seq) {
+    if (seq !== activeGenerationSeq) return;
+    setStudioGenerating(false);
+    clearActiveGenerationSession();
+    stopRecoveryPolling();
+}
+
+function revealResultContainer() {
+    const rc = document.getElementById('result-container');
+    if (!rc) return;
+    rc.classList.remove('hidden');
+    try {
+        rc.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch (e) { /* ignore */ }
+}
+
+async function tryRecoverGenerationResult(kind) {
+    if (!generationStartedAt) return false;
+    try {
+        const res = await fetch('/api/history', { headers: miniAppHeaders(false) });
+        if (!res.ok) return false;
+        const data = await parseJsonResponse(res);
+        const items = Array.isArray(data.items) ? data.items : [];
+        const cutoff = generationStartedAt - 15000;
+        const latest = items.find((it) => it && Number(it.ts) >= cutoff && it.type === kind);
+        if (!latest) return false;
+        if (kind === 'text' && !String(latest.text || '').trim()) return false;
+        if (kind === 'image' && !latest.dataUrl) return false;
+        openHistoryItem(latest);
+        tg.showPopup({
+            title: 'Результат готов',
+            message: 'Ответ уже был на сервере — открыли последнюю генерацию из истории.',
+        });
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function applyTextGenerateData(data, topic) {
+    if (!data || !String(data.content || '').trim()) {
+        throw new Error('Пустой ответ от сервера. Проверьте историю на дашборде.');
+    }
+    currentGeneratedText = data.content;
+    currentGeneratedScore = data.viralScore;
+    currentGeneratedMeta = {
+        goal: data.goal || '',
+        selectedAngle: data.selectedAngle || '',
+        rewriteApplied: !!data.rewriteApplied,
+        candidateCount: Number(data.candidateCount) || 0,
+        criticScore: Number(data.criticScore) || 0,
+        criticNeedsRewrite: !!data.criticNeedsRewrite,
+        criticVerdict: data.criticVerdict || '',
+        criticIssues: Array.isArray(data.criticIssues) ? data.criticIssues : [],
+        criticStrengths: Array.isArray(data.criticStrengths) ? data.criticStrengths : [],
+        criticBreakdown: data.criticBreakdown || {},
+        risk: (studioRisk && studioRisk.value) || studioRiskLevel || DEFAULT_RISK,
+        alternateAngle: data.alternateAngle || '',
+        alternateScore: Number(data.alternateScore) || 0,
+    };
+    currentGeneratedCriticText = buildCriticText({
+        criticVerdict: data.criticVerdict || '',
+        criticIssues: Array.isArray(data.criticIssues) ? data.criticIssues : [],
+        criticStrengths: Array.isArray(data.criticStrengths) ? data.criticStrengths : [],
+        criticBreakdown: data.criticBreakdown || {},
+    });
+    currentAlternativeText = data.alternateContent || '';
+    currentAlternativeScore = Number(data.alternateScore) || 0;
+    currentAlternativeMeta = currentAlternativeText
+        ? {
+            goal: data.goal || '',
+            selectedAngle: data.alternateAngle || '',
+            rewriteApplied: false,
+            candidateCount: Number(data.candidateCount) || 0,
+            criticScore: null,
+            risk: currentGeneratedMeta.risk,
+        }
+        : null;
+    currentDisplayedVariant = 'A';
+    currentImageDataUrl = '';
+    updateDashboardScore(currentGeneratedScore);
+    renderTextResultView();
+    revealResultContainer();
+    document.getElementById('publish-status').classList.add('hidden');
+
+    const historyEntry = appendHistoryEntry({
+        ts: Number(data.historyTs) || Date.now(),
+        type: 'text',
+        topic: topic.slice(0, 240),
+        text: currentGeneratedText,
+        score: currentGeneratedScore,
+        goal: data.goal || '',
+        selectedAngle: data.selectedAngle || '',
+        rewriteApplied: !!data.rewriteApplied,
+        candidateCount: Number(data.candidateCount) || 0,
+        criticScore: Number(data.criticScore) || 0,
+        criticNeedsRewrite: !!data.criticNeedsRewrite,
+        criticVerdict: data.criticVerdict || '',
+        criticIssues: Array.isArray(data.criticIssues) ? data.criticIssues.slice(0, 4) : [],
+        criticStrengths: Array.isArray(data.criticStrengths) ? data.criticStrengths.slice(0, 4) : [],
+        criticBreakdown: data.criticBreakdown || {},
+        risk: currentGeneratedMeta.risk,
+        alternateText: data.alternateContent || '',
+        alternateAngle: data.alternateAngle || '',
+        alternateScore: Number(data.alternateScore) || 0,
+    });
+    syncCurrentHistoryFromItem(historyEntry || { ts: Date.now(), type: 'text' });
+    if (document.getElementById('tab-dashboard').classList.contains('active')) loadDashboardData();
+    return data;
+}
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    const banner = document.getElementById('studio-generating-banner');
+    if (!banner || banner.classList.contains('hidden')) return;
+    const kind = studioMode === 'image' ? 'image' : 'text';
+    tryRecoverGenerationResult(kind).then((ok) => {
+        if (ok) endGenerationSession(activeGenerationSeq);
+    });
+});
+
+async function recoverActiveGenerationOnLoad() {
+    let saved = null;
+    try {
+        const raw = localStorage.getItem(ACTIVE_GENERATION_KEY);
+        saved = raw ? JSON.parse(raw) : null;
+    } catch (e) {
+        saved = null;
+    }
+    if (!saved || !saved.startedAt || !saved.kind) return;
+
+    const startedAt = Number(saved.startedAt);
+    if (!Number.isFinite(startedAt)) return;
+    const ageMs = Date.now() - startedAt;
+    // Если генерация очень старая — это, скорее всего, просто остаток прошлого сеанса.
+    if (ageMs > 10 * 60 * 1000) {
+        clearActiveGenerationSession();
+        return;
+    }
+
+    generationStartedAt = startedAt;
+    const kind = saved.kind === 'image' ? 'image' : 'text';
+    try {
+        const ok = await tryRecoverGenerationResult(kind);
+        setStudioGenerating(false);
+        if (ok) clearActiveGenerationSession();
+        else clearActiveGenerationSession();
+    } catch (e) {
+        setStudioGenerating(false);
+        clearActiveGenerationSession();
+    }
 }
 
 document.getElementById('mode-pill-text').addEventListener('click', () => setStudioMode('text'));
@@ -1314,8 +1586,7 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
 
     const btn = document.getElementById('btn-generate');
     const originalText = btn.textContent;
-    btn.textContent = 'Генерация... ⏳';
-    btn.disabled = true;
+    const seq = beginGenerationSession('text');
 
     try {
         const response = await fetch('/api/generate', {
@@ -1324,7 +1595,7 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
             body: JSON.stringify({ topic, platform, tone, risk, model, intent: studioIntent }),
         });
 
-        const data = await response.json();
+        const data = await parseJsonResponse(response);
 
         if (response.status === 403 && data.error === 'limit_reached') {
             limitMsg.innerHTML = `⚡️ Лимит 5 генераций исчерпан. <a href="javascript:void(0)" onclick="tg.openLink('https://t.me/tribute')">Перейти на Pro →</a>`;
@@ -1338,74 +1609,8 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
             throw new Error(data?.message || errText || `Ошибка генерации (${response.status})`);
         }
 
-        currentGeneratedText = data.content;
-        currentGeneratedScore = data.viralScore;
-        currentGeneratedMeta = {
-            goal: data.goal || '',
-            selectedAngle: data.selectedAngle || '',
-            rewriteApplied: !!data.rewriteApplied,
-            candidateCount: Number(data.candidateCount) || 0,
-            criticScore: Number(data.criticScore) || 0,
-            criticNeedsRewrite: !!data.criticNeedsRewrite,
-            criticVerdict: data.criticVerdict || '',
-            criticIssues: Array.isArray(data.criticIssues) ? data.criticIssues : [],
-            criticStrengths: Array.isArray(data.criticStrengths) ? data.criticStrengths : [],
-            criticBreakdown: data.criticBreakdown || {},
-            risk,
-            alternateAngle: data.alternateAngle || '',
-            alternateScore: Number(data.alternateScore) || 0,
-        };
-        currentGeneratedCriticText = buildCriticText({
-            criticVerdict: data.criticVerdict || '',
-            criticIssues: Array.isArray(data.criticIssues) ? data.criticIssues : [],
-            criticStrengths: Array.isArray(data.criticStrengths) ? data.criticStrengths : [],
-            criticBreakdown: data.criticBreakdown || {},
-        });
-        currentAlternativeText = data.alternateContent || '';
-        currentAlternativeScore = Number(data.alternateScore) || 0;
-        currentAlternativeMeta = currentAlternativeText
-            ? {
-                goal: data.goal || '',
-                selectedAngle: data.alternateAngle || '',
-                rewriteApplied: false,
-                candidateCount: Number(data.candidateCount) || 0,
-                criticScore: null,
-                risk,
-            }
-            : null;
-        currentDisplayedVariant = 'A';
-        currentImageDataUrl = '';
-        updateDashboardScore(currentGeneratedScore);
-        renderTextResultView();
+        applyTextGenerateData(data, topic);
 
-        document.getElementById('result-container').classList.remove('hidden');
-        document.getElementById('publish-status').classList.add('hidden');
-
-        const historyEntry = appendHistoryEntry({
-            ts: Number(data.historyTs) || Date.now(),
-            type: 'text',
-            topic: topic.slice(0, 240),
-            text: currentGeneratedText,
-            score: currentGeneratedScore,
-            goal: data.goal || '',
-            selectedAngle: data.selectedAngle || '',
-            rewriteApplied: !!data.rewriteApplied,
-            candidateCount: Number(data.candidateCount) || 0,
-            criticScore: Number(data.criticScore) || 0,
-            criticNeedsRewrite: !!data.criticNeedsRewrite,
-            criticVerdict: data.criticVerdict || '',
-            criticIssues: Array.isArray(data.criticIssues) ? data.criticIssues.slice(0, 4) : [],
-            criticStrengths: Array.isArray(data.criticStrengths) ? data.criticStrengths.slice(0, 4) : [],
-            criticBreakdown: data.criticBreakdown || {},
-            risk,
-            alternateText: data.alternateContent || '',
-            alternateAngle: data.alternateAngle || '',
-            alternateScore: Number(data.alternateScore) || 0,
-        });
-        syncCurrentHistoryFromItem(historyEntry || { ts: Date.now(), type: 'text' });
-        if (document.getElementById('tab-dashboard').classList.contains('active')) loadDashboardData();
-
-        // Show remaining generations for free users
         if (data.remainingToday !== undefined) {
             const remaining = data.remainingToday;
             if (remaining <= 2) {
@@ -1414,13 +1619,13 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
                 limitMsg.classList.add('warning');
             }
         }
-
     } catch (error) {
         console.error(error);
-        alertFromGenerateError(error.message);
+        const recovered = await tryRecoverGenerationResult('text');
+        if (!recovered) alertFromGenerateError(error.message);
     } finally {
+        endGenerationSession(seq);
         btn.textContent = originalText;
-        btn.disabled = false;
     }
 });
 
@@ -1440,8 +1645,7 @@ async function runImageGeneration() {
 
     const btn = document.getElementById('btn-generate-image');
     const originalText = btn.textContent;
-    btn.textContent = 'Рисуем... ⏳';
-    btn.disabled = true;
+    const seq = beginGenerationSession('image');
 
     try {
         const response = await fetch('/api/generate-image', {
@@ -1450,7 +1654,7 @@ async function runImageGeneration() {
             body: JSON.stringify({ prompt, aspectRatio, style, risk }),
         });
 
-        const data = await response.json();
+        const data = await parseJsonResponse(response);
 
         if (response.status === 403 && data.error === 'limit_reached') {
             limitMsg.innerHTML = `⚡️ Лимит 5 генераций исчерпан. <a href="javascript:void(0)" onclick="tg.openLink('https://t.me/tribute')">Перейти на Pro →</a>`;
@@ -1462,6 +1666,9 @@ async function runImageGeneration() {
         if (!response.ok) {
             const errText = typeof data?.error === 'string' ? data.error : '';
             throw new Error(data?.message || errText || `Ошибка (${response.status})`);
+        }
+        if (!data.dataUrl) {
+            throw new Error('Пустой ответ (нет картинки). Проверьте историю на дашборде.');
         }
 
         currentImageDataUrl = data.dataUrl;
@@ -1498,7 +1705,7 @@ async function runImageGeneration() {
         const variantBtn = document.getElementById('btn-toggle-variant');
         if (variantBtn) variantBtn.classList.add('hidden');
 
-        document.getElementById('result-container').classList.remove('hidden');
+        revealResultContainer();
         document.getElementById('publish-status').classList.add('hidden');
 
         const historyEntry = appendHistoryEntry({
@@ -1523,10 +1730,11 @@ async function runImageGeneration() {
         }
     } catch (error) {
         console.error(error);
-        alertFromGenerateError(error.message);
+        const recovered = await tryRecoverGenerationResult('image');
+        if (!recovered) alertFromGenerateError(error.message);
     } finally {
+        endGenerationSession(seq);
         btn.textContent = originalText;
-        btn.disabled = false;
     }
 }
 
@@ -1697,6 +1905,7 @@ document.getElementById('trend-search').addEventListener('input', (e) => {
 
 // Init
 updatePlanUI('free', null);
+recoverActiveGenerationOnLoad();
 loadUserData();
 loadTrends();
 loadDashboardData();

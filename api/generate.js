@@ -4,7 +4,7 @@ const { resolveTelegramUser } = require('../lib/miniAppAuth');
 const { isKvConfigured, getQuotaState, incrementGenerationCount } = require('../lib/kvUserStore');
 const { appendUserHistory, getUserHistory } = require('../lib/kvHistory');
 const { buildStudioTextPrompt, inferPostGoal } = require('../lib/buildTextPrompt');
-const { generateBestTextContent } = require('../lib/textGeneration');
+const { generateStudioTextContent } = require('../lib/textGeneration');
 const { assertGenerateRateLimit } = require('../lib/rateLimitKv');
 
 module.exports = async (req, res) => {
@@ -83,7 +83,9 @@ module.exports = async (req, res) => {
       alternateAngle,
       alternateScore,
       goal: detectedGoal,
-    } = await generateBestTextContent(
+      pipelineMode,
+      generationMs,
+    } = await generateStudioTextContent(
       genAI,
       modelChain,
       prompt,
@@ -96,6 +98,8 @@ module.exports = async (req, res) => {
         profile: rec,
         recentHistory,
         goal,
+        plan: rec.plan,
+        paidTierActive: limit === Infinity,
       },
     );
     const { remainingToday } = await incrementGenerationCount(auth.userId, rec);
@@ -123,6 +127,8 @@ module.exports = async (req, res) => {
         alternateText: alternateContent || '',
         alternateAngle: alternateAngle || '',
         alternateScore: Number(alternateScore) || 0,
+        pipelineMode: pipelineMode || '',
+        generationMs: Number(generationMs) || 0,
       });
     } catch (histErr) {
       console.error('appendUserHistory:', histErr.message);
@@ -148,6 +154,8 @@ module.exports = async (req, res) => {
       alternateContent,
       alternateAngle,
       alternateScore,
+      pipelineMode,
+      generationMs,
       historyTs,
       remainingToday,
     });

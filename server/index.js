@@ -28,7 +28,7 @@ const {
   inferPostGoal,
   isSurpriseRequest,
 } = require('../lib/buildTextPrompt');
-const { generateBestTextContent } = require('../lib/textGeneration');
+const { generateStudioTextContent } = require('../lib/textGeneration');
 const { assertGenerateRateLimit } = require('../lib/rateLimitKv');
 const { getTrendsList } = require('../lib/trendsProvider');
 const { canPublishImageToChannel } = require('../lib/planFeatures');
@@ -287,7 +287,9 @@ app.post('/api/generate', async (req, res) => {
       alternateAngle,
       alternateScore,
       goal: detectedGoal,
-    } = await generateBestTextContent(
+      pipelineMode,
+      generationMs,
+    } = await generateStudioTextContent(
       genAI,
       modelChain,
       prompt,
@@ -300,6 +302,8 @@ app.post('/api/generate', async (req, res) => {
         profile: profileRec,
         recentHistory,
         goal,
+        plan,
+        paidTierActive: ctx.limit === Infinity,
       },
     );
     const { remainingToday } = await bumpQuota(auth.userId, ctx);
@@ -328,6 +332,8 @@ app.post('/api/generate', async (req, res) => {
           alternateText: alternateContent || '',
           alternateAngle: alternateAngle || '',
           alternateScore: Number(alternateScore) || 0,
+          pipelineMode: pipelineMode || '',
+          generationMs: Number(generationMs) || 0,
         });
       } catch (histErr) {
         console.error('appendUserHistory:', histErr.message);
@@ -355,6 +361,8 @@ app.post('/api/generate', async (req, res) => {
           alternateText: alternateContent || '',
           alternateAngle: alternateAngle || '',
           alternateScore: Number(alternateScore) || 0,
+          pipelineMode: pipelineMode || '',
+          generationMs: Number(generationMs) || 0,
         });
       } catch (histErr) {
         console.error('appendFileHistory:', histErr.message);
@@ -381,6 +389,8 @@ app.post('/api/generate', async (req, res) => {
       alternateContent,
       alternateAngle,
       alternateScore,
+      pipelineMode,
+      generationMs,
       historyTs,
       ...(remainingToday !== undefined ? { remainingToday } : {}),
     });

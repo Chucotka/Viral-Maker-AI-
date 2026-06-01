@@ -173,6 +173,31 @@ input[type="text"]:focus, textarea:focus, select:focus {
     margin-top: -4px;
     margin-bottom: 14px;
 }
+.studio-generating-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 12px 0;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(0, 122, 255, 0.12);
+    border: 1px solid var(--accent);
+    font-size: 14px;
+    line-height: 1.4;
+}
+.studio-generating-spinner {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    border: 2px solid var(--text-muted);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: studio-spin 0.85s linear infinite;
+    flex-shrink: 0;
+}
+@keyframes studio-spin {
+    to { transform: rotate(360deg); }
+}
 .result-image {
     width: 100%;
     max-height: 70vh;
