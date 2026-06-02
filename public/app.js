@@ -607,7 +607,22 @@ async function parseJsonResponse(response) {
     try {
         return JSON.parse(raw);
     } catch {
-        throw new Error('Сервер вернул неверный ответ. Попробуйте ещё раз.');
+        const status = response.status;
+        const body = raw.trim();
+        if (status === 504 || /FUNCTION_INVOCATION_TIMEOUT|deployment.*timeout/i.test(body)) {
+            throw new Error('Сервер не успел ответить (таймаут). Загляните в Дашборд — результат мог сохраниться в истории.');
+        }
+        if (/^\s*<!DOCTYPE|^\s*<html/i.test(body)) {
+            if (status >= 500) {
+                throw new Error(
+                    `Сбой сервера (HTTP ${status}): пришла страница ошибки, а не JSON. Это обычно не ключ Gemini — смотрите логи Vercel → Functions → /api/generate.`,
+                );
+            }
+            throw new Error(
+                `Сервер вернул HTML (HTTP ${status}), а не JSON. Проверьте URL мини-приложения в BotFather (должен совпадать с Vercel, не старый ngrok).`,
+            );
+        }
+        throw new Error(`Сервер вернул неверный ответ (HTTP ${status}). Попробуйте ещё раз.`);
     }
 }
 
