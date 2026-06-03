@@ -701,3 +701,116 @@ input[type="text"]:focus, textarea:focus, select:focus {
         60px 40px 0 0 transparent,
         -40px 60px 0 0 transparent; }
 }
+
+/* ── Onboarding ── */
+.onboarding-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 20px;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+}
+
+.onboarding-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+}
+
+.onboarding-card {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    background: var(--surface);
+    border-radius: 20px 20px 16px 16px;
+    padding: 24px 20px 20px;
+    border: 1px solid var(--border);
+    animation: refModalIn 0.35s ease-out;
+}
+
+.onboarding-dots {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    margin-bottom: 16px;
+}
+
+.onboarding-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+}
+
+.onboarding-dot.active {
+    background: var(--accent);
+    box-shadow: 0 0 8px rgba(0, 122, 255, 0.5);
+}
+
+.onboarding-body {
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 10px 0 18px;
+}
+
+.onboarding-skip {
+    display: block;
+    width: 100%;
+    margin-top: 12px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 8px;
+}
+
+/* ── Feature upsell (analytics) ── */
+.feature-upsell {
+    text-align: center;
+    padding: 32px 16px;
+    background: linear-gradient(160deg, rgba(0, 122, 255, 0.12), transparent);
+    border-radius: 16px;
+    border: 1px dashed rgba(0, 122, 255, 0.35);
+    margin-bottom: 20px;
+}
+
+.feature-upsell-icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+}
+
+.feature-upsell h3 {
+    margin-bottom: 8px;
+}
+
+/* ── Studio tips ── */
+.studio-tips-card {
+    background: rgba(0, 122, 255, 0.08);
+    border: 1px solid rgba(0, 122, 255, 0.2);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+}
+
+.studio-tips-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.studio-tips-list {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.studio-tips-list li {
+    margin-bottom: 4px;
+}

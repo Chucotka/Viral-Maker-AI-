@@ -1,6 +1,8 @@
 const { resolveTelegramUser } = require('../lib/miniAppAuth');
 const { isKvConfigured, setUserPlan, planDurationDays } = require('../lib/kvUserStore');
-const { hasDebugAccess, normalizeDebugPlan, readDebugSecret } = require('../lib/debugPlan');
+const { hasAdminApiAccess } = require('../lib/adminAccess');
+const { sendSafeError } = require('../lib/httpErrors');
+const { normalizeDebugPlan, readDebugSecret } = require('../lib/debugPlan');
 
 module.exports = async (req, res) => {
   try {
@@ -24,7 +26,7 @@ module.exports = async (req, res) => {
       return res.status(405).end();
     }
 
-    if (!hasDebugAccess(req)) {
+    if (!hasAdminApiAccess(req, auth.userId)) {
       console.warn('Debug plan ignored: forbidden');
       return res.status(403).json({ error: 'forbidden' });
     }
@@ -50,7 +52,6 @@ module.exports = async (req, res) => {
       planUntil: new Date(Date.now() + planDurationDays() * 864e5).toISOString(),
     });
   } catch (e) {
-    console.error('Debug plan error:', e.message);
-    res.status(500).json({ error: e.message });
+    sendSafeError(res, e, 'debug-plan');
   }
 };

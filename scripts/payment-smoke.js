@@ -136,7 +136,12 @@ async function main() {
     process.exit(1);
   }
 
-  const testUser = { id: 999000001, first_name: 'PaymentSmoke', username: 'payment_smoke_bot' };
+  // Authenticated API checks (initData must match OWNER_TELEGRAM_IDS for admin endpoints)
+  const ownerRaw = String(process.env.OWNER_TELEGRAM_IDS || '999000001').trim();
+  const ownerId = Number(ownerRaw.split(',')[0]) || 999000001;
+  const testUser = { id: ownerId, first_name: 'PaymentSmoke', username: 'payment_smoke_bot' };
+  if (ownerRaw) pass('env OWNER_TELEGRAM_IDS', String(ownerId));
+  else fail('env OWNER_TELEGRAM_IDS', 'нет — admin/debug тесты могут не пройти');
   const initData = buildInitData(token, testUser);
   const authHeaders = { 'X-Telegram-Init-Data': initData };
 
@@ -190,7 +195,7 @@ async function main() {
 
       await httpsJson(`${BASE}/api/manual-plan`, {
         method: 'POST',
-        headers: { 'X-Debug-Secret': debugSecret, 'Content-Type': 'application/json' },
+        headers: { ...authHeaders, 'X-Debug-Secret': debugSecret, 'Content-Type': 'application/json' },
         body: { target: String(testUser.id), plan: 'free' },
       });
     } catch (e) {

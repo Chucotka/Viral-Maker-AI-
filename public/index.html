@@ -17,7 +17,7 @@
                     <div class="avatar" id="user-avatar">👤</div>
                     <span id="user-name">Пользователь</span>
                 </div>
-                <div class="score-badge">
+                <div class="score-badge" title="Ориентир по ключевым словам и структуре, не гарантия виральности">
                     <span class="score-label">Viral Score</span>
                     <span class="score-value" id="dashboard-score">0</span>/100
                 </div>
@@ -34,7 +34,7 @@
                     <span class="referral-lightning">⚡</span>
                     <div>
                         <h3 class="referral-title">Пригласи друзей — получи Pro</h3>
-                        <p class="referral-subtitle">+10 генераций за друга · Pro на 5 и 10 друзей</p>
+                        <p class="referral-subtitle">+10 генераций за друга · Pro на 5 и 10 · засчитывается после 1-й генерации</p>
                     </div>
                 </div>
                 <div class="referral-stats-row">
@@ -79,6 +79,15 @@
             <header class="section-header">
                 <h2>Студия Контента</h2>
             </header>
+
+            <div class="studio-tips-card" id="studio-tips-card">
+                <div class="studio-tips-title">💡 Быстрый старт</div>
+                <ul class="studio-tips-list">
+                    <li><b>Авто</b> — AI сам выберет лучший угол подачи</li>
+                    <li><b>Короткая тема</b> — достаточно 3–5 слов, мы развернём</li>
+                    <li><b>Refine</b> после генерации — новая версия (списывает лимит)</li>
+                </ul>
+            </div>
 
             <div class="studio-mode-row" role="tablist" aria-label="Режим студии">
                 <button type="button" class="mode-pill active" id="mode-pill-text" data-studio-mode="text">Текст</button>
@@ -281,6 +290,14 @@
                 <h2>Аналитика</h2>
             </header>
 
+            <div id="analytics-upsell" class="feature-upsell">
+                <div class="feature-upsell-icon">📈</div>
+                <h3>Аналитика — тариф Pro</h3>
+                <p class="text-hint">Viral Score, график за 7 дней и лучший пост доступны с активной подпиской Pro или Premium.</p>
+                <button type="button" class="btn btn-primary btn-full" id="btn-analytics-upgrade">Перейти на Pro</button>
+            </div>
+
+            <div id="analytics-content" class="hidden">
             <div class="analytics-stats">
                 <div class="stat-card">
                     <div class="stat-value" id="stat-total">0</div>
@@ -305,6 +322,7 @@
                     <p class="text-muted">Нет данных</p>
                 </div>
             </div>
+            </div>
         </section>
 
         <!-- Tab 5: Settings -->
@@ -328,7 +346,7 @@
                     <span class="referral-lightning referral-lightning-lg">⚡</span>
                     <div>
                         <h3 class="referral-title">Реферальная программа</h3>
-                        <p class="referral-subtitle">Делись ссылкой — получай генерации и Pro бесплатно</p>
+                        <p class="referral-subtitle">Делись ссылкой — друг должен сделать 1 генерацию, чтобы бонус засчитался</p>
                     </div>
                 </div>
 
@@ -374,9 +392,10 @@
                 </button>
             </div>
 
+            <div id="admin-tools-panel" class="hidden">
             <div class="settings-group">
                 <label>Тестовый доступ</label>
-                <p class="text-hint" style="margin-bottom:10px">Для владельца проекта. Попросит секрет и активирует тариф без оплаты.</p>
+                <p class="text-hint" style="margin-bottom:10px">Только для владельца. Попросит секрет и активирует тариф без оплаты.</p>
                 <div class="plan-actions">
                     <button type="button" class="btn btn-secondary btn-inline" id="btn-debug-pro">Активировать Pro</button>
                     <button type="button" class="btn btn-secondary btn-inline" id="btn-debug-premium">Активировать Premium</button>
@@ -405,6 +424,7 @@
                 </div>
                 <p class="text-hint" id="cleanup-status" style="margin-top:8px"></p>
                 <div id="cleanup-list" class="cleanup-list hidden"></div>
+            </div>
             </div>
 
             <div class="settings-group">
@@ -438,14 +458,14 @@
                         <h4>Free</h4>
                         <span class="plan-price">0 Stars</span>
                     </div>
-                    <p>5 генераций в день</p>
+                    <p>5 генераций/день + бонус за друзей</p>
                 </div>
                 <div class="plan-card" id="plan-pro" style="cursor: pointer;">
                     <div class="plan-header">
                         <h4>Pro</h4>
                         <span class="plan-price">99 Stars / карта</span>
                     </div>
-                    <p>Безлимит + аналитика</p>
+                    <p>Безлимит · аналитика · 2 AI-варианта</p>
                     <div class="plan-actions">
                         <button type="button" class="btn btn-secondary btn-inline" id="plan-pro-tribute">Картой через Tribute</button>
                     </div>
@@ -455,7 +475,7 @@
                         <h4>Premium</h4>
                         <span class="plan-price">299 Stars / карта</span>
                     </div>
-                    <p>Картинки в канал + увеличенный лимит</p>
+                    <p>Pro + картинки в канал · 3 AI-варианта · ×2 rate limit</p>
                     <div class="plan-actions">
                         <button type="button" class="btn btn-secondary btn-inline" id="plan-premium-tribute">Картой через Tribute</button>
                     </div>
@@ -496,6 +516,18 @@
             </button>
         </nav>
 
+        <!-- Onboarding -->
+        <div id="onboarding-modal" class="onboarding-modal hidden" role="dialog" aria-modal="true">
+            <div class="onboarding-backdrop"></div>
+            <div class="onboarding-card">
+                <div id="onboarding-dots" class="onboarding-dots"></div>
+                <h3 id="onboarding-title"></h3>
+                <p id="onboarding-body" class="onboarding-body"></p>
+                <button type="button" class="btn btn-primary btn-full" id="onboarding-next">Дальше</button>
+                <button type="button" class="onboarding-skip" id="onboarding-skip">Пропустить</button>
+            </div>
+        </div>
+
         <!-- Модалка награды за milestone -->
         <div id="referral-reward-modal" class="referral-modal hidden" role="dialog" aria-modal="true">
             <div class="referral-modal-backdrop"></div>
@@ -509,6 +541,8 @@
         </div>
     </div>
 
+    <script src="js/vm-core.js"></script>
+    <script src="js/onboarding.js"></script>
     <script src="referral.js"></script>
     <script src="app.js"></script>
 </body>

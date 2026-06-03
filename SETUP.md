@@ -24,13 +24,16 @@ Welcome to the **Viral Maker AI** setup guide! This project contains both the Ex
    - `GEMINI_API_KEY`: Your Google Gemini API key.
    - `TELEGRAM_BOT_TOKEN`: The token you got from `@BotFather`.
    - `WEBAPP_URL`: Leave this blank for a moment, we will get it from ngrok.
+   - `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`: Upstash Redis (required for user data, quotas, referrals).
+   - `OWNER_TELEGRAM_IDS`: Your Telegram numeric user id (owner-only admin tools).
+   - `DEBUG_ADMIN_SECRET`: Secret for admin API endpoints (owner + secret).
 
 ### 3. Start ngrok
 Telegram Mini Apps require an HTTPS URL. To expose your local development server to the internet via HTTPS, use ngrok.
 
-Run the following command in your terminal to start ngrok on port 3000 (the default port for our app):
+Run the following command in your terminal to start ngrok on port **3001** (default dev port):
 ```bash
-ngrok http 3000
+ngrok http 3001
 ```
 
 Ngrok will display a public URL (e.g., `https://<random-string>.ngrok-free.app`).
@@ -46,7 +49,9 @@ npm install
 npm run dev
 ```
 
-The server should now be running on `http://localhost:3000` and is accessible via your ngrok URL.
+The server should now be running on `http://localhost:3001` and is accessible via your ngrok URL.
+
+**Note:** Local dev uses the same `api/*.js` handlers as Vercel production (via `server/mountApi.js`). Redis is required for generation, user profile, and payments.
 
 ### 5. Set the Bot WebApp URL
 You need to tell Telegram what URL to load when users open your Mini App.

@@ -897,6 +897,10 @@ function switchTab(tabId) {
         }
     });
 
+    if (tabId === 'analytics' && window.VM && !VM.canAccessAnalytics()) {
+        VM.syncAnalyticsGate();
+    }
+
     if (tabId === 'dashboard' || tabId === 'analytics') {
         loadDashboardData();
     }
@@ -1146,6 +1150,12 @@ async function loadDashboardData() {
 }
 
 // --- User Data ---
+function updateAdminToolsVisibility(isOwner) {
+    const panel = document.getElementById('admin-tools-panel');
+    if (!panel) return;
+    panel.classList.toggle('hidden', !isOwner);
+}
+
 async function loadUserData(options = {}) {
     const { silent = false } = options;
     try {
@@ -1159,8 +1169,20 @@ async function loadUserData(options = {}) {
         }
         if (data && data.plan) {
             userPlan = data.plan;
+            if (window.VM) {
+                VM.updatePlan(data.plan);
+                VM.updateFeatures(data.features);
+                const hadStored = sessionStorage.getItem('vm_last_bonus_gen') !== null;
+                const prevBonus = Number(sessionStorage.getItem('vm_last_bonus_gen') || '0');
+                const nextBonus = Number(data.bonusGenerations) || 0;
+                if (!silent && hadStored && nextBonus > prevBonus) {
+                    VM.showReferralBonusToast(prevBonus, nextBonus);
+                }
+                sessionStorage.setItem('vm_last_bonus_gen', String(nextBonus));
+            }
             updatePlanUI(data.plan, data.planUntil || null, data.bonusGenerations || 0, data.quotaRemaining);
         }
+        updateAdminToolsVisibility(Boolean(data?.isOwner));
         if (data && data.profile) {
             document.getElementById('profile-niche').value = data.profile.niche || '';
             document.getElementById('profile-language').value = data.profile.language || '';
@@ -1174,10 +1196,11 @@ async function loadUserData(options = {}) {
                 await loadUserData({ silent: true });
             }
         }
-        if (data?.referralSignup?.applied && !silent) {
+        if (data?.referralSignup?.bound && !silent) {
             tg.showPopup({
-                title: 'Добро пожаловать!',
-                message: 'Вы перешли по реферальной ссылке. Ваш друг уже получил +10 бонусных генераций!',
+                title: 'Реферальная ссылка активна',
+                message:
+                    'Вы перешли по приглашению. После вашей первой генерации друг получит +10 бонусных генераций.',
             });
         }
     } catch (error) {
@@ -1985,9 +2008,15 @@ document.getElementById('trend-search').addEventListener('input', (e) => {
 });
 
 // Init
+if (window.VMOnboarding) VMOnboarding.mount();
 if (window.ReferralSystem) ReferralSystem.mount();
+document.getElementById('btn-analytics-upgrade')?.addEventListener('click', () => buyPlan('pro'));
 updatePlanUI('free', null);
 recoverActiveGenerationOnLoad();
-loadUserData();
+loadUserData().then(() => {
+    if (window.VMOnboarding && !VMOnboarding.isDone()) {
+        setTimeout(() => VMOnboarding.show(), 400);
+    }
+});
 loadTrends();
 loadDashboardData();

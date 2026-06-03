@@ -1,4 +1,5 @@
 const { getTributePlanConfig } = require('../lib/tributeConfig');
+const { sendSafeError } = require('../lib/httpErrors');
 
 module.exports = async (req, res) => {
   try {
@@ -15,6 +16,6 @@ module.exports = async (req, res) => {
     }
     res.json({ plan: config.plan, link: config.webLink });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    sendSafeError(res, e, 'tribute-link');
   }
 };

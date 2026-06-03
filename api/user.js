@@ -1,7 +1,10 @@
 const { resolveTelegramUser } = require('../lib/miniAppAuth');
 const { isKvConfigured, getQuotaState, saveUserRecord, saveTelegramIdentity } = require('../lib/kvUserStore');
+const { isAppOwner } = require('../lib/appOwner');
+const { sendSafeError } = require('../lib/httpErrors');
+const { planFeatureSummary } = require('../lib/planFeatures');
 const {
-  processReferralSignup,
+  bindReferrerOnFirstVisit,
   buildReferralStats,
   ackReferralRewards,
   parseReferrerId,
@@ -15,14 +18,9 @@ function sanitizeProfileBody(body) {
   return { niche, language, styleNote, brandMemory };
 }
 
-/** Извлекает start_param из query/body (fallback, если клиент передаёт явно). */
-function readReferralParam(req, authStartParam) {
-  if (authStartParam) return authStartParam;
-  const q = req.query?.startapp || req.query?.start_param;
-  if (typeof q === 'string' && q.trim()) return q.trim();
-  const bodyParam = req.body?.startParam || req.body?.startapp;
-  if (typeof bodyParam === 'string' && bodyParam.trim()) return bodyParam.trim();
-  return null;
+/** Только подписанный start_param из initData — защита от подмены referrer. */
+function readReferralParam(_req, authStartParam) {
+  return authStartParam || null;
 }
 
 module.exports = async (req, res) => {
@@ -42,7 +40,7 @@ module.exports = async (req, res) => {
       const referralParam = readReferralParam(req, auth.startParam);
       let referralSignup = null;
       if (referralParam && parseReferrerId(referralParam)) {
-        referralSignup = await processReferralSignup(auth.userId, referralParam);
+        referralSignup = await bindReferrerOnFirstVisit(auth.userId, referralParam);
       }
 
       const { rec, quota } = await getQuotaState(auth.userId);
@@ -52,6 +50,7 @@ module.exports = async (req, res) => {
         plan: rec.plan,
         dailyCount: rec.dailyCount,
         userId: auth.userId,
+        isOwner: isAppOwner(auth.userId),
         planUntil: rec.planUntil || null,
         bonusGenerations: rec.bonusGenerations || 0,
         quotaRemaining: quota.totalRemaining === Infinity ? null : quota.totalRemaining,
@@ -63,6 +62,7 @@ module.exports = async (req, res) => {
         },
         referral,
         referralSignup,
+        features: planFeatureSummary(rec),
       });
     }
 
@@ -97,7 +97,6 @@ module.exports = async (req, res) => {
 
     return res.status(405).end();
   } catch (e) {
-    console.error('User API error:', e.message);
-    res.status(500).json({ error: e.message });
+    sendSafeError(res, e, 'user');
   }
 };

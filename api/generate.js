@@ -1,11 +1,13 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { modelFallbackChain } = require('../lib/geminiRobust');
 const { resolveTelegramUser } = require('../lib/miniAppAuth');
-const { isKvConfigured, getQuotaState, incrementGenerationCount } = require('../lib/kvUserStore');
+const { isKvConfigured, getQuotaState, incrementGenerationCount, isPaidTierActive } = require('../lib/kvUserStore');
+const { confirmReferralAfterFirstGeneration } = require('../lib/referralService');
 const { appendUserHistory, getUserHistory } = require('../lib/kvHistory');
 const { buildStudioTextPrompt, inferPostGoal } = require('../lib/buildTextPrompt');
 const { generateStudioTextContent } = require('../lib/textGeneration');
 const { assertGenerateRateLimit } = require('../lib/rateLimitKv');
+const { sendSafeError } = require('../lib/httpErrors');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).end();
@@ -110,10 +112,11 @@ module.exports = async (req, res) => {
         recentHistory,
         goal,
         plan: rec.plan,
-        paidTierActive: limit === Infinity,
+        paidTierActive: isPaidTierActive(rec),
       },
     );
     const { remainingToday } = await incrementGenerationCount(auth.userId, rec);
+    await confirmReferralAfterFirstGeneration(auth.userId);
 
     const historyTs = Date.now();
     try {
@@ -172,6 +175,6 @@ module.exports = async (req, res) => {
     });
   } catch (e) {
     console.error('ULTIMATE GENERATION ERROR:', e.message);
-    res.status(500).json({ error: e.message });
+    sendSafeError(res, e, 'generate');
   }
 };

@@ -2,6 +2,7 @@ const { resolveTelegramUser } = require('../lib/miniAppAuth');
 const { isKvConfigured } = require('../lib/kvUserStore');
 const { getUserHistory, updateUserHistoryEntry } = require('../lib/kvHistory');
 const { getLocalHistory } = require('../lib/localHistoryStore');
+const { sendSafeError } = require('../lib/httpErrors');
 
 module.exports = async (req, res) => {
   try {
@@ -29,7 +30,6 @@ module.exports = async (req, res) => {
 
     return res.status(405).end();
   } catch (e) {
-    console.error('History API error:', e.message);
-    res.status(500).json({ error: e.message });
+    sendSafeError(res, e, 'history');
   }
 };

@@ -2,6 +2,7 @@ const { InputFile } = require('grammy');
 const { resolveTelegramUser } = require('../lib/miniAppAuth');
 const { isKvConfigured, getQuotaState } = require('../lib/kvUserStore');
 const { canPublishImageToChannel } = require('../lib/planFeatures');
+const { sendSafeError, sendClientError } = require('../lib/httpErrors');
 const { normalizeTelegramChannel } = require('../lib/telegramChannel');
 
 module.exports = async (req, res) => {
@@ -18,7 +19,7 @@ module.exports = async (req, res) => {
     }
 
     if (!process.env.TELEGRAM_BOT_TOKEN) {
-      return res.status(500).json({ error: 'TELEGRAM_BOT_TOKEN is not configured.' });
+      return sendClientError(res, 500, 'server_misconfigured', 'Сервис публикации временно недоступен.');
     }
 
     const { Bot } = require('grammy');
@@ -53,16 +54,15 @@ module.exports = async (req, res) => {
 
     res.json({ ok: true });
   } catch (e) {
-    const status = Number(e?.error_code) || 500;
-    const message = e?.description || e?.response?.description || e?.message || 'Не удалось опубликовать.';
-    console.error('Publish error:', {
-      status,
-      message,
-      errorCode: e?.error_code || null,
-    });
-    res.status(status).json({
-      error: 'publish_failed',
-      message,
-    });
+    const tgMessage = e?.description || e?.response?.description;
+    if (tgMessage) {
+      const status = Number(e?.error_code) || 500;
+      console.error('Publish error:', { status, message: tgMessage, errorCode: e?.error_code || null });
+      return res.status(status >= 400 && status < 600 ? status : 500).json({
+        error: 'publish_failed',
+        message: String(tgMessage).slice(0, 200),
+      });
+    }
+    sendSafeError(res, e, 'publish');
   }
 };
