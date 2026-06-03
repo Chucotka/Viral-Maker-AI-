@@ -814,3 +814,220 @@ input[type="text"]:focus, textarea:focus, select:focus {
 .studio-tips-list li {
     margin-bottom: 4px;
 }
+
+/* ── Admin subscriptions dashboard ── */
+.subs-dashboard {
+    margin-top: 14px;
+}
+
+.subs-stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.subs-stat {
+    border-radius: 14px;
+    padding: 12px 8px;
+    text-align: center;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.subs-stat-active { border-color: rgba(52, 199, 89, 0.35); background: rgba(52, 199, 89, 0.08); }
+.subs-stat-expired { border-color: rgba(255, 149, 0, 0.35); background: rgba(255, 149, 0, 0.08); }
+.subs-stat-free { border-color: rgba(142, 142, 147, 0.35); background: rgba(142, 142, 147, 0.08); }
+
+.subs-stat-clickable {
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.subs-stat-clickable:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.subs-stat-clickable:active {
+    transform: translateY(0);
+}
+
+.subs-stat-value {
+    display: block;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.subs-stat-label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.subs-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.subs-tab {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    border-radius: 999px;
+    padding: 10px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.subs-tab.active {
+    color: var(--text);
+    border-color: var(--accent);
+    background: rgba(0, 122, 255, 0.15);
+}
+
+.subs-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.subs-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.subs-card-active { border-left: 4px solid var(--success); }
+.subs-card-expired { border-left: 4px solid var(--warning); opacity: 0.92; }
+.subs-card-free { border-left: 4px solid var(--text-muted); }
+
+.subs-card-left {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-width: 0;
+    flex: 1;
+}
+
+.subs-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #007aff, #5856d6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.subs-card-body {
+    min-width: 0;
+    flex: 1;
+}
+
+.subs-card-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+}
+
+.subs-card-name {
+    font-size: 15px;
+    font-weight: 700;
+    word-break: break-word;
+}
+
+.subs-card-id {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    word-break: break-all;
+}
+
+.subs-card-id code {
+    font-size: 11px;
+}
+
+.subs-card-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.45;
+}
+
+.subs-meta-sep {
+    margin: 0 4px;
+}
+
+.subs-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.subs-badge-pro {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.25), rgba(255, 149, 0, 0.25));
+    color: #ffd700;
+}
+
+.subs-badge-premium {
+    background: rgba(191, 90, 242, 0.2);
+    color: #bf5af2;
+}
+
+.subs-badge-free {
+    background: rgba(142, 142, 147, 0.2);
+    color: var(--text-muted);
+}
+
+.subs-days-chip {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(52, 199, 89, 0.15);
+    color: var(--success);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.subs-days-chip-muted {
+    background: rgba(255, 149, 0, 0.12);
+    color: #ff9500;
+}
+
+.subs-card .btn {
+    flex-shrink: 0;
+    min-width: 96px;
+}
+
+.subs-empty {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+    padding: 24px 12px;
+    border: 1px dashed var(--border);
+    border-radius: 14px;
+}

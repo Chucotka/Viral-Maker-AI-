@@ -415,15 +415,41 @@
             </div>
 
             <div class="settings-group">
-                <label>Очистка тестовых подписок</label>
-                <p class="text-hint" style="margin-bottom:10px">Показывает активные Pro/Premium и позволяет сбросить их в Free без ручного поиска по Redis.</p>
+                <label>Подписки пользователей</label>
+                <p class="text-hint" style="margin-bottom:10px">Активные Pro/Premium, истёкшие и Free-аккаунты с @username.</p>
                 <input type="password" id="cleanup-secret" placeholder="DEBUG_ADMIN_SECRET" autocomplete="off">
                 <div class="plan-actions" style="margin-top:12px">
-                    <button type="button" class="btn btn-secondary btn-inline" id="btn-cleanup-load">Показать активные</button>
-                    <button type="button" class="btn btn-secondary btn-inline" id="btn-cleanup-clear">Скрыть список</button>
+                    <button type="button" class="btn btn-secondary btn-inline" id="btn-cleanup-load">Обновить список</button>
+                    <button type="button" class="btn btn-secondary btn-inline" id="btn-cleanup-clear">Скрыть</button>
                 </div>
                 <p class="text-hint" id="cleanup-status" style="margin-top:8px"></p>
-                <div id="cleanup-list" class="cleanup-list hidden"></div>
+
+                <div id="subs-dashboard" class="subs-dashboard hidden">
+                    <div class="subs-stats-row">
+                        <div class="subs-stat subs-stat-active">
+                            <span class="subs-stat-value" id="subs-count-active">0</span>
+                            <span class="subs-stat-label">Активные</span>
+                        </div>
+                        <div class="subs-stat subs-stat-expired">
+                            <span class="subs-stat-value" id="subs-count-expired">0</span>
+                            <span class="subs-stat-label">Истёкшие</span>
+                        </div>
+                        <div class="subs-stat subs-stat-free">
+                            <span class="subs-stat-value" id="subs-count-free">0</span>
+                            <span class="subs-stat-label">Free</span>
+                        </div>
+                    </div>
+
+                    <div class="subs-tabs" role="tablist">
+                        <button type="button" class="subs-tab active" data-subs-tab="active">✅ Активные</button>
+                        <button type="button" class="subs-tab" data-subs-tab="expired">⏱ Истёкшие</button>
+                        <button type="button" class="subs-tab" data-subs-tab="free">👤 Free</button>
+                    </div>
+
+                    <div id="subs-panel-active" class="subs-panel"></div>
+                    <div id="subs-panel-expired" class="subs-panel hidden"></div>
+                    <div id="subs-panel-free" class="subs-panel hidden"></div>
+                </div>
             </div>
             </div>
 
@@ -543,6 +569,7 @@
 
     <script src="js/vm-core.js"></script>
     <script src="js/onboarding.js"></script>
+    <script src="js/admin-subs.js"></script>
     <script src="referral.js"></script>
     <script src="app.js"></script>
 </body>

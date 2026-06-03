@@ -10,6 +10,7 @@ const {
   findUserIdByTelegramUsername,
   clearUserPlan,
   listActivePaidUsers,
+  listSubscriptionOverview,
 } = require('../lib/kvUserStore');
 
 function parseTarget(value) {
@@ -64,9 +65,14 @@ module.exports = async (req, res) => {
         return res.status(405).end();
       }
       if (!requireAdmin(req, res)) return;
-      const items = await listActivePaidUsers({ limit: 100, scanCount: 100 });
-      console.info('Manual plan list returned', { count: items.length });
-      return res.json({ ok: true, items, count: items.length });
+      const overview = await listSubscriptionOverview({ scanCount: 150, freeLimit: 50 });
+      console.info('Manual plan list returned', overview.totals);
+      return res.json({
+        ok: true,
+        items: overview.active,
+        count: overview.totals.active,
+        overview,
+      });
     }
 
     if (req.method !== 'POST') {

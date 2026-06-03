@@ -1396,40 +1396,8 @@ function getCleanupSecret() {
 }
 
 function renderCleanupList(items) {
-    const listEl = document.getElementById('cleanup-list');
-    if (!listEl) return;
-
-    if (!Array.isArray(items) || !items.length) {
-        listEl.innerHTML = '<p class="text-muted">Активных подписок не найдено.</p>';
-        listEl.classList.remove('hidden');
-        return;
-    }
-
-    listEl.innerHTML = items.map((item) => {
-        const username = item.telegramUsername ? `@${escapeHtml(item.telegramUsername)}` : 'без username';
-        const until = item.planUntil ? new Date(item.planUntil).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
-        const planLabel = item.plan === 'premium' ? 'Premium' : 'Pro';
-        return `
-            <div class="cleanup-item">
-                <div class="cleanup-item-main">
-                    <div class="cleanup-item-title">${username}</div>
-                    <div class="cleanup-item-meta">
-                        userId: <code>${escapeHtml(item.userId)}</code><br>
-                        Тариф: <b>${planLabel}</b><br>
-                        До: ${escapeHtml(until)}
-                    </div>
-                </div>
-                <button type="button" class="btn btn-secondary btn-inline cleanup-reset-btn" data-user-id="${escapeHtml(item.userId)}" data-username="${escapeHtml(item.telegramUsername || '')}">Сбросить</button>
-            </div>
-        `;
-    }).join('');
-    listEl.classList.remove('hidden');
-
-    listEl.querySelectorAll('.cleanup-reset-btn').forEach((btn) => {
-        btn.addEventListener('click', () => {
-            resetCleanupPlan(btn.dataset.userId, btn.dataset.username || '');
-        });
-    });
+    void items;
+    // legacy noop — UI moved to AdminSubs
 }
 
 async function loadCleanupPlans() {
@@ -1441,7 +1409,7 @@ async function loadCleanupPlans() {
         return;
     }
 
-    if (statusEl) statusEl.textContent = 'Загружаю активные подписки...';
+    if (statusEl) statusEl.textContent = 'Загружаю подписки...';
 
     try {
         const response = await fetch('/api/manual-plan?action=list', {
@@ -1459,13 +1427,30 @@ async function loadCleanupPlans() {
             return;
         }
 
-        const items = Array.isArray(data.items) ? data.items : [];
-        renderCleanupList(items);
-        if (statusEl) statusEl.textContent = items.length ? `Найдено ${items.length} активных подписок.` : 'Активных подписок нет.';
+        const overview = data.overview || {
+            active: Array.isArray(data.items) ? data.items : [],
+            expired: [],
+            freeUsers: [],
+            totals: {
+                active: Array.isArray(data.items) ? data.items.length : 0,
+                expired: 0,
+                freeUsers: 0,
+            },
+        };
+
+        if (window.AdminSubs) {
+            AdminSubs.renderOverview(overview);
+        }
+
+        const t = overview.totals || {};
+        if (statusEl) {
+            statusEl.textContent =
+                `Активных: ${t.active || 0} · Истёкших: ${t.expired || 0} · Free: ${t.freeUsers || 0}`;
+        }
     } catch (error) {
         console.error('Cleanup list error:', error);
         if (statusEl) statusEl.textContent = 'Ошибка при загрузке списка.';
-        tg.showAlert('Ошибка при загрузке списка подписок.');
+        tg.showAlert('Ошибка при загрузке подписок.');
     }
 }
 
@@ -1516,6 +1501,8 @@ async function resetCleanupPlan(userId, username = '') {
     }
 }
 
+window.resetCleanupPlan = resetCleanupPlan;
+
 document.getElementById('plan-pro').addEventListener('click', () => buyPlan('pro'));
 document.getElementById('plan-premium').addEventListener('click', () => buyPlan('premium'));
 document.getElementById('btn-open-premiumbot').addEventListener('click', handlePremiumBotAction);
@@ -1543,12 +1530,8 @@ document.getElementById('btn-manual-pro').addEventListener('click', () => activa
 document.getElementById('btn-manual-premium').addEventListener('click', () => activateManualPlan('premium'));
 document.getElementById('btn-cleanup-load').addEventListener('click', () => loadCleanupPlans());
 document.getElementById('btn-cleanup-clear').addEventListener('click', () => {
-    const listEl = document.getElementById('cleanup-list');
     const statusEl = document.getElementById('cleanup-status');
-    if (listEl) {
-        listEl.innerHTML = '';
-        listEl.classList.add('hidden');
-    }
+    if (window.AdminSubs) AdminSubs.hideDashboard();
     if (statusEl) statusEl.textContent = '';
 });
 
@@ -2010,6 +1993,7 @@ document.getElementById('trend-search').addEventListener('input', (e) => {
 // Init
 if (window.VMOnboarding) VMOnboarding.mount();
 if (window.ReferralSystem) ReferralSystem.mount();
+if (window.AdminSubs) AdminSubs.mount();
 document.getElementById('btn-analytics-upgrade')?.addEventListener('click', () => buyPlan('pro'));
 updatePlanUI('free', null);
 recoverActiveGenerationOnLoad();
