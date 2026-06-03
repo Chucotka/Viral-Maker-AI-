@@ -18,7 +18,15 @@ const {
   getQuotaState,
   saveUserRecord,
   incrementGenerationCount,
+  getEffectiveQuota,
+  FREE_DAILY_LIMIT,
 } = require('../lib/kvUserStore');
+const {
+  processReferralSignup,
+  buildReferralStats,
+  ackReferralRewards,
+  parseReferrerId,
+} = require('../lib/referralService');
 const { appendUserHistory, getUserHistory, updateUserHistoryEntry } = require('../lib/kvHistory');
 const {
   buildStudioTextPrompt,
@@ -105,7 +113,13 @@ function resolveStudioUser(req, res) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (initData && token) {
     const parsed = validateInitData(initData, token);
-    if (parsed) return { userId: String(parsed.user.id), user: parsed.user };
+    if (parsed) {
+      return {
+        userId: String(parsed.user.id),
+        user: parsed.user,
+        startParam: parsed.startParam || null,
+      };
+    }
   }
   const uid = req.body?.userId ?? req.query?.userId ?? req.query?.id ?? 'anonymous';
   return { userId: String(uid), user: null };
@@ -113,12 +127,12 @@ function resolveStudioUser(req, res) {
 
 async function quotaContextOrError(res, userId) {
   if (isKvConfigured()) {
-    const { rec, limit } = await getQuotaState(userId);
-    if (rec.dailyCount >= limit) {
-      res.status(403).json({ error: 'limit_reached', message: 'Лимит исчерпан. Перейди на Pro.' });
+    const { rec, quota } = await getQuotaState(userId);
+    if (!quota.canGenerate) {
+      res.status(403).json({ error: 'limit_reached', message: 'Лимит исчерпан. Перейди на Pro или пригласи друзей.' });
       return null;
     }
-    return { mode: 'kv', rec, limit };
+    return { mode: 'kv', rec, quota };
   }
 
   const today = new Date().toISOString().split('T')[0];
@@ -128,23 +142,34 @@ async function quotaContextOrError(res, userId) {
     users[userId].dailyCount = 0;
     users[userId].lastReset = today;
   }
-  const limit = filePaidActive(users[userId]) ? Infinity : 5;
-  if (users[userId].dailyCount >= limit) {
-    res.status(403).json({ error: 'limit_reached', message: 'Лимит исчерпан. Перейди на Pro.' });
+  const limit = filePaidActive(users[userId]) ? Infinity : FREE_DAILY_LIMIT;
+  const quota = getEffectiveQuota(users[userId], limit);
+  if (!quota.canGenerate) {
+    res.status(403).json({ error: 'limit_reached', message: 'Лимит исчерпан. Перейди на Pro или пригласи друзей.' });
     return null;
   }
-  return { mode: 'file', users, userId, limit };
+  return { mode: 'file', users, userId, limit, quota };
 }
 
 async function bumpQuota(userId, ctx) {
   if (ctx.mode === 'kv') {
     return incrementGenerationCount(userId, ctx.rec);
   }
-  ctx.users[userId].dailyCount += 1;
-  saveFileUsers(ctx.users);
+  const u = ctx.users[userId];
   const limit = ctx.limit;
-  const remainingToday = limit === Infinity ? undefined : Math.max(0, limit - ctx.users[userId].dailyCount);
-  return { record: ctx.users[userId], remainingToday };
+  if (limit === Infinity) {
+    u.dailyCount = (Number(u.dailyCount) || 0) + 1;
+  } else if ((Number(u.dailyCount) || 0) < limit) {
+    u.dailyCount = (Number(u.dailyCount) || 0) + 1;
+  } else if ((Number(u.bonusGenerations) || 0) > 0) {
+    u.bonusGenerations = (Number(u.bonusGenerations) || 0) - 1;
+  } else {
+    throw new Error('limit_reached');
+  }
+  saveFileUsers(ctx.users);
+  const quota = getEffectiveQuota(u, limit);
+  const remainingToday = limit === Infinity ? undefined : quota.totalRemaining;
+  return { record: u, remainingToday, quota };
 }
 
 // Health checks
@@ -570,40 +595,61 @@ function sanitizeProfileBody(body) {
   return { niche, language, styleNote, brandMemory };
 }
 
+function readReferralParam(req, authStartParam) {
+  if (authStartParam) return authStartParam;
+  const q = req.query?.startapp || req.query?.start_param;
+  if (typeof q === 'string' && q.trim()) return q.trim();
+  return null;
+}
+
 app.get('/api/user', async (req, res) => {
   try {
     const auth = resolveStudioUser(req, res);
     if (!auth) return;
 
+    const referralParam = readReferralParam(req, auth.startParam);
+
     if (isKvConfigured()) {
-      const { rec } = await getQuotaState(auth.userId);
+      let referralSignup = null;
+      if (referralParam && parseReferrerId(referralParam)) {
+        referralSignup = await processReferralSignup(auth.userId, referralParam);
+      }
+      const { rec, quota } = await getQuotaState(auth.userId);
+      const referral = buildReferralStats(rec, auth.userId);
       return res.json({
         plan: rec.plan,
         dailyCount: rec.dailyCount,
         userId: auth.userId,
         planUntil: rec.planUntil || null,
+        bonusGenerations: rec.bonusGenerations || 0,
+        quotaRemaining: quota.totalRemaining === Infinity ? null : quota.totalRemaining,
         profile: {
           niche: rec.niche || '',
           language: rec.language || '',
           styleNote: rec.styleNote || '',
           brandMemory: rec.brandMemory || '',
         },
+        referral,
+        referralSignup,
       });
     }
 
     const users = loadFileUsers();
     const u = users[auth.userId] || { plan: 'free', dailyCount: 0 };
+    const referral = buildReferralStats(u, auth.userId);
     res.json({
       plan: u.plan,
       dailyCount: u.dailyCount,
       userId: auth.userId,
       planUntil: u.planUntil || null,
+      bonusGenerations: u.bonusGenerations || 0,
       profile: {
         niche: typeof u.niche === 'string' ? u.niche : '',
         language: typeof u.language === 'string' ? u.language : '',
         styleNote: typeof u.styleNote === 'string' ? u.styleNote : '',
         brandMemory: typeof u.brandMemory === 'string' ? u.brandMemory : '',
       },
+      referral,
     });
   } catch (e) {
     console.error('User API error:', e.message);
@@ -616,7 +662,23 @@ app.post('/api/user', async (req, res) => {
     const auth = resolveStudioUser(req, res);
     if (!auth) return;
 
-    const { niche, language, styleNote, brandMemory } = sanitizeProfileBody(req.body || {});
+    const body = req.body || {};
+
+    if (isKvConfigured() && body.ackReferralRewards) {
+      const milestones = Array.isArray(body.ackReferralRewards) ? body.ackReferralRewards : [];
+      await ackReferralRewards(auth.userId, milestones);
+      const { rec, quota } = await getQuotaState(auth.userId);
+      return res.json({
+        ok: true,
+        referral: buildReferralStats(rec, auth.userId),
+        plan: rec.plan,
+        planUntil: rec.planUntil || null,
+        bonusGenerations: rec.bonusGenerations || 0,
+        quotaRemaining: quota.totalRemaining === Infinity ? null : quota.totalRemaining,
+      });
+    }
+
+    const { niche, language, styleNote, brandMemory } = sanitizeProfileBody(body);
 
     if (isKvConfigured()) {
       const { rec } = await getQuotaState(auth.userId);

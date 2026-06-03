@@ -1159,13 +1159,26 @@ async function loadUserData(options = {}) {
         }
         if (data && data.plan) {
             userPlan = data.plan;
-            updatePlanUI(data.plan, data.planUntil || null);
+            updatePlanUI(data.plan, data.planUntil || null, data.bonusGenerations || 0, data.quotaRemaining);
         }
         if (data && data.profile) {
             document.getElementById('profile-niche').value = data.profile.niche || '';
             document.getElementById('profile-language').value = data.profile.language || '';
             document.getElementById('profile-style').value = data.profile.styleNote || '';
             document.getElementById('profile-brand-memory').value = data.profile.brandMemory || '';
+        }
+        if (data && data.referral && window.ReferralSystem) {
+            ReferralSystem.renderStats(data.referral, data.userId);
+            if (!silent && data.referral.unseenRewards?.length) {
+                await ReferralSystem.handleUnseenRewards(data.referral.unseenRewards, miniAppHeaders);
+                await loadUserData({ silent: true });
+            }
+        }
+        if (data?.referralSignup?.applied && !silent) {
+            tg.showPopup({
+                title: 'Добро пожаловать!',
+                message: 'Вы перешли по реферальной ссылке. Ваш друг уже получил +10 бонусных генераций!',
+            });
         }
     } catch (error) {
         console.error('Error loading user data:', error);
@@ -1208,7 +1221,7 @@ document.getElementById('btn-save-profile').addEventListener('click', async () =
     }
 });
 
-function updatePlanUI(plan, planUntil) {
+function updatePlanUI(plan, planUntil, bonusGenerations = 0, quotaRemaining = null) {
     const badge = document.getElementById('current-plan-badge');
     const upgradeBtn = document.getElementById('btn-upgrade-pro');
 
@@ -1230,7 +1243,12 @@ function updatePlanUI(plan, planUntil) {
         upgradeBtn.classList.add('hidden');
     } else {
         badge.className = 'plan-badge plan-free';
-        badge.innerHTML = 'Free · 5 генераций/день';
+        const bonusLine = bonusGenerations > 0 ? ` · +${bonusGenerations} бонус` : '';
+        const remainLine =
+            quotaRemaining != null && Number.isFinite(quotaRemaining)
+                ? ` · осталось ${quotaRemaining}`
+                : '';
+        badge.innerHTML = `Free · 5 генераций/день${bonusLine}${remainLine}`;
         upgradeBtn.classList.remove('hidden');
     }
     const hintImg = document.getElementById('hint-image-publish');
@@ -1967,6 +1985,7 @@ document.getElementById('trend-search').addEventListener('input', (e) => {
 });
 
 // Init
+if (window.ReferralSystem) ReferralSystem.mount();
 updatePlanUI('free', null);
 recoverActiveGenerationOnLoad();
 loadUserData();

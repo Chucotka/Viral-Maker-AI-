@@ -421,3 +421,283 @@ input[type="text"]:focus, textarea:focus, select:focus {
 }
 .nav-item.active { color: var(--accent); }
 .nav-icon { font-size: 20px; }
+
+/* ── Referral System ── */
+:root {
+    --neon-yellow: #ffe066;
+    --neon-orange: #ff9500;
+    --neon-pink: #ff2d55;
+    --neon-purple: #bf5af2;
+    --referral-glow: rgba(255, 149, 0, 0.35);
+}
+
+.referral-card {
+    position: relative;
+    background: linear-gradient(145deg, #2a2a2e 0%, #1f1f23 100%);
+    border: 1px solid rgba(255, 149, 0, 0.25);
+    border-radius: 18px;
+    padding: 18px;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.referral-card-compact {
+    margin-top: 4px;
+}
+
+.referral-card-glow {
+    position: absolute;
+    top: -40%;
+    right: -20%;
+    width: 180px;
+    height: 180px;
+    background: radial-gradient(circle, var(--referral-glow) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.referral-card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 14px;
+    position: relative;
+    z-index: 1;
+}
+
+.referral-lightning {
+    font-size: 28px;
+    filter: drop-shadow(0 0 8px rgba(255, 224, 102, 0.8));
+    animation: refPulse 2s ease-in-out infinite;
+}
+
+.referral-lightning-lg {
+    font-size: 36px;
+}
+
+@keyframes refPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.08); opacity: 0.85; }
+}
+
+.referral-title {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    background: linear-gradient(90deg, var(--neon-yellow), var(--neon-orange));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.referral-subtitle {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+.referral-stats-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 1;
+}
+
+.referral-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+    position: relative;
+    z-index: 1;
+}
+
+.referral-stat-box {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 8px;
+    text-align: center;
+}
+
+.referral-stat-value {
+    display: block;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--neon-yellow);
+    text-shadow: 0 0 12px rgba(255, 224, 102, 0.4);
+}
+
+.referral-stat-label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.referral-stat {
+    flex: 1;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    padding: 10px;
+}
+
+.referral-rewards-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+    position: relative;
+    z-index: 1;
+}
+
+.referral-reward-chip {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 6px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-muted);
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.referral-reward-chip strong {
+    display: block;
+    color: var(--text);
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.referral-reward-chip.ref-milestone-done {
+    border-color: rgba(255, 149, 0, 0.6);
+    box-shadow: 0 0 12px rgba(255, 149, 0, 0.25);
+}
+
+.referral-reward-chip.ref-milestone-done strong {
+    color: var(--neon-yellow);
+}
+
+.referral-progress-wrap {
+    margin-bottom: 14px;
+    position: relative;
+    z-index: 1;
+}
+
+.referral-progress-bar {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+.referral-progress-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, var(--neon-orange), var(--neon-pink), var(--neon-purple));
+    box-shadow: 0 0 10px rgba(255, 45, 85, 0.5);
+    transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.referral-progress-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 6px;
+}
+
+.btn-referral {
+    background: linear-gradient(135deg, var(--neon-orange) 0%, var(--neon-pink) 100%);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(255, 45, 85, 0.35);
+    position: relative;
+    z-index: 1;
+}
+
+.btn-referral:active {
+    box-shadow: 0 2px 10px rgba(255, 45, 85, 0.25);
+}
+
+.ref-neon-text {
+    color: var(--neon-yellow);
+    font-weight: 700;
+}
+
+/* Modal */
+.referral-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.referral-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+}
+
+.referral-modal-content {
+    position: relative;
+    background: linear-gradient(160deg, #2c2c30, #1c1c1e);
+    border: 1px solid rgba(255, 149, 0, 0.4);
+    border-radius: 20px;
+    padding: 28px 22px 22px;
+    max-width: 340px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 0 40px rgba(255, 149, 0, 0.2);
+    animation: refModalIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes refModalIn {
+    from { opacity: 0; transform: scale(0.85) translateY(20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.referral-reward-icon {
+    font-size: 52px;
+    margin-bottom: 12px;
+    animation: refPulse 1.5s ease-in-out infinite;
+}
+
+.referral-reward-body {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin: 12px 0 20px;
+}
+
+.ref-confetti-burst {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 200px;
+    height: 200px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    opacity: 0;
+}
+
+.ref-confetti-burst.ref-animate {
+    animation: refConfetti 0.8s ease-out forwards;
+}
+
+@keyframes refConfetti {
+    0% { opacity: 1; transform: translate(-50%, -50%) scale(0.3); box-shadow:
+        0 0 0 0 var(--neon-yellow),
+        20px -30px 0 2px var(--neon-orange),
+        -25px -20px 0 2px var(--neon-pink),
+        30px 20px 0 2px var(--neon-purple),
+        -20px 30px 0 2px var(--neon-yellow); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(2); box-shadow:
+        0 -60px 0 0 transparent,
+        40px -80px 0 0 transparent,
+        -50px -60px 0 0 transparent,
+        60px 40px 0 0 transparent,
+        -40px 60px 0 0 transparent; }
+}

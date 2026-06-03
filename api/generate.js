@@ -39,9 +39,9 @@ module.exports = async (req, res) => {
       return res.status(500).json({ error: 'missing_api_key' });
     }
 
-    const { rec, limit } = await getQuotaState(auth.userId);
-    if (rec.dailyCount >= limit) {
-      return res.status(403).json({ error: 'limit_reached', message: 'Лимит исчерпан. Перейди на Pro.' });
+    const { rec, quota } = await getQuotaState(auth.userId);
+    if (!quota.canGenerate) {
+      return res.status(403).json({ error: 'limit_reached', message: 'Лимит исчерпан. Перейди на Pro или пригласи друзей.' });
     }
 
     if (!(await assertGenerateRateLimit(auth.userId, res, rec.plan))) return;

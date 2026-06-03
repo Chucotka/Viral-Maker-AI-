@@ -27,6 +27,37 @@
                 <button class="btn btn-primary btn-large" onclick="switchTab('studio')">🚀 Создать Контент</button>
             </div>
 
+            <!-- Реферальный блок на главной -->
+            <div class="referral-card referral-card-compact" id="referral-dashboard-card">
+                <div class="referral-card-glow"></div>
+                <div class="referral-card-header">
+                    <span class="referral-lightning">⚡</span>
+                    <div>
+                        <h3 class="referral-title">Пригласи друзей — получи Pro</h3>
+                        <p class="referral-subtitle">+10 генераций за друга · Pro на 5 и 10 друзей</p>
+                    </div>
+                </div>
+                <div class="referral-stats-row">
+                    <div class="referral-stat">
+                        <span class="referral-stat-value" data-ref-count>0</span>
+                        <span class="referral-stat-label">друзей</span>
+                    </div>
+                    <div class="referral-stat">
+                        <span class="referral-stat-value" data-ref-bonus>0</span>
+                        <span class="referral-stat-label">бонус-ген.</span>
+                    </div>
+                </div>
+                <div class="referral-progress-wrap">
+                    <div class="referral-progress-bar">
+                        <div class="referral-progress-fill" data-ref-progress style="width: 0%"></div>
+                    </div>
+                    <p class="referral-progress-label" data-ref-progress-label>0 / 5 друзей до +1 дня Pro</p>
+                </div>
+                <button type="button" class="btn btn-referral btn-full" data-ref-invite>
+                    ⚡ Пригласить друзей
+                </button>
+            </div>
+
             <div class="trending-strip-container">
                 <h3>Тренды сейчас</h3>
                 <div class="trending-strip" id="dashboard-trends">
@@ -290,6 +321,59 @@
                 <button class="btn btn-accent btn-full hidden" id="btn-upgrade-pro" style="margin-top: 12px;">Перейти на Pro — подписка</button>
             </div>
 
+            <!-- Полный реферальный блок в настройках -->
+            <div class="referral-card" id="referral-settings-card">
+                <div class="referral-card-glow"></div>
+                <div class="referral-card-header">
+                    <span class="referral-lightning referral-lightning-lg">⚡</span>
+                    <div>
+                        <h3 class="referral-title">Реферальная программа</h3>
+                        <p class="referral-subtitle">Делись ссылкой — получай генерации и Pro бесплатно</p>
+                    </div>
+                </div>
+
+                <div class="referral-rewards-grid">
+                    <div class="referral-reward-chip">
+                        <span>👥 За друга</span>
+                        <strong>+10 ген.</strong>
+                    </div>
+                    <div class="referral-reward-chip" data-ref-milestone-5>
+                        <span>🎯 5 друзей</span>
+                        <strong>+1 день Pro</strong>
+                    </div>
+                    <div class="referral-reward-chip" data-ref-milestone-10>
+                        <span>🏆 10 друзей</span>
+                        <strong>+7 дней Pro</strong>
+                    </div>
+                </div>
+
+                <div class="referral-stats-grid">
+                    <div class="referral-stat-box">
+                        <span class="referral-stat-value" data-ref-count>0</span>
+                        <span class="referral-stat-label">Приглашено</span>
+                    </div>
+                    <div class="referral-stat-box">
+                        <span class="referral-stat-value" data-ref-bonus>0</span>
+                        <span class="referral-stat-label">Бонус-генераций</span>
+                    </div>
+                    <div class="referral-stat-box">
+                        <span class="referral-stat-value" data-ref-total-reward>0</span>
+                        <span class="referral-stat-label">Всего заработано</span>
+                    </div>
+                </div>
+
+                <div class="referral-progress-wrap">
+                    <div class="referral-progress-bar">
+                        <div class="referral-progress-fill" data-ref-progress style="width: 0%"></div>
+                    </div>
+                    <p class="referral-progress-label" data-ref-progress-label>0 / 5 друзей до +1 дня Pro</p>
+                </div>
+
+                <button type="button" class="btn btn-referral btn-full" data-ref-invite>
+                    ⚡ Пригласить друзей
+                </button>
+            </div>
+
             <div class="settings-group">
                 <label>Тестовый доступ</label>
                 <p class="text-hint" style="margin-bottom:10px">Для владельца проекта. Попросит секрет и активирует тариф без оплаты.</p>
@@ -411,8 +495,21 @@
                 <span class="nav-text">Настройки</span>
             </button>
         </nav>
+
+        <!-- Модалка награды за milestone -->
+        <div id="referral-reward-modal" class="referral-modal hidden" role="dialog" aria-modal="true">
+            <div class="referral-modal-backdrop"></div>
+            <div class="referral-modal-content">
+                <div class="ref-confetti-burst" aria-hidden="true"></div>
+                <div class="referral-reward-icon" id="referral-reward-icon">⚡</div>
+                <h3 id="referral-reward-title">Награда получена!</h3>
+                <p id="referral-reward-body" class="referral-reward-body"></p>
+                <button type="button" class="btn btn-referral btn-full" id="referral-reward-close">Круто! 🚀</button>
+            </div>
+        </div>
     </div>
 
+    <script src="referral.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
