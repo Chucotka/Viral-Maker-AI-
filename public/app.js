@@ -33,6 +33,62 @@ function parseDataUrl(dataUrl) {
     return { mimeType: m[1], imageBase64: m[2] };
 }
 
+function syncDownloadImageButton(hasImage) {
+    const btn = document.getElementById('btn-download-image');
+    if (btn) btn.disabled = !hasImage;
+}
+
+async function saveCurrentImageToDevice() {
+    const dataUrl = currentImageDataUrl;
+    if (!dataUrl) {
+        tg.showAlert('Сначала сгенерируйте изображение.');
+        return;
+    }
+    const parts = parseDataUrl(dataUrl);
+    const btn = document.getElementById('btn-download-image');
+    const prevLabel = btn ? btn.textContent : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Сохраняем…';
+    }
+    try {
+        if (window.VMImageDownload) {
+            const ok = await window.VMImageDownload.saveGeneratedImageToDevice({
+                dataUrl,
+                mimeType: parts?.mimeType,
+                tg,
+                getHeaders: () => miniAppHeaders(true),
+                onError: (msg) => tg.showAlert(msg),
+            });
+            if (ok) {
+                trackHistoryFeedback({
+                    increments: { downloadCount: 1 },
+                    set: { lastDownloadedAt: Date.now() },
+                });
+            }
+            return;
+        }
+        const blob = await fetch(dataUrl).then((r) => r.blob());
+        const fileName = window.VMImageDownload?.fileNameFromMime?.(parts?.mimeType) || 'viral-maker-ai.png';
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = fileName;
+        a.click();
+        trackHistoryFeedback({
+            increments: { downloadCount: 1 },
+            set: { lastDownloadedAt: Date.now() },
+        });
+    } catch (e) {
+        console.error(e);
+        tg.showAlert('Не удалось сохранить. Удерживайте превью картинки → «Сохранить изображение».');
+    } finally {
+        if (btn) {
+            btn.textContent = prevLabel || 'Сохранить в галерею';
+            syncDownloadImageButton(!!currentImageDataUrl);
+        }
+    }
+}
+
 function formatStrategyLabel(angle) {
     const map = {
         story: 'история',
@@ -989,11 +1045,7 @@ function openHistoryItem(item) {
         if (item.dataUrl && resultImage) {
             resultImage.src = item.dataUrl;
         }
-        const dl = document.getElementById('btn-download-image');
-        if (dl && item.dataUrl) {
-            dl.href = item.dataUrl;
-            dl.download = `viral-maker-ai.${String(item.mimeType || '').includes('jpeg') ? 'jpg' : 'png'}`;
-        }
+        syncDownloadImageButton(!!item.dataUrl);
         if (resultText) resultText.classList.add('hidden');
         if (resultImageWrap) resultImageWrap.classList.remove('hidden');
         if (scoreWrap) scoreWrap.classList.add('hidden');
@@ -1776,10 +1828,7 @@ async function runImageGeneration() {
         currentAlternativeMeta = null;
         currentDisplayedVariant = 'A';
         document.getElementById('result-image').src = data.dataUrl;
-        const dl = document.getElementById('btn-download-image');
-        dl.href = data.dataUrl;
-        const ext = String(data.mimeType || '').includes('jpeg') ? 'jpg' : 'png';
-        dl.download = `viral-maker-ai.${ext}`;
+        syncDownloadImageButton(true);
 
         document.getElementById('result-text').classList.add('hidden');
         document.getElementById('result-image-wrap').classList.remove('hidden');
@@ -1978,10 +2027,7 @@ document.getElementById('btn-publish-image').addEventListener('click', async () 
 });
 
 document.getElementById('btn-download-image').addEventListener('click', () => {
-    trackHistoryFeedback({
-        increments: { downloadCount: 1 },
-        set: { lastDownloadedAt: Date.now() },
-    });
+    saveCurrentImageToDevice();
 });
 
 // Trend Search Filter
