@@ -5,8 +5,8 @@
 (function initReferralSystem(global) {
   const tg = global.Telegram?.WebApp;
 
-  /** Подсказка об антифрод-правиле — показываем под заголовком и внизу блока. */
-  const REFERRAL_RULE_HINT = 'Друг засчитывается после первой генерации';
+  /** Подсказка об антифрод-правиле — показываем под заголовком. */
+  const REFERRAL_RULE_HINT = 'ℹ️ Друг засчитывается после первой генерации';
 
   /** Уровни наград для UI (compact + full). */
   const REFERRAL_REWARDS = [
@@ -53,6 +53,7 @@
   let currentStats = null;
   let currentUserId = null;
   let lastRenderedCount = null;
+  const lastTierStates = {};
 
   function readStartParam() {
     const fromTg = tg?.initDataUnsafe?.start_param;
@@ -100,7 +101,30 @@
     if (state === 'done') return 'is-done';
     if (state === 'next') return 'is-next';
     if (state === 'permanent') return 'is-permanent';
+    if (state === 'upcoming') return 'is-upcoming';
     return '';
+  }
+
+  /** Лёгкий bump цифр при изменении (scale + text-shadow через CSS). */
+  function animateStatValue(el, nextVal) {
+    const next = String(nextVal);
+    const prev = el.dataset.refPrev;
+    if (prev !== undefined && prev !== next) {
+      el.classList.remove('referral-stat-bump');
+      void el.offsetWidth;
+      el.classList.add('referral-stat-bump');
+    }
+    el.dataset.refPrev = next;
+    el.textContent = next;
+  }
+
+  function triggerTierAnimation(tierId, kind) {
+    document.querySelectorAll(`[data-ref-tier="${tierId}"]`).forEach((el) => {
+      el.classList.remove('referral-tier-pop', 'referral-tier-done-flash');
+      void el.offsetWidth;
+      el.classList.add('referral-tier-pop');
+      if (kind === 'done') el.classList.add('referral-tier-done-flash');
+    });
   }
 
   /** HTML одной tier-карточки (compact или full). */
@@ -129,9 +153,21 @@
     `;
   }
 
-  /** Рендер сетки наград в контейнеры [data-ref-tiers="compact|full"]. */
+  /** Рендер сетки наград + точечные анимации при смене состояния. */
   function renderRewardTiers(stats) {
     const count = stats?.referralCount || 0;
+    const transitions = [];
+
+    REFERRAL_REWARDS.forEach((tier) => {
+      const state = tier.kind === 'repeat' ? 'permanent' : resolveTierState(tier, count, stats);
+      const prev = lastTierStates[tier.id];
+      if (prev && prev !== state) {
+        if (state === 'done') transitions.push({ tierId: tier.id, kind: 'done' });
+        else if (state === 'next') transitions.push({ tierId: tier.id, kind: 'next' });
+      }
+      lastTierStates[tier.id] = state;
+    });
+
     document.querySelectorAll('[data-ref-tiers]').forEach((container) => {
       const mode = container.dataset.refTiers === 'full' ? 'full' : 'compact';
       container.innerHTML = REFERRAL_REWARDS.map((tier) => {
@@ -140,14 +176,7 @@
       }).join('');
     });
 
-    // Анимация при росте счётчика друзей
-    if (lastRenderedCount != null && count > lastRenderedCount) {
-      document.querySelectorAll('.referral-tier.is-next, .referral-tier.is-done').forEach((el) => {
-        el.classList.remove('referral-tier-pop');
-        void el.offsetWidth;
-        el.classList.add('referral-tier-pop');
-      });
-    }
+    transitions.forEach(({ tierId, kind }) => triggerTierAnimation(tierId, kind));
     lastRenderedCount = count;
   }
 
@@ -158,14 +187,24 @@
     const totalReward = stats?.totalReferralReward || 0;
 
     document.querySelectorAll('[data-ref-count]').forEach((el) => {
-      el.textContent = String(count);
+      animateStatValue(el, count);
     });
     document.querySelectorAll('[data-ref-bonus]').forEach((el) => {
-      el.textContent = String(bonus);
+      animateStatValue(el, bonus);
     });
     document.querySelectorAll('[data-ref-total-reward]').forEach((el) => {
-      el.textContent = String(totalReward);
+      animateStatValue(el, totalReward);
     });
+  }
+
+  function renderProgressLabel(el, labelMain, labelAccent) {
+    if (!labelAccent) {
+      el.textContent = labelMain;
+      return;
+    }
+    el.innerHTML =
+      `<span class="referral-progress-label-main">${escapeHtml(labelMain)}</span> ` +
+      `<span class="referral-progress-label-accent">${escapeHtml(labelAccent)}</span>`;
   }
 
   /**
@@ -176,7 +215,8 @@
     if (count >= MILESTONE_10) {
       return {
         fillPercent: 100,
-        label: 'Все награды получены! 🏆',
+        labelMain: 'Все награды получены! 🏆',
+        labelAccent: '',
         segment: 'complete',
       };
     }
@@ -184,14 +224,16 @@
       const remaining = MILESTONE_5 - count;
       return {
         fillPercent: (count / MILESTONE_5) * 50,
-        label: `${count} / ${MILESTONE_5} друзей · ещё ${remaining} до +1 дня Pro`,
+        labelMain: `${count} / ${MILESTONE_5} друзей`,
+        labelAccent: `ещё ${remaining} до +1 дня Pro`,
         segment: 'to5',
       };
     }
     const remaining = MILESTONE_10 - count;
     return {
       fillPercent: 50 + ((count - MILESTONE_5) / (MILESTONE_10 - MILESTONE_5)) * 50,
-      label: `${count} / ${MILESTONE_10} друзей · ещё ${remaining} до +7 дней Pro`,
+      labelMain: `${count} / ${MILESTONE_10} друзей`,
+      labelAccent: `ещё ${remaining} до +7 дней Pro`,
       segment: 'to10',
     };
   }
@@ -199,22 +241,25 @@
   /** Прогресс-бар + маркеры milestone + подпись. */
   function renderProgressTrack(stats) {
     const count = stats?.referralCount || 0;
-    const { fillPercent, label, segment } = computeProgress(count);
+    const { fillPercent, labelMain, labelAccent, segment } = computeProgress(count);
 
     document.querySelectorAll('[data-ref-progress]').forEach((el) => {
       el.style.width = `${Math.min(100, Math.max(0, fillPercent))}%`;
       el.dataset.refSegment = segment;
     });
     document.querySelectorAll('[data-ref-progress-label]').forEach((el) => {
-      el.textContent = label;
+      renderProgressLabel(el, labelMain, labelAccent);
     });
     document.querySelectorAll('[data-ref-progress-root]').forEach((root) => {
       root.dataset.refSegment = segment;
       root.querySelectorAll('[data-ref-marker]').forEach((marker) => {
         const m = Number(marker.dataset.refMarker);
         marker.classList.toggle('is-reached', count >= m);
-        marker.classList.toggle('is-current', segment === 'to5' && m === MILESTONE_5 && count < MILESTONE_5
-          || segment === 'to10' && m === MILESTONE_10 && count < MILESTONE_10);
+        marker.classList.toggle(
+          'is-current',
+          (segment === 'to5' && m === MILESTONE_5 && count < MILESTONE_5)
+            || (segment === 'to10' && m === MILESTONE_10 && count < MILESTONE_10),
+        );
       });
     });
   }
@@ -236,20 +281,25 @@
         .map((r) => {
           if (r.kind === 'milestone') {
             const days = Number(r.proDays) || 0;
-            return `<li class="referral-feed-item">🎁 Milestone ${r.milestone}: +${days} ${days === 1 ? 'день' : 'дней'} Pro</li>`;
+            return `<li class="referral-feed-item" data-reward-kind="milestone">+${days} ${days === 1 ? 'день' : 'дней'} Pro · milestone ${r.milestone}</li>`;
           }
-          return `<li class="referral-feed-item">🎁 Новая реферальная награда</li>`;
+          return `<li class="referral-feed-item" data-reward-kind="bonus">+10 бонусных генераций</li>`;
         })
         .join('');
       feed.innerHTML = `
         <div class="referral-feed-banner">
           <span class="referral-feed-icon" aria-hidden="true">🔔</span>
-          <div>
+          <div class="referral-feed-body">
             <div class="referral-feed-title">Новые награды</div>
             <ul class="referral-feed-list">${items}</ul>
           </div>
         </div>
       `;
+      const banner = feed.querySelector('.referral-feed-banner');
+      if (banner) {
+        banner.classList.remove('referral-feed-enter');
+        requestAnimationFrame(() => banner.classList.add('referral-feed-enter'));
+      }
     });
   }
 
