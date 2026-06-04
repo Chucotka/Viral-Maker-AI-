@@ -392,8 +392,8 @@
                 </button>
             </div>
 
-            <div id="admin-tools-panel" class="hidden">
-            <div class="settings-group">
+            <!-- Debug-активация тарифов — только владелец (OWNER_TELEGRAM_IDS). По умолчанию hidden в HTML. -->
+            <div id="owner-test-access" class="settings-group hidden">
                 <label>Тестовый доступ</label>
                 <p class="text-hint" style="margin-bottom:10px">Только для владельца. Попросит секрет и активирует тариф без оплаты.</p>
                 <div class="plan-actions">
@@ -402,6 +402,7 @@
                 </div>
             </div>
 
+            <div id="admin-tools-panel" class="hidden">
             <div class="settings-group">
                 <label>Ручная активация после Tribute</label>
                 <p class="text-hint" style="margin-bottom:10px">Введи <b>@username</b> или <b>userId</b>. Пользователь должен хотя бы раз открыть mini app, чтобы связка сохранилась.</p>

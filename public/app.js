@@ -1150,10 +1150,18 @@ async function loadDashboardData() {
 }
 
 // --- User Data ---
-function updateAdminToolsVisibility(isOwner) {
-    const panel = document.getElementById('admin-tools-panel');
-    if (!panel) return;
-    panel.classList.toggle('hidden', !isOwner);
+/**
+ * Показывает owner-only секции настроек.
+ * Источник истины — isOwner с GET /api/user (сервер сравнивает с OWNER_TELEGRAM_IDS).
+ * Блок «Тестовый доступ» скрыт от обычных пользователей: debug-активация тарифов без оплаты.
+ * Клиент не сверяет telegram id локально — только флаг с API; сами endpoint'ы защищены adminAccess.
+ */
+function applyOwnerOnlySections(isOwnerFromServer) {
+    const show = Boolean(isOwnerFromServer);
+    ['owner-test-access', 'admin-tools-panel'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('hidden', !show);
+    });
 }
 
 async function loadUserData(options = {}) {
@@ -1182,7 +1190,7 @@ async function loadUserData(options = {}) {
             }
             updatePlanUI(data.plan, data.planUntil || null, data.bonusGenerations || 0, data.quotaRemaining);
         }
-        updateAdminToolsVisibility(Boolean(data?.isOwner));
+        applyOwnerOnlySections(Boolean(data?.isOwner));
         if (data && data.profile) {
             document.getElementById('profile-niche').value = data.profile.niche || '';
             document.getElementById('profile-language').value = data.profile.language || '';

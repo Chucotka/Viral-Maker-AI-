@@ -29,12 +29,26 @@ describe('referralService', () => {
 
 describe('appOwner', () => {
   it('isAppOwner respects OWNER_TELEGRAM_IDS', () => {
-    const prev = process.env.OWNER_TELEGRAM_IDS;
+    const prevIds = process.env.OWNER_TELEGRAM_IDS;
+    const prevId = process.env.OWNER_TELEGRAM_ID;
+    delete process.env.OWNER_TELEGRAM_ID;
     process.env.OWNER_TELEGRAM_IDS = '111,222';
     assert.equal(isAppOwner('111'), true);
     assert.equal(isAppOwner('333'), false);
     assert.deepEqual(parseOwnerTelegramIds(), ['111', '222']);
-    process.env.OWNER_TELEGRAM_IDS = prev;
+    process.env.OWNER_TELEGRAM_IDS = prevIds;
+    process.env.OWNER_TELEGRAM_ID = prevId;
+  });
+
+  it('isAppOwner falls back to OWNER_TELEGRAM_ID', () => {
+    const prevIds = process.env.OWNER_TELEGRAM_IDS;
+    const prevId = process.env.OWNER_TELEGRAM_ID;
+    delete process.env.OWNER_TELEGRAM_IDS;
+    process.env.OWNER_TELEGRAM_ID = '555';
+    assert.equal(isAppOwner('555'), true);
+    assert.equal(isAppOwner('111'), false);
+    process.env.OWNER_TELEGRAM_IDS = prevIds;
+    process.env.OWNER_TELEGRAM_ID = prevId;
   });
 });
 

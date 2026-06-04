@@ -26,15 +26,15 @@ module.exports = async (req, res) => {
       return res.status(405).end();
     }
 
-    if (!hasAdminApiAccess(req, auth.userId)) {
-      console.warn('Debug plan ignored: forbidden');
-      return res.status(403).json({ error: 'forbidden' });
-    }
-
     const auth = resolveTelegramUser(req, res);
     if (!auth) {
       console.warn('Debug plan ignored: missing_or_invalid_init_data');
       return;
+    }
+
+    if (!hasAdminApiAccess(req, auth.userId)) {
+      console.warn('Debug plan ignored: forbidden');
+      return res.status(403).json({ error: 'forbidden' });
     }
 
     const plan = normalizeDebugPlan(req.body?.plan || req.query?.plan);
