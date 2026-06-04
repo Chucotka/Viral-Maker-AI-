@@ -6,6 +6,7 @@ const { isAppOwner, parseOwnerTelegramIds } = require('../lib/appOwner');
 const { sendSafeError, GENERIC_MESSAGE } = require('../lib/httpErrors');
 const { validateInitData } = require('../lib/telegramInitData');
 const { canAccessAnalytics, planFeatureSummary } = require('../lib/planFeatures');
+const { getEffectiveQuota, FREE_DAILY_LIMIT } = require('../lib/kvUserStore');
 
 describe('referralService', () => {
   it('parseReferrerId extracts telegram id', () => {
@@ -63,6 +64,31 @@ describe('telegramInitData', () => {
   it('rejects invalid initData', () => {
     assert.equal(validateInitData('', 'token'), null);
     assert.equal(validateInitData('user=%7B%7D', 'token'), null);
+  });
+});
+
+describe('kvUserStore quota', () => {
+  it('free user at daily limit cannot generate without bonus', () => {
+    const rec = { plan: 'free', dailyCount: FREE_DAILY_LIMIT, bonusGenerations: 0 };
+    const q = getEffectiveQuota(rec, FREE_DAILY_LIMIT);
+    assert.equal(q.canGenerate, false);
+    assert.equal(q.dailyRemaining, 0);
+    assert.equal(q.totalRemaining, 0);
+  });
+
+  it('free user uses bonus only after daily limit exhausted', () => {
+    const rec = { plan: 'free', dailyCount: FREE_DAILY_LIMIT, bonusGenerations: 3 };
+    const q = getEffectiveQuota(rec, FREE_DAILY_LIMIT);
+    assert.equal(q.canGenerate, true);
+    assert.equal(q.dailyRemaining, 0);
+    assert.equal(q.totalRemaining, 3);
+  });
+
+  it('paid user has unlimited generations regardless of dailyCount', () => {
+    const rec = { plan: 'pro', dailyCount: 999, bonusGenerations: 0 };
+    const q = getEffectiveQuota(rec, Infinity);
+    assert.equal(q.canGenerate, true);
+    assert.equal(q.totalRemaining, Infinity);
   });
 });
 
