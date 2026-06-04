@@ -1453,7 +1453,7 @@ async function loadCleanupPlans() {
         const t = overview.totals || {};
         if (statusEl) {
             statusEl.textContent =
-                `Активных: ${t.active || 0} · Истёкших: ${t.expired || 0} · Free: ${t.freeUsers || 0}`;
+                `В базе: ${t.totalUsers || 0} · 30 дн: ${t.activeLast30Days || 0} · Подписки: ${t.active || 0}/${t.expired || 0} · Free: ${t.freeUsers || 0}`;
         }
     } catch (error) {
         console.error('Cleanup list error:', error);

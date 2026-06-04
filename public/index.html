@@ -426,6 +426,22 @@
                 <p class="text-hint" id="cleanup-status" style="margin-top:8px"></p>
 
                 <div id="subs-dashboard" class="subs-dashboard hidden">
+                    <div class="subs-stats-row subs-stats-row-analytics">
+                        <div class="subs-stat subs-stat-total">
+                            <span class="subs-stat-value" id="subs-count-total">0</span>
+                            <span class="subs-stat-label">Всего в базе</span>
+                        </div>
+                        <div class="subs-stat subs-stat-mau30">
+                            <span class="subs-stat-value" id="subs-count-mau30">0</span>
+                            <span class="subs-stat-label">Заходили 30 дн</span>
+                        </div>
+                        <div class="subs-stat subs-stat-mau7">
+                            <span class="subs-stat-value" id="subs-count-mau7">0</span>
+                            <span class="subs-stat-label">Заходили 7 дн</span>
+                        </div>
+                    </div>
+                    <p class="text-hint subs-analytics-hint">Считаем по lastSeen в Redis (открытие app). Старые пользователи без lastSeen попадут в счёт после следующего визита.</p>
+
                     <div class="subs-stats-row">
                         <div class="subs-stat subs-stat-active">
                             <span class="subs-stat-value" id="subs-count-active">0</span>

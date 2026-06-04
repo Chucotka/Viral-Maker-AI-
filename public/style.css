@@ -835,6 +835,20 @@ input[type="text"]:focus, textarea:focus, select:focus {
     background: rgba(255, 255, 255, 0.03);
 }
 
+.subs-stats-row-analytics {
+    margin-bottom: 6px;
+}
+
+.subs-analytics-hint {
+    margin: 0 0 12px;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.subs-stat-total { border-color: rgba(0, 122, 255, 0.35); background: rgba(0, 122, 255, 0.08); }
+.subs-stat-mau30 { border-color: rgba(88, 86, 214, 0.35); background: rgba(88, 86, 214, 0.08); }
+.subs-stat-mau7 { border-color: rgba(90, 200, 250, 0.35); background: rgba(90, 200, 250, 0.08); }
+
 .subs-stat-active { border-color: rgba(52, 199, 89, 0.35); background: rgba(52, 199, 89, 0.08); }
 .subs-stat-expired { border-color: rgba(255, 149, 0, 0.35); background: rgba(255, 149, 0, 0.08); }
 .subs-stat-free { border-color: rgba(142, 142, 147, 0.35); background: rgba(142, 142, 147, 0.08); }

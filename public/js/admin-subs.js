@@ -66,10 +66,12 @@
 
     const metaExtra =
       item.status === 'free'
-        ? `Генераций сегодня: ${item.dailyCount || 0}${item.bonusGenerations ? ` · бонус: ${item.bonusGenerations}` : ''}`
+        ? `Генераций сегодня: ${item.dailyCount || 0}${item.bonusGenerations ? ` · бонус: ${item.bonusGenerations}` : ''}${item.lastSeen ? ` · был: ${formatDate(item.lastSeen)}` : ''}`
         : item.referralCount
-          ? `Рефералов: ${item.referralCount}`
-          : '';
+          ? `Рефералов: ${item.referralCount}${item.lastSeen ? ` · был: ${formatDate(item.lastSeen)}` : ''}`
+          : item.lastSeen
+            ? `Был: ${formatDate(item.lastSeen)}`
+            : '';
 
     const resetBtn =
       item.status === 'active'
@@ -105,11 +107,14 @@
   }
 
   function updateStats(totals) {
-    const t = totals || { active: 0, expired: 0, freeUsers: 0 };
+    const t = totals || { active: 0, expired: 0, freeUsers: 0, totalUsers: 0, activeLast30Days: 0, activeLast7Days: 0 };
     const set = (id, val) => {
       const el = qs(id);
       if (el) el.textContent = String(val);
     };
+    set('subs-count-total', t.totalUsers);
+    set('subs-count-mau30', t.activeLast30Days);
+    set('subs-count-mau7', t.activeLast7Days);
     set('subs-count-active', t.active);
     set('subs-count-expired', t.expired);
     set('subs-count-free', t.freeUsers);

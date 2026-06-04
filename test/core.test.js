@@ -6,7 +6,7 @@ const { isAppOwner, parseOwnerTelegramIds } = require('../lib/appOwner');
 const { sendSafeError, GENERIC_MESSAGE } = require('../lib/httpErrors');
 const { validateInitData } = require('../lib/telegramInitData');
 const { canAccessAnalytics, planFeatureSummary } = require('../lib/planFeatures');
-const { getEffectiveQuota, FREE_DAILY_LIMIT } = require('../lib/kvUserStore');
+const { getEffectiveQuota, FREE_DAILY_LIMIT, parseLastSeenMs, countActiveSince } = require('../lib/kvUserStore');
 
 describe('referralService', () => {
   it('parseReferrerId extracts telegram id', () => {
@@ -103,6 +103,16 @@ describe('kvUserStore quota', () => {
     const q = getEffectiveQuota(rec, Infinity);
     assert.equal(q.canGenerate, true);
     assert.equal(q.totalRemaining, Infinity);
+  });
+
+  it('countActiveSince respects lastSeen window', () => {
+    const now = Date.now();
+    const recent = { lastSeen: new Date(now - 864e5).toISOString() };
+    const old = { lastSeen: new Date(now - 40 * 864e5).toISOString() };
+    const since30 = now - 30 * 864e5;
+    assert.equal(countActiveSince(recent, since30), true);
+    assert.equal(countActiveSince(old, since30), false);
+    assert.equal(Number.isNaN(parseLastSeenMs(null)), true);
   });
 });
 
