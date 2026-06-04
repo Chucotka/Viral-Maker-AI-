@@ -98,7 +98,7 @@ module.exports = async (req, res) => {
       await appendUserHistory(auth.userId, {
         ts: historyTs,
         type: 'image',
-        prompt: prompt.slice(0, 400),
+        prompt: prompt.slice(0, 240),
         directorApplied: !!directorApplied,
       });
     } catch (histErr) {

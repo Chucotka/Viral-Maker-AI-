@@ -201,14 +201,33 @@ function activateTextVariant(variant) {
     renderTextResultView();
 }
 
+function historyItemKey(item) {
+    if (window.VMHistory && typeof window.VMHistory.historyItemKey === 'function') {
+        return window.VMHistory.historyItemKey(item);
+    }
+    const ts = item && typeof item.ts === 'number' ? item.ts : '';
+    const type = String(item?.type || '');
+    const text = String(item?.text || item?.prompt || item?.topic || '');
+    return `${ts}|${type}|${text}`;
+}
+
 function appendHistoryEntry(entry) {
     try {
         const raw = localStorage.getItem(HISTORY_KEY);
         const list = raw ? JSON.parse(raw) : [];
-        const saved = { ...entry, ts: Number(entry?.ts) || Date.now() };
+        const ts = Number(entry?.ts) || Date.now();
+        let saved = { ...entry, ts };
+        if (saved.type === 'image' && saved.dataUrl && window.VMHistory) {
+            window.VMHistory.persistImageBlob(ts, saved.dataUrl, saved.mimeType);
+            const { dataUrl, ...meta } = saved;
+            saved = meta;
+        }
         list.unshift(saved);
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, 40)));
-        return saved;
+        const toStore = window.VMHistory
+            ? window.VMHistory.prepareListForStorage(list.slice(0, 40))
+            : list.slice(0, 40);
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(toStore));
+        return window.VMHistory ? window.VMHistory.hydrateHistoryItem({ ...saved, ts, type: entry.type, prompt: entry.prompt }) : { ...entry, ts };
     } catch (e) { /* ignore */ }
     return null;
 }
@@ -216,17 +235,11 @@ function appendHistoryEntry(entry) {
 function readHistoryCache() {
     try {
         const raw = localStorage.getItem(HISTORY_KEY);
-        return raw ? JSON.parse(raw) : [];
+        const list = raw ? JSON.parse(raw) : [];
+        return window.VMHistory ? window.VMHistory.hydrateHistoryList(list) : list;
     } catch (e) {
         return [];
     }
-}
-
-function historyItemKey(item) {
-    const ts = item && typeof item.ts === 'number' ? item.ts : '';
-    const type = String(item?.type || '');
-    const text = String(item?.text || item?.prompt || item?.topic || '');
-    return `${ts}|${type}|${text}`;
 }
 
 function applyHistoryMutation(item, mutation = {}) {
@@ -271,6 +284,11 @@ async function pushHistoryFeedback(ts, mutation = {}) {
 }
 
 function mergeHistoryLists(serverList, localList) {
+    if (window.VMHistory && typeof window.VMHistory.mergeHistoryLists === 'function') {
+        return window.VMHistory.hydrateHistoryList(
+            window.VMHistory.mergeHistoryLists(serverList, localList),
+        );
+    }
     const merged = new Map();
     const add = (item) => {
         if (!item || typeof item !== 'object') return;
@@ -962,6 +980,7 @@ function renderDashboardFromList(list) {
 
 function openHistoryItem(item) {
     if (!item || typeof item !== 'object') return;
+    if (window.VMHistory) item = window.VMHistory.hydrateHistoryItem(item);
     switchTab('studio');
     const resultContainer = document.getElementById('result-container');
     const resultText = document.getElementById('result-text');
@@ -1131,7 +1150,10 @@ async function loadDashboardData() {
                 const localList = readHistoryCache();
                 list = mergeHistoryLists(data.items, localList);
                 try {
-                    localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, 40)));
+                    const toStore = window.VMHistory
+                        ? window.VMHistory.prepareListForStorage(list.slice(0, 40))
+                        : list.slice(0, 40);
+                    localStorage.setItem(HISTORY_KEY, JSON.stringify(toStore));
                 } catch (e) { /* ignore */ }
             }
         }
@@ -1803,8 +1825,9 @@ async function runImageGeneration() {
         revealResultContainer();
         document.getElementById('publish-status').classList.add('hidden');
 
+        const imageTs = Number(data.historyTs) || Date.now();
         const historyEntry = appendHistoryEntry({
-            ts: Number(data.historyTs) || Date.now(),
+            ts: imageTs,
             type: 'image',
             prompt: prompt.slice(0, 240),
             dataUrl: data.dataUrl,
@@ -1812,7 +1835,15 @@ async function runImageGeneration() {
             directorApplied: !!data.directorApplied,
             risk,
         });
-        syncCurrentHistoryFromItem(historyEntry || { ts: Date.now(), type: 'image' });
+        syncCurrentHistoryFromItem(
+            historyEntry || {
+                ts: imageTs,
+                type: 'image',
+                prompt: prompt.slice(0, 240),
+                dataUrl: data.dataUrl,
+                mimeType: data.mimeType,
+            },
+        );
         if (document.getElementById('tab-dashboard').classList.contains('active')) loadDashboardData();
 
         if (data.remainingToday !== undefined) {
