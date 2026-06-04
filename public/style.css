@@ -443,6 +443,26 @@ input[type="text"]:focus, textarea:focus, select:focus {
 
 .referral-card-compact {
     margin-top: 4px;
+    border-color: rgba(255, 149, 0, 0.4);
+    box-shadow: 0 0 24px rgba(255, 149, 0, 0.08);
+}
+
+.referral-rule-hint {
+    font-size: 11px;
+    color: rgba(255, 224, 102, 0.85);
+    margin-top: 6px;
+    line-height: 1.35;
+}
+
+.referral-rule-hint-footer {
+    margin: 10px 0 0;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+.referral-card-header .referral-rule-hint {
+    margin-top: 4px;
 }
 
 .referral-card-glow {
@@ -543,6 +563,127 @@ input[type="text"]:focus, textarea:focus, select:focus {
     padding: 10px;
 }
 
+/* ── Tier cards (compact + full) ── */
+.referral-tiers {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 12px;
+}
+
+.referral-tiers-compact {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.referral-tiers-full {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.referral-tier {
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s;
+}
+
+.referral-tier-compact {
+    padding: 10px 6px;
+    text-align: center;
+}
+
+.referral-tier-compact .referral-tier-icon {
+    display: block;
+    font-size: 20px;
+    margin-bottom: 4px;
+}
+
+.referral-tier-compact .referral-tier-title {
+    display: block;
+    font-size: 10px;
+    color: var(--text-muted);
+    line-height: 1.2;
+    margin-bottom: 4px;
+}
+
+.referral-tier-compact .referral-tier-reward {
+    display: block;
+    font-size: 11px;
+    color: var(--text);
+    line-height: 1.2;
+}
+
+.referral-tier-full {
+    padding: 12px 14px;
+}
+
+.referral-tier-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.referral-tier-full .referral-tier-icon {
+    font-size: 28px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 6px rgba(255, 224, 102, 0.35));
+}
+
+.referral-tier-full .referral-tier-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 2px;
+}
+
+.referral-tier-full .referral-tier-reward {
+    display: block;
+    font-size: 15px;
+    color: var(--neon-yellow);
+    text-shadow: 0 0 10px rgba(255, 224, 102, 0.25);
+}
+
+.referral-tier-desc {
+    margin: 8px 0 0 40px;
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.45;
+}
+
+.referral-tier.is-permanent {
+    border-color: rgba(255, 224, 102, 0.35);
+    background: rgba(255, 149, 0, 0.06);
+}
+
+.referral-tier.is-next {
+    border-color: rgba(255, 45, 85, 0.55);
+    box-shadow: 0 0 16px rgba(255, 45, 85, 0.2);
+    transform: translateY(-1px);
+}
+
+.referral-tier.is-done {
+    border-color: rgba(52, 199, 89, 0.45);
+    background: rgba(52, 199, 89, 0.06);
+}
+
+.referral-tier.is-done .referral-tier-reward {
+    color: #34c759;
+}
+
+.referral-tier-pop {
+    animation: refTierPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes refTierPop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.04); box-shadow: 0 0 20px rgba(255, 149, 0, 0.35); }
+    100% { transform: scale(1); }
+}
+
+/* Legacy chips — оставлены на случай старых ссылок */
 .referral-rewards-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -585,11 +726,51 @@ input[type="text"]:focus, textarea:focus, select:focus {
     z-index: 1;
 }
 
+.referral-progress-track {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    padding: 0 2px;
+}
+
+.referral-progress-marker {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    transition: color 0.3s, transform 0.3s;
+}
+
+.referral-progress-marker.is-reached {
+    color: var(--neon-yellow);
+}
+
+.referral-progress-marker.is-current {
+    color: var(--neon-pink);
+    transform: scale(1.08);
+}
+
+.referral-progress-wrap[data-ref-segment="complete"] .referral-progress-marker.is-reached {
+    color: #34c759;
+}
+
 .referral-progress-bar {
-    height: 8px;
+    height: 10px;
     background: rgba(255, 255, 255, 0.08);
     border-radius: 99px;
     overflow: hidden;
+    position: relative;
+}
+
+.referral-progress-bar::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: rgba(255, 255, 255, 0.12);
+    z-index: 0;
 }
 
 .referral-progress-fill {
@@ -598,12 +779,56 @@ input[type="text"]:focus, textarea:focus, select:focus {
     background: linear-gradient(90deg, var(--neon-orange), var(--neon-pink), var(--neon-purple));
     box-shadow: 0 0 10px rgba(255, 45, 85, 0.5);
     transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    z-index: 1;
 }
 
 .referral-progress-label {
     font-size: 11px;
     color: var(--text-muted);
-    margin-top: 6px;
+    margin-top: 8px;
+    line-height: 1.4;
+}
+
+/* Лента уведомлений о наградах (заготовка под push/toast) */
+.referral-activity-feed {
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 1;
+}
+
+.referral-feed-banner {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 149, 0, 0.35);
+    background: rgba(255, 149, 0, 0.08);
+}
+
+.referral-feed-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.referral-feed-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--neon-yellow);
+    margin-bottom: 4px;
+}
+
+.referral-feed-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.referral-feed-item {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.4;
 }
 
 .btn-referral {

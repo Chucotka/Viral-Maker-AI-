@@ -27,16 +27,18 @@
                 <button class="btn btn-primary btn-large" onclick="switchTab('studio')">🚀 Создать Контент</button>
             </div>
 
-            <!-- Реферальный блок на главной -->
+            <!-- Реферальный блок на главной (compact) -->
             <div class="referral-card referral-card-compact" id="referral-dashboard-card">
                 <div class="referral-card-glow"></div>
                 <div class="referral-card-header">
                     <span class="referral-lightning">⚡</span>
                     <div>
                         <h3 class="referral-title">Пригласи друзей — получи Pro</h3>
-                        <p class="referral-subtitle">+10 генераций за друга · Pro на 5 и 10 · засчитывается после 1-й генерации</p>
+                        <p class="referral-subtitle">Приглашай друзей — получай генерации и Pro бесплатно</p>
+                        <p class="referral-rule-hint" data-ref-rule-hint></p>
                     </div>
                 </div>
+
                 <div class="referral-stats-row">
                     <div class="referral-stat">
                         <span class="referral-stat-value" data-ref-count>0</span>
@@ -47,15 +49,28 @@
                         <span class="referral-stat-label">бонус-ген.</span>
                     </div>
                 </div>
-                <div class="referral-progress-wrap">
+
+                <div class="referral-tiers referral-tiers-compact" data-ref-tiers="compact" aria-label="Уровни наград"></div>
+
+                <div class="referral-progress-wrap" data-ref-progress-root>
+                    <div class="referral-progress-track" aria-hidden="true">
+                        <span class="referral-progress-marker" data-ref-marker="0">0</span>
+                        <span class="referral-progress-marker" data-ref-marker="5">5</span>
+                        <span class="referral-progress-marker" data-ref-marker="10">10</span>
+                    </div>
                     <div class="referral-progress-bar">
                         <div class="referral-progress-fill" data-ref-progress style="width: 0%"></div>
                     </div>
-                    <p class="referral-progress-label" data-ref-progress-label>0 / 5 друзей до +1 дня Pro</p>
+                    <p class="referral-progress-label" data-ref-progress-label>0 / 5 друзей · ещё 5 до +1 дня Pro</p>
                 </div>
+
+                <div class="referral-activity-feed hidden" data-ref-activity-feed aria-live="polite"></div>
+
                 <button type="button" class="btn btn-referral btn-full" data-ref-invite>
-                    ⚡ Пригласить друзей
+                    ⚡ Пригласить друзей — получить бонус
                 </button>
+
+                <p class="referral-rule-hint referral-rule-hint-footer" data-ref-rule-hint></p>
             </div>
 
             <div class="trending-strip-container">
@@ -346,24 +361,12 @@
                     <span class="referral-lightning referral-lightning-lg">⚡</span>
                     <div>
                         <h3 class="referral-title">Реферальная программа</h3>
-                        <p class="referral-subtitle">Делись ссылкой — друг должен сделать 1 генерацию, чтобы бонус засчитался</p>
+                        <p class="referral-subtitle">Делись ссылкой — зарабатывай генерации и дни Pro</p>
+                        <p class="referral-rule-hint" data-ref-rule-hint></p>
                     </div>
                 </div>
 
-                <div class="referral-rewards-grid">
-                    <div class="referral-reward-chip">
-                        <span>👥 За друга</span>
-                        <strong>+10 ген.</strong>
-                    </div>
-                    <div class="referral-reward-chip" data-ref-milestone-5>
-                        <span>🎯 5 друзей</span>
-                        <strong>+1 день Pro</strong>
-                    </div>
-                    <div class="referral-reward-chip" data-ref-milestone-10>
-                        <span>🏆 10 друзей</span>
-                        <strong>+7 дней Pro</strong>
-                    </div>
-                </div>
+                <div class="referral-tiers referral-tiers-full" data-ref-tiers="full" aria-label="Уровни наград"></div>
 
                 <div class="referral-stats-grid">
                     <div class="referral-stat-box">
@@ -380,16 +383,25 @@
                     </div>
                 </div>
 
-                <div class="referral-progress-wrap">
+                <div class="referral-progress-wrap" data-ref-progress-root>
+                    <div class="referral-progress-track" aria-hidden="true">
+                        <span class="referral-progress-marker" data-ref-marker="0">0</span>
+                        <span class="referral-progress-marker" data-ref-marker="5">🎯 5</span>
+                        <span class="referral-progress-marker" data-ref-marker="10">👑 10</span>
+                    </div>
                     <div class="referral-progress-bar">
                         <div class="referral-progress-fill" data-ref-progress style="width: 0%"></div>
                     </div>
-                    <p class="referral-progress-label" data-ref-progress-label>0 / 5 друзей до +1 дня Pro</p>
+                    <p class="referral-progress-label" data-ref-progress-label>0 / 5 друзей · ещё 5 до +1 дня Pro</p>
                 </div>
 
+                <div class="referral-activity-feed hidden" data-ref-activity-feed aria-live="polite"></div>
+
                 <button type="button" class="btn btn-referral btn-full" data-ref-invite>
-                    ⚡ Пригласить друзей
+                    ⚡ Пригласить друзей — получить бонус
                 </button>
+
+                <p class="referral-rule-hint referral-rule-hint-footer" data-ref-rule-hint></p>
             </div>
 
             <!-- Debug-активация тарифов — только владелец (OWNER_TELEGRAM_IDS). По умолчанию hidden в HTML. -->
