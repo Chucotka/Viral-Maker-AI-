@@ -60,7 +60,12 @@ async function handleSendImageToBot(req, res, auth) {
     '🖼 Viral Maker AI\n\n' +
     'Чтобы сохранить в галерею: нажмите и удерживайте это фото → «Сохранить в галерею» / «Save to Photos».';
 
-  await bot.api.sendPhoto(auth.userId, new InputFile(buf, `viral-maker-ai.${ext}`), { caption });
+  const chatId = Number(auth.userId);
+  await bot.api.sendPhoto(
+    Number.isFinite(chatId) ? chatId : auth.userId,
+    new InputFile(buf, `viral-maker-ai.${ext}`),
+    { caption },
+  );
 
   const botUsername = String(process.env.TELEGRAM_BOT_USERNAME || '').replace(/^@/, '');
   const chatLink = botUsername ? `https://t.me/${botUsername}` : null;
@@ -71,10 +76,11 @@ async function handleSendImageToBot(req, res, auth) {
 function setDownloadCors(req, res) {
   const origin = String(req.get('Origin') || '').trim();
   const allowed =
+    !origin ||
     origin === 'https://web.telegram.org' ||
     origin === 'https://telegram.org' ||
     /\.telegram\.org$/i.test(origin);
-  res.setHeader('Access-Control-Allow-Origin', allowed ? origin : 'https://web.telegram.org');
+  res.setHeader('Access-Control-Allow-Origin', allowed && origin ? origin : '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition, Content-Type');
 }

@@ -6,9 +6,11 @@ const { isKvConfigured, getQuotaState, incrementGenerationCount } = require('../
 const { confirmReferralAfterFirstGeneration } = require('../lib/referralService');
 const { appendUserHistory, getUserHistory } = require('../lib/kvHistory');
 const {
-  buildImageGenerationPrompt,
-  buildImageCriticPrompt,
-  buildSurpriseImagePrompt,
+  buildImageModelPrompt,
+  buildSurpriseImageModelPrompt,
+  buildImageEnhancePrompt,
+  isUsableImageEnhancement,
+  stripImagePromptFences,
   isSurpriseRequest,
 } = require('../lib/buildTextPrompt');
 const { assertGenerateRateLimit } = require('../lib/rateLimitKv');
@@ -57,41 +59,41 @@ module.exports = async (req, res) => {
     } catch (histErr) {
       console.error('getUserHistory:', histErr.message);
     }
-    const fullPrompt = isSurpriseRequest(prompt)
-      ? buildSurpriseImagePrompt({ aspectRatio, style: styleBit, profile: rec, recentHistory, risk })
-      : buildImageGenerationPrompt({
+    let imagePrompt = isSurpriseRequest(prompt)
+      ? buildSurpriseImageModelPrompt({ aspectRatio, style: styleBit, profile: rec, recentHistory, risk })
+      : buildImageModelPrompt({
           prompt,
+          aspectRatio,
+          style: styleBit,
+          profile: rec,
+          recentHistory,
+        });
+    let directorApplied = false;
+    if (!isSurpriseRequest(prompt)) {
+      try {
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const enhancePrompt = buildImageEnhancePrompt({
+          userPrompt: prompt,
           aspectRatio,
           style: styleBit,
           profile: rec,
           recentHistory,
           risk,
         });
-    let finalPrompt = fullPrompt;
-    let directorApplied = false;
-    try {
-      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      const criticPrompt = buildImageCriticPrompt({
-        basePrompt: fullPrompt,
-        aspectRatio,
-        style: styleBit,
-        profile: rec,
-        recentHistory,
-        risk,
-      });
-      const critique = await generateContentRobust(genAI, modelFallbackChain('gemini-2.5-flash'), criticPrompt, {});
-      const revised = String(critique.content || '').trim();
-      if (revised) {
-        finalPrompt = revised;
-        directorApplied = true;
+        const critique = await generateContentRobust(genAI, modelFallbackChain('gemini-2.5-flash'), enhancePrompt, {});
+        const revised = stripImagePromptFences(critique.content || '');
+        if (isUsableImageEnhancement(revised, prompt)) {
+          imagePrompt = revised;
+          directorApplied = true;
+        }
+      } catch (criticErr) {
+        console.error('image enhance:', criticErr.message);
       }
-    } catch (criticErr) {
-      console.error('image director:', criticErr.message);
     }
 
     const { mimeType, dataBase64, modelUsed } = await generateGeminiImage({
       apiKey: process.env.GEMINI_API_KEY,
-      prompt: finalPrompt,
+      prompt: imagePrompt,
       aspectRatio,
     });
 

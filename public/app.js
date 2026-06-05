@@ -1875,7 +1875,9 @@ async function runImageGeneration() {
         document.getElementById('result-actions-image').classList.remove('hidden');
         const resultMeta = document.getElementById('result-meta');
         if (resultMeta) {
-            resultMeta.textContent = data.directorApplied ? 'Визуальный директор: активен · анти-повторы включены' : 'Анти-повторы включены';
+            resultMeta.textContent = data.directorApplied
+                ? 'Промпт уточнён · запрос сохранён'
+                : 'Готово — удерживайте превью, чтобы сохранить вручную';
             resultMeta.classList.remove('hidden');
         }
         const resultCritic = document.getElementById('result-critic');

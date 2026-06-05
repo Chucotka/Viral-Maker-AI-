@@ -111,15 +111,19 @@
   }
 
   async function requestSendImageToBotChat({ getHeaders, downloadToken, imageBase64, mimeType }) {
-    const body = { mimeType: mimeType || 'image/png' };
-    if (downloadToken) body.downloadToken = downloadToken;
-    else if (imageBase64) body.imageBase64 = imageBase64;
-    else return { ok: false, message: 'Нет данных изображения.' };
+    const body = { mimeType: mimeType || 'image/png', action: 'send' };
+    if (downloadToken) {
+      body.downloadToken = downloadToken;
+    } else if (imageBase64) {
+      body.imageBase64 = imageBase64;
+    } else {
+      return { ok: false, message: 'Нет данных изображения.' };
+    }
 
     const res = await fetch('/api/image-download', {
       method: 'POST',
       headers: getHeaders ? getHeaders() : { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...body, action: 'send' }),
+      body: JSON.stringify(body),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -165,6 +169,17 @@
   /**
    * @param {object} opts
    */
+  function showDownloadFilePopup(tg) {
+    const message =
+      'Подтвердите сохранение в системном окне Telegram.\n\n' +
+      'Если окно не появилось — удерживайте превью картинки выше → «Сохранить изображение».';
+    if (typeof tg.showPopup === 'function') {
+      tg.showPopup({ title: 'Сохранить в галерею', message, buttons: [{ id: 'ok', type: 'ok', text: 'Понятно' }] });
+      return;
+    }
+    tg.showAlert?.(message);
+  }
+
   async function saveGeneratedImageToDevice(opts) {
     const { dataUrl, mimeType, tg, getHeaders, onError } = opts || {};
     const parsed = parseDataUrl(dataUrl);
@@ -173,72 +188,52 @@
       return false;
     }
     const fileName = opts.downloadFileName || fileNameFromMime(mimeType || parsed.mimeType);
-    const mobile = isTelegramMobile(tg);
 
     const prepared = await ensureDownloadUrl(opts, parsed, fileName);
     const downloadUrl = prepared?.url || opts.downloadUrl || null;
     const downloadToken = prepared?.token || opts.downloadToken || null;
+    const sendPayload = {
+      getHeaders,
+      downloadToken,
+      imageBase64: downloadToken ? null : parsed.imageBase64,
+      mimeType: parsed.mimeType,
+    };
 
-    // 1) Мобильный Telegram: сначала отправка в личный чат (самый надёжный способ «в галерею»)
-    if (mobile) {
-      try {
-        const sent = await requestSendImageToBotChat({
-          getHeaders,
-          downloadToken,
-          imageBase64: parsed.imageBase64,
-          mimeType: parsed.mimeType,
-        });
-        if (sent.ok) {
-          showBotChatSavePopup(tg, sent.chatLink);
-          return true;
-        }
-        onError?.(sent.message);
-      } catch {
-        /* try other methods */
-      }
-    }
-
-    // 2) Нативный downloadFile (Bot API 8.0+)
+    // 1) Нативное сохранение в галерею (Telegram 8.0+)
     if (downloadUrl && canUseTelegramDownload(tg)) {
       const ok = await telegramDownloadFile(tg, downloadUrl, fileName);
       if (ok) {
-        tg.showAlert?.('Подтвердите сохранение в системном окне Telegram.');
+        showDownloadFilePopup(tg);
         return true;
       }
     }
 
-    // 3) Открыть HTTPS-файл во внешнем браузере
-    if (downloadUrl && openDownloadLink(tg, downloadUrl)) {
-      tg.showAlert?.(
-        'Файл открыт. В браузере нажмите «Скачать» или удерживайте изображение → «Сохранить».',
-      );
-      return true;
+    // 2) Фото в личный чат с ботом → долгое нажатие → «Сохранить в галерею»
+    try {
+      const sent = await requestSendImageToBotChat(sendPayload);
+      if (sent.ok) {
+        showBotChatSavePopup(tg, sent.chatLink);
+        return true;
+      }
+    } catch {
+      /* try other methods */
     }
 
-    // 4) Десктоп / web: отправка в чат с ботом
-    if (!mobile) {
-      try {
-        const sent = await requestSendImageToBotChat({
-          getHeaders,
-          downloadToken,
-          imageBase64: parsed.imageBase64,
-          mimeType: parsed.mimeType,
-        });
-        if (sent.ok) {
-          showBotChatSavePopup(tg, sent.chatLink);
-          return true;
-        }
-      } catch {
-        /* ignore */
-      }
+    // 3) Открыть файл по HTTPS
+    if (downloadUrl && openDownloadLink(tg, downloadUrl)) {
+      tg.showAlert?.(
+        'Файл открыт. Удерживайте изображение → «Сохранить» / «Download».',
+      );
+      return true;
     }
 
     const blob = dataUrlToBlob(dataUrl);
     if (await shareBlobFallback(blob, fileName)) return true;
 
     onError?.(
-      'Сохраните вручную: удерживайте превью картинки в студии → «Сохранить изображение». ' +
-        'Или напишите боту /start и нажмите «Сохранить в галерею» снова.',
+      'Не удалось сохранить автоматически.\n\n' +
+        '1) Удерживайте превью картинки → «Сохранить изображение»\n' +
+        '2) Напишите боту /start и нажмите «Сохранить в галерею» снова',
     );
     return false;
   }
