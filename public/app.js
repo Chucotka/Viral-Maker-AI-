@@ -5,6 +5,9 @@ tg.ready();
 
 const PREMIUM_BOT_URL = 'https://t.me/PremiumBot';
 const PREMIUM_BOT_HANDLE = '@PremiumBot';
+const DEFAULT_SUPPORT_CHAT_URL = 'https://t.me/viral_maker_ai_bot?start=support';
+
+let supportChatLink = DEFAULT_SUPPORT_CHAT_URL;
 
 const HISTORY_KEY = 'vm_history_v1';
 const SETTINGS_KEY = 'vm_settings_v1';
@@ -467,6 +470,27 @@ async function copyPremiumBotHandle() {
     } catch (e) {
         tg.showAlert('Откройте поиск в Telegram и найдите @PremiumBot вручную.');
     }
+}
+
+function openSupportChat() {
+    const url = supportChatLink || DEFAULT_SUPPORT_CHAT_URL;
+    try {
+        if (typeof tg.openTelegramLink === 'function') {
+            tg.openTelegramLink(url);
+            return;
+        }
+    } catch {
+        /* ignore */
+    }
+    try {
+        if (typeof tg.openLink === 'function') {
+            tg.openLink(url);
+            return;
+        }
+    } catch {
+        /* ignore */
+    }
+    window.open(url, '_blank', 'noopener');
 }
 
 function handlePremiumBotAction() {
@@ -1297,6 +1321,9 @@ async function loadUserData(options = {}) {
                     'Вы перешли по приглашению. После вашей первой генерации друг получит +10 бонусных генераций.',
             });
         }
+        if (data?.supportChatLink) {
+            supportChatLink = data.supportChatLink;
+        }
     } catch (error) {
         console.error('Error loading user data:', error);
     }
@@ -1600,6 +1627,7 @@ window.resetCleanupPlan = resetCleanupPlan;
 document.getElementById('plan-pro').addEventListener('click', () => buyPlan('pro'));
 document.getElementById('plan-premium').addEventListener('click', () => buyPlan('premium'));
 document.getElementById('btn-open-premiumbot').addEventListener('click', handlePremiumBotAction);
+document.getElementById('btn-contact-support')?.addEventListener('click', openSupportChat);
 document.getElementById('plan-pro-tribute').addEventListener('click', (e) => {
     e.stopPropagation();
     buyPlanViaTribute('pro');

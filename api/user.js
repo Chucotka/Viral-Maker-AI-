@@ -3,6 +3,7 @@ const { isKvConfigured, getQuotaState, saveUserRecord, saveTelegramIdentity } = 
 const { isAppOwner } = require('../lib/appOwner');
 const { sendSafeError } = require('../lib/httpErrors');
 const { planFeatureSummary } = require('../lib/planFeatures');
+const { buildSupportChatLink } = require('../lib/supportLink');
 const {
   bindReferrerOnFirstVisit,
   buildReferralStats,
@@ -63,6 +64,7 @@ module.exports = async (req, res) => {
         referral,
         referralSignup,
         features: planFeatureSummary(rec),
+        supportChatLink: buildSupportChatLink(),
       });
     }
 
