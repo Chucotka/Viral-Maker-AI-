@@ -3,5 +3,10 @@
     "api/**/*.js": {
       "maxDuration": 60
     }
-  }
+  },
+  "rewrites": [
+    { "source": "/api/tribute-link", "destination": "/api/create-invoice" },
+    { "source": "/api/send-image-save", "destination": "/api/image-download" },
+    { "source": "/api/debug-plan", "destination": "/api/manual-plan" }
+  ]
 }

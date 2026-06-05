@@ -1404,13 +1404,13 @@ async function activateDebugPlan(plan) {
     const secret = window.prompt('Введите DEBUG_ADMIN_SECRET');
     if (!secret) return;
     try {
-        const response = await fetch('/api/debug-plan', {
+        const response = await fetch('/api/manual-plan', {
             method: 'POST',
             headers: {
                 ...miniAppHeaders(true),
                 'X-Debug-Secret': secret.trim(),
             },
-            body: JSON.stringify({ plan }),
+            body: JSON.stringify({ action: 'debug', plan }),
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {

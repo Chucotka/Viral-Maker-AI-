@@ -116,10 +116,10 @@
     else if (imageBase64) body.imageBase64 = imageBase64;
     else return { ok: false, message: 'Нет данных изображения.' };
 
-    const res = await fetch('/api/send-image-save', {
+    const res = await fetch('/api/image-download', {
       method: 'POST',
       headers: getHeaders ? getHeaders() : { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ ...body, action: 'send' }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {

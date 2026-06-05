@@ -27,7 +27,7 @@ function parseTarget(value) {
 function parseAction(value) {
   const raw = String(value || '').trim().toLowerCase();
   if (!raw) return '';
-  if (raw === 'list' || raw === 'reset') return raw;
+  if (raw === 'list' || raw === 'reset' || raw === 'debug') return raw;
   return '';
 }
 
@@ -59,7 +59,28 @@ module.exports = async (req, res) => {
       });
     }
 
+    const pathOnly = String(req.url || '').split('?')[0];
     const action = parseAction(req.body?.action || req.query?.action);
+    const isDebugRoute = action === 'debug' || pathOnly.endsWith('/debug-plan');
+    if (isDebugRoute) {
+      if (req.method !== 'POST') {
+        return res.status(405).end();
+      }
+      const auth = requireAdmin(req, res);
+      if (!auth) return;
+      const plan = normalizeDebugPlan(req.body?.plan || req.query?.plan);
+      if (!plan) {
+        return res.status(400).json({ error: 'invalid_plan' });
+      }
+      await setUserPlan(auth.userId, plan, { durationDays: planDurationDays() });
+      return res.json({
+        ok: true,
+        userId: auth.userId,
+        plan,
+        planUntil: new Date(Date.now() + planDurationDays() * 864e5).toISOString(),
+      });
+    }
+
     if (action === 'list') {
       if (req.method !== 'GET' && req.method !== 'POST') {
         return res.status(405).end();

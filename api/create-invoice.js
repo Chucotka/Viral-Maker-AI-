@@ -1,8 +1,32 @@
 const https = require('https');
 const { resolveTelegramUser } = require('../lib/miniAppAuth');
+const { getTributePlanConfig } = require('../lib/tributeConfig');
 const { sendSafeError } = require('../lib/httpErrors');
 
+async function handleTributeLink(req, res) {
+  const plan = String(req.query?.plan || '').toLowerCase();
+  const config = getTributePlanConfig(plan);
+  if (!config) {
+    return res.status(400).json({ error: 'invalid_plan' });
+  }
+  if (!config.webLink) {
+    return res.status(503).json({
+      error: 'tribute_not_configured',
+      message: 'Добавьте TRIBUTE_PRO_WEBLINK / TRIBUTE_PREMIUM_WEBLINK в Vercel.',
+    });
+  }
+  return res.json({ plan: config.plan, link: config.webLink });
+}
+
 module.exports = async (req, res) => {
+  if (req.method === 'GET') {
+    try {
+      return await handleTributeLink(req, res);
+    } catch (e) {
+      return sendSafeError(res, e, 'create-invoice-tribute-link');
+    }
+  }
+
   if (req.method !== 'POST') return res.status(405).end();
 
   try {
