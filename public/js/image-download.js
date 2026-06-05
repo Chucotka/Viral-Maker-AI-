@@ -1,6 +1,6 @@
 /**
- * Сохранение сгенерированной картинки на устройство (галерея / файлы).
- * В Telegram Mini App <a download> с data: URL не работает — нужен WebApp.downloadFile + HTTPS.
+ * Сохранение картинки на устройство в Telegram Mini App.
+ * На телефоне надёжнее всего: отправить фото в личный чат с ботом → долгое нажатие → «Сохранить в галерею».
  */
 (function initVmImageDownload(global) {
   function extensionFromMime(mimeType) {
@@ -14,8 +14,15 @@
     return `viral-maker-ai.${extensionFromMime(mimeType)}`;
   }
 
+  function isTelegramMobile(tg) {
+    const p = String(tg?.platform || '').toLowerCase();
+    return p === 'ios' || p === 'android' || p === 'android_x';
+  }
+
   function canUseTelegramDownload(tg) {
-    return !!(tg && typeof tg.downloadFile === 'function');
+    if (!tg || typeof tg.downloadFile !== 'function') return false;
+    if (typeof tg.isVersionAtLeast === 'function') return tg.isVersionAtLeast('8.0');
+    return true;
   }
 
   function dataUrlToBlob(dataUrl) {
@@ -27,7 +34,122 @@
     return new Blob([bytes], { type: m[1] });
   }
 
-  async function shareBlobFallback(tg, blob, fileName) {
+  function parseDataUrl(dataUrl) {
+    const m = /^data:([^;]+);base64,(.+)$/.exec(dataUrl || '');
+    if (!m) return null;
+    return { mimeType: m[1], imageBase64: m[2] };
+  }
+
+  function telegramDownloadFile(tg, url, fileName) {
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (v) => {
+        if (settled) return;
+        settled = true;
+        resolve(!!v);
+      };
+      setTimeout(() => finish(false), 90_000);
+      const params = { url: String(url), file_name: String(fileName) };
+      try {
+        if (tg.downloadFile.length >= 2) {
+          tg.downloadFile(params, (accepted) => finish(accepted !== false));
+          return;
+        }
+        const ret = tg.downloadFile(params);
+        if (ret && typeof ret.then === 'function') {
+          ret.then(() => finish(true)).catch(() => finish(false));
+          return;
+        }
+        finish(true);
+      } catch {
+        finish(false);
+      }
+    });
+  }
+
+  function openDownloadLink(tg, url) {
+    if (!url) return false;
+    try {
+      if (typeof tg.openLink === 'function') {
+        tg.openLink(url, { try_instant_view: false });
+        return true;
+      }
+    } catch {
+      /* ignore */
+    }
+    try {
+      global.open(url, '_blank', 'noopener');
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function showBotChatSavePopup(tg, chatLink) {
+    const buttons = chatLink
+      ? [
+          { id: 'open_chat', type: 'default', text: 'Открыть чат с ботом' },
+          { id: 'ok', type: 'ok', text: 'Понятно' },
+        ]
+      : [{ id: 'ok', type: 'ok', text: 'Понятно' }];
+
+    const message =
+      'Фото отправлено в личный чат с ботом.\n\n' +
+      '1. Откройте чат с ботом\n' +
+      '2. Нажмите и удерживайте картинку\n' +
+      '3. Выберите «Сохранить в галерею» / «Save to Photos»';
+
+    if (typeof tg.showPopup === 'function') {
+      tg.showPopup({ title: 'Сохранить в галерею', message, buttons }, (buttonId) => {
+        if (buttonId === 'open_chat' && chatLink && typeof tg.openTelegramLink === 'function') {
+          tg.openTelegramLink(chatLink);
+        }
+      });
+      return;
+    }
+    tg.showAlert?.(message);
+  }
+
+  async function requestSendImageToBotChat({ getHeaders, downloadToken, imageBase64, mimeType }) {
+    const body = { mimeType: mimeType || 'image/png' };
+    if (downloadToken) body.downloadToken = downloadToken;
+    else if (imageBase64) body.imageBase64 = imageBase64;
+    else return { ok: false, message: 'Нет данных изображения.' };
+
+    const res = await fetch('/api/send-image-save', {
+      method: 'POST',
+      headers: getHeaders ? getHeaders() : { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { ok: false, message: data.message || data.error || 'Не удалось отправить фото в чат.' };
+    }
+    return { ok: true, chatLink: data.chatLink || null };
+  }
+
+  async function ensureDownloadUrl(opts, parsed, fileName) {
+    if (opts.downloadUrl) {
+      return { url: opts.downloadUrl, fileName: opts.downloadFileName || fileName, token: opts.downloadToken || null };
+    }
+    if (!parsed?.imageBase64) return null;
+    const res = await fetch('/api/image-download', {
+      method: 'POST',
+      headers: opts.getHeaders ? opts.getHeaders() : { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imageBase64: parsed.imageBase64,
+        mimeType: parsed.mimeType,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.downloadUrl) {
+      opts.onError?.(data.message || data.error || 'Не удалось подготовить файл.');
+      return null;
+    }
+    return { url: data.downloadUrl, fileName: data.fileName || fileName, token: data.token || null };
+  }
+
+  async function shareBlobFallback(blob, fileName) {
     if (!blob || !global.navigator?.share) return false;
     try {
       const file = new File([blob], fileName, { type: blob.type || 'image/png' });
@@ -40,84 +162,84 @@
     }
   }
 
-  function anchorBlobFallback(blob, fileName) {
-    if (!blob) return false;
-    try {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      a.rel = 'noopener';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  function telegramDownloadFile(tg, url, fileName) {
-    return new Promise((resolve) => {
-      try {
-        tg.downloadFile({ url, file_name: fileName }, (accepted) => {
-          resolve(accepted !== false);
-        });
-      } catch {
-        resolve(false);
-      }
-    });
-  }
-
   /**
    * @param {object} opts
-   * @param {string} opts.dataUrl
-   * @param {string} [opts.mimeType]
-   * @param {object} opts.tg - Telegram.WebApp
-   * @param {() => object} opts.getHeaders - auth headers for POST
-   * @param {(msg: string) => void} [opts.onError]
    */
   async function saveGeneratedImageToDevice(opts) {
     const { dataUrl, mimeType, tg, getHeaders, onError } = opts || {};
-    const fileName = fileNameFromMime(mimeType);
-    const parts = /^data:([^;]+);base64,(.+)$/.exec(dataUrl || '');
-    if (!parts) {
+    const parsed = parseDataUrl(dataUrl);
+    if (!parsed) {
       onError?.('Нет изображения для сохранения.');
       return false;
     }
-    const imageBase64 = parts[2];
-    const resolvedMime = mimeType || parts[1] || 'image/png';
+    const fileName = opts.downloadFileName || fileNameFromMime(mimeType || parsed.mimeType);
+    const mobile = isTelegramMobile(tg);
 
-    if (canUseTelegramDownload(tg)) {
+    const prepared = await ensureDownloadUrl(opts, parsed, fileName);
+    const downloadUrl = prepared?.url || opts.downloadUrl || null;
+    const downloadToken = prepared?.token || opts.downloadToken || null;
+
+    // 1) Мобильный Telegram: сначала отправка в личный чат (самый надёжный способ «в галерею»)
+    if (mobile) {
       try {
-        const res = await fetch('/api/image-download', {
-          method: 'POST',
-          headers: getHeaders ? getHeaders() : { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageBase64, mimeType: resolvedMime }),
+        const sent = await requestSendImageToBotChat({
+          getHeaders,
+          downloadToken,
+          imageBase64: parsed.imageBase64,
+          mimeType: parsed.mimeType,
         });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          onError?.(data.message || data.error || 'Не удалось подготовить файл.');
-        } else if (data.downloadUrl) {
-          const ok = await telegramDownloadFile(tg, data.downloadUrl, data.fileName || fileName);
-          if (ok) return true;
+        if (sent.ok) {
+          showBotChatSavePopup(tg, sent.chatLink);
+          return true;
         }
+        onError?.(sent.message);
       } catch {
-        /* fallback below */
+        /* try other methods */
       }
     }
 
-    const blob = dataUrlToBlob(dataUrl);
-    if (await shareBlobFallback(tg, blob, fileName)) return true;
-    if (anchorBlobFallback(blob, fileName)) {
-      tg?.showAlert?.(
-        'Если файл не появился в галерее: нажмите и удерживайте превью картинки выше → «Сохранить изображение».',
+    // 2) Нативный downloadFile (Bot API 8.0+)
+    if (downloadUrl && canUseTelegramDownload(tg)) {
+      const ok = await telegramDownloadFile(tg, downloadUrl, fileName);
+      if (ok) {
+        tg.showAlert?.('Подтвердите сохранение в системном окне Telegram.');
+        return true;
+      }
+    }
+
+    // 3) Открыть HTTPS-файл во внешнем браузере
+    if (downloadUrl && openDownloadLink(tg, downloadUrl)) {
+      tg.showAlert?.(
+        'Файл открыт. В браузере нажмите «Скачать» или удерживайте изображение → «Сохранить».',
       );
       return true;
     }
 
-    onError?.('Сохранение недоступно в этом клиенте. Удерживайте превью картинки → «Сохранить изображение».');
+    // 4) Десктоп / web: отправка в чат с ботом
+    if (!mobile) {
+      try {
+        const sent = await requestSendImageToBotChat({
+          getHeaders,
+          downloadToken,
+          imageBase64: parsed.imageBase64,
+          mimeType: parsed.mimeType,
+        });
+        if (sent.ok) {
+          showBotChatSavePopup(tg, sent.chatLink);
+          return true;
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    const blob = dataUrlToBlob(dataUrl);
+    if (await shareBlobFallback(blob, fileName)) return true;
+
+    onError?.(
+      'Сохраните вручную: удерживайте превью картинки в студии → «Сохранить изображение». ' +
+        'Или напишите боту /start и нажмите «Сохранить в галерею» снова.',
+    );
     return false;
   }
 
@@ -125,5 +247,6 @@
     saveGeneratedImageToDevice,
     fileNameFromMime,
     canUseTelegramDownload,
+    isTelegramMobile,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

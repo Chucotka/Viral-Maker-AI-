@@ -11,6 +11,7 @@ const API_ROUTES = [
   { path: '/api/generate', module: '../api/generate', methods: ['post'] },
   { path: '/api/generate-image', module: '../api/generate-image', methods: ['post'] },
   { path: '/api/image-download', module: '../api/image-download', methods: ['get', 'post', 'options'] },
+  { path: '/api/send-image-save', module: '../api/send-image-save', methods: ['post'] },
   { path: '/api/history', module: '../api/history', methods: ['get', 'post'] },
   { path: '/api/publish', module: '../api/publish', methods: ['post'] },
   { path: '/api/create-invoice', module: '../api/create-invoice', methods: ['post'] },

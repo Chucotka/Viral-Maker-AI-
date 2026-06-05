@@ -56,6 +56,9 @@ async function saveCurrentImageToDevice() {
             const ok = await window.VMImageDownload.saveGeneratedImageToDevice({
                 dataUrl,
                 mimeType: parts?.mimeType,
+                downloadUrl: currentImageDownloadUrl,
+                downloadToken: currentImageDownloadToken,
+                downloadFileName: currentImageDownloadFileName,
                 tg,
                 getHeaders: () => miniAppHeaders(true),
                 onError: (msg) => tg.showAlert(msg),
@@ -411,6 +414,9 @@ let recoveryPollAttempts = 0;
 const RECOVERY_POLL_INTERVAL_MS = 3000;
 const RECOVERY_POLL_MAX_ATTEMPTS = 50; // ~150 сек
 let currentImageDataUrl = '';
+let currentImageDownloadUrl = '';
+let currentImageDownloadToken = '';
+let currentImageDownloadFileName = '';
 let planRefreshTimer = null;
 let studioIntent = savedIntent();
 let studioRiskLevel = savedRisk();
@@ -881,6 +887,9 @@ function applyTextGenerateData(data, topic) {
         : null;
     currentDisplayedVariant = 'A';
     currentImageDataUrl = '';
+    currentImageDownloadUrl = '';
+    currentImageDownloadToken = '';
+    currentImageDownloadFileName = '';
     updateDashboardScore(currentGeneratedScore);
     renderTextResultView();
     revealResultContainer();
@@ -1053,6 +1062,9 @@ function openHistoryItem(item) {
     if (item.type === 'image') {
         syncCurrentHistoryFromItem(item);
         currentImageDataUrl = item.dataUrl || '';
+        currentImageDownloadUrl = '';
+        currentImageDownloadToken = '';
+        currentImageDownloadFileName = '';
         currentGeneratedText = '';
         currentGeneratedScore = 0;
         currentGeneratedMeta = null;
@@ -1841,6 +1853,9 @@ async function runImageGeneration() {
         }
 
         currentImageDataUrl = data.dataUrl;
+        currentImageDownloadUrl = data.downloadUrl || '';
+        currentImageDownloadToken = data.downloadToken || '';
+        currentImageDownloadFileName = data.downloadFileName || '';
         currentGeneratedText = '';
         currentGeneratedScore = 0;
         currentGeneratedMeta = null;

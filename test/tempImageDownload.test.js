@@ -1,6 +1,11 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const { putImageDownload, getImageDownload, buildDownloadFileName } = require('../lib/tempImageDownload');
+const {
+  putImageDownload,
+  getImageDownload,
+  buildDownloadFileName,
+  buildDownloadUrl,
+} = require('../lib/tempImageDownload');
 
 describe('tempImageDownload', () => {
   it('buildDownloadFileName picks extension from mime', () => {
@@ -22,5 +27,11 @@ describe('tempImageDownload', () => {
 
     process.env.UPSTASH_REDIS_REST_URL = prevUrl;
     process.env.UPSTASH_REDIS_REST_TOKEN = prevToken;
+  it('buildDownloadUrl uses WEBAPP_URL when set', () => {
+    const prev = process.env.WEBAPP_URL;
+    process.env.WEBAPP_URL = 'https://app.example.com/';
+    const url = buildDownloadUrl({ get: () => null }, 'abc123');
+    assert.match(url, /^https:\/\/app\.example\.com\/api\/image-download\?t=abc123$/);
+    process.env.WEBAPP_URL = prev;
   });
 });

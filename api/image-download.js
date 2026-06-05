@@ -7,13 +7,19 @@ const {
   publicBaseUrl,
 } = require('../lib/tempImageDownload');
 
-function setDownloadCors(res) {
-  res.setHeader('Access-Control-Allow-Origin', 'https://web.telegram.org');
+function setDownloadCors(req, res) {
+  const origin = String(req.get('Origin') || '').trim();
+  const allowed =
+    origin === 'https://web.telegram.org' ||
+    origin === 'https://telegram.org' ||
+    /\.telegram\.org$/i.test(origin);
+  res.setHeader('Access-Control-Allow-Origin', allowed ? origin : 'https://web.telegram.org');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition, Content-Type');
 }
 
-function sendImageAttachment(res, buffer, mimeType, fileName) {
-  setDownloadCors(res);
+function sendImageAttachment(req, res, buffer, mimeType, fileName) {
+  setDownloadCors(req, res);
   res.setHeader('Content-Type', mimeType || 'image/png');
   res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
   res.setHeader('Cache-Control', 'private, no-store, max-age=0');
@@ -22,7 +28,7 @@ function sendImageAttachment(res, buffer, mimeType, fileName) {
 
 module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') {
-    setDownloadCors(res);
+    setDownloadCors(req, res);
     return res.status(204).end();
   }
 
@@ -35,7 +41,7 @@ module.exports = async (req, res) => {
       }
       const buffer = Buffer.from(row.imageBase64, 'base64');
       const fileName = buildDownloadFileName(row.mimeType);
-      return sendImageAttachment(res, buffer, row.mimeType, fileName);
+      return sendImageAttachment(req, res, buffer, row.mimeType, fileName);
     } catch (e) {
       return sendSafeError(res, e, 'image-download-get');
     }
