@@ -282,10 +282,11 @@
                     <button type="button" class="chip-btn" id="btn-refine-expert">Экспертнее</button>
                 </div>
                 <div class="action-buttons hidden" id="result-actions-image">
-                    <button type="button" class="btn btn-accent" id="btn-download-image">Скачать</button>
+                    <button type="button" class="btn btn-accent" id="btn-download-image">Сохранить в галерею</button>
                     <button class="btn btn-accent" id="btn-publish-image">В канал 📢</button>
                     <button class="btn btn-secondary" id="btn-remake-image">Ещё раз</button>
                 </div>
+                <p class="text-hint" id="hint-image-save" style="margin-top:8px">На телефоне: «Сохранить в галерею» отправит фото в чат с ботом — удержите его там и выберите «Сохранить в галерею».</p>
                 <p class="text-hint hidden" id="hint-image-publish" style="margin-top:8px">Публикация картинки в канал — тариф <b>Premium</b> (текст в канал — на всех тарифах).</p>
                 <p id="publish-status" class="status-msg hidden"></p>
             </div>
@@ -613,6 +614,8 @@
     </div>
 
     <script src="js/vm-core.js"></script>
+    <script src="js/history-store.js"></script>
+    <script src="js/image-download.js"></script>
     <script src="js/onboarding.js"></script>
     <script src="js/admin-subs.js"></script>
     <script src="referral.js"></script>

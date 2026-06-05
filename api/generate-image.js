@@ -13,6 +13,11 @@ const {
 } = require('../lib/buildTextPrompt');
 const { assertGenerateRateLimit } = require('../lib/rateLimitKv');
 const { sendSafeError } = require('../lib/httpErrors');
+const {
+  putImageDownload,
+  buildDownloadFileName,
+  buildDownloadUrl,
+} = require('../lib/tempImageDownload');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).end();
@@ -105,6 +110,16 @@ module.exports = async (req, res) => {
       console.error('appendUserHistory:', histErr.message);
     }
 
+    let downloadToken = null;
+    let downloadUrl = null;
+    const downloadFileName = buildDownloadFileName(mimeType);
+    try {
+      downloadToken = await putImageDownload(auth.userId, dataBase64, mimeType);
+      downloadUrl = buildDownloadUrl(req, downloadToken);
+    } catch (dlErr) {
+      console.error('image download token:', dlErr.message);
+    }
+
     res.json({
       mimeType,
       imageBase64: dataBase64,
@@ -113,6 +128,9 @@ module.exports = async (req, res) => {
       directorApplied,
       historyTs,
       remainingToday,
+      downloadToken,
+      downloadUrl,
+      downloadFileName,
     });
   } catch (e) {
     console.error('IMAGE GENERATION ERROR:', e.message);
