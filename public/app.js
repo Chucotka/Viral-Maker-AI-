@@ -1876,8 +1876,8 @@ async function runImageGeneration() {
         const resultMeta = document.getElementById('result-meta');
         if (resultMeta) {
             resultMeta.textContent = data.directorApplied
-                ? 'Промпт уточнён · запрос сохранён'
-                : 'Готово — удерживайте превью, чтобы сохранить вручную';
+                ? 'Промпт уточнён · для сохранения нажмите «Сохранить в галерею»'
+                : 'Готово · «Сохранить в галерею» отправит фото в чат с ботом';
             resultMeta.classList.remove('hidden');
         }
         const resultCritic = document.getElementById('result-critic');
@@ -2102,6 +2102,14 @@ recoverActiveGenerationOnLoad();
 loadUserData().then(() => {
     if (window.VMOnboarding && !VMOnboarding.isDone()) {
         setTimeout(() => VMOnboarding.show(), 400);
+    }
+    if (window.VMImageDownload?.readPendingSaveToken?.()) {
+        setTimeout(() => {
+            VMImageDownload.retryPendingSaveIfAny({
+                tg,
+                getHeaders: () => miniAppHeaders(true),
+            });
+        }, 800);
     }
 });
 loadTrends();
