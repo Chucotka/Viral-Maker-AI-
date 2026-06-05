@@ -33,6 +33,74 @@ function parseDataUrl(dataUrl) {
     return { mimeType: m[1], imageBase64: m[2] };
 }
 
+function imageDownloadFileName(mimeType) {
+    const ext = String(mimeType || '').includes('jpeg') ? 'jpg' : 'png';
+    return `viral-maker-ai.${ext}`;
+}
+
+function fallbackBlobDownload(dataUrl, fileName) {
+    const parts = parseDataUrl(dataUrl);
+    if (!parts) return false;
+    try {
+        const binary = atob(parts.imageBase64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+        const blob = new Blob([bytes], { type: parts.mimeType });
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = fileName;
+        link.rel = 'noopener';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 2000);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+async function downloadGeneratedImage(dataUrl) {
+    const parts = parseDataUrl(dataUrl);
+    if (!parts) {
+        tg.showAlert('Сначала сгенерируйте изображение.');
+        return;
+    }
+    const fileName = imageDownloadFileName(parts.mimeType);
+
+    if (typeof tg.downloadFile === 'function') {
+        try {
+            const response = await fetch('/api/image-export', {
+                method: 'POST',
+                headers: miniAppHeaders(true),
+                body: JSON.stringify({
+                    mimeType: parts.mimeType,
+                    imageBase64: parts.imageBase64,
+                    fileName,
+                }),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (response.ok && data.url) {
+                tg.downloadFile({ url: data.url, file_name: data.fileName || fileName }, (accepted) => {
+                    if (accepted === false) {
+                        tg.showAlert('Разрешите сохранение файла в Telegram, чтобы скачать картинку.');
+                    }
+                });
+                return;
+            }
+            const msg = data.message || data.error;
+            if (msg) tg.showAlert(String(msg).slice(0, 200));
+        } catch {
+            /* try fallback */
+        }
+    }
+
+    if (fallbackBlobDownload(dataUrl, fileName)) return;
+    tg.showAlert('Не удалось сохранить файл. Обновите Telegram до последней версии и попробуйте снова.');
+}
+
 function formatStrategyLabel(angle) {
     const map = {
         story: 'история',
@@ -225,8 +293,7 @@ function readHistoryCache() {
 function historyItemKey(item) {
     const ts = item && typeof item.ts === 'number' ? item.ts : '';
     const type = String(item?.type || '');
-    const text = String(item?.text || item?.prompt || item?.topic || '');
-    return `${ts}|${type}|${text}`;
+    return `${ts}|${type}`;
 }
 
 function applyHistoryMutation(item, mutation = {}) {
@@ -276,7 +343,12 @@ function mergeHistoryLists(serverList, localList) {
         if (!item || typeof item !== 'object') return;
         const key = historyItemKey(item);
         const prev = merged.get(key);
-        merged.set(key, prev ? { ...prev, ...item } : item);
+        if (!prev) {
+            merged.set(key, item);
+            return;
+        }
+        const dataUrl = item.dataUrl || prev.dataUrl;
+        merged.set(key, { ...prev, ...item, ...(dataUrl ? { dataUrl } : {}) });
     };
     (Array.isArray(serverList) ? serverList : []).forEach(add);
     (Array.isArray(localList) ? localList : []).forEach(add);
@@ -988,11 +1060,6 @@ function openHistoryItem(item) {
         currentDisplayedVariant = 'A';
         if (item.dataUrl && resultImage) {
             resultImage.src = item.dataUrl;
-        }
-        const dl = document.getElementById('btn-download-image');
-        if (dl && item.dataUrl) {
-            dl.href = item.dataUrl;
-            dl.download = `viral-maker-ai.${String(item.mimeType || '').includes('jpeg') ? 'jpg' : 'png'}`;
         }
         if (resultText) resultText.classList.add('hidden');
         if (resultImageWrap) resultImageWrap.classList.remove('hidden');
@@ -1776,11 +1843,6 @@ async function runImageGeneration() {
         currentAlternativeMeta = null;
         currentDisplayedVariant = 'A';
         document.getElementById('result-image').src = data.dataUrl;
-        const dl = document.getElementById('btn-download-image');
-        dl.href = data.dataUrl;
-        const ext = String(data.mimeType || '').includes('jpeg') ? 'jpg' : 'png';
-        dl.download = `viral-maker-ai.${ext}`;
-
         document.getElementById('result-text').classList.add('hidden');
         document.getElementById('result-image-wrap').classList.remove('hidden');
         document.getElementById('result-score-wrap').classList.add('hidden');
@@ -1977,11 +2039,12 @@ document.getElementById('btn-publish-image').addEventListener('click', async () 
     }
 });
 
-document.getElementById('btn-download-image').addEventListener('click', () => {
+document.getElementById('btn-download-image').addEventListener('click', async () => {
     trackHistoryFeedback({
         increments: { downloadCount: 1 },
         set: { lastDownloadedAt: Date.now() },
     });
+    await downloadGeneratedImage(currentImageDataUrl);
 });
 
 // Trend Search Filter
