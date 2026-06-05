@@ -27,6 +27,8 @@ describe('tempImageDownload', () => {
 
     process.env.UPSTASH_REDIS_REST_URL = prevUrl;
     process.env.UPSTASH_REDIS_REST_TOKEN = prevToken;
+  });
+
   it('buildDownloadUrl uses WEBAPP_URL when set', () => {
     const prev = process.env.WEBAPP_URL;
     process.env.WEBAPP_URL = 'https://app.example.com/';
