@@ -389,7 +389,14 @@ function loadSavedSettings() {
 
 // Set user name if available (отображение; userId на сервере только из initData)
 if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-    document.getElementById('user-name').textContent = tg.initDataUnsafe.user.first_name;
+    const firstName = tg.initDataUnsafe.user.first_name;
+    document.getElementById('user-name').textContent = firstName;
+    const settingsHeroName = document.getElementById('settings-hero-name');
+    if (settingsHeroName) settingsHeroName.textContent = firstName;
+    const settingsHeroAvatar = document.getElementById('settings-hero-avatar');
+    if (settingsHeroAvatar && tg.initDataUnsafe.user.photo_url) {
+        settingsHeroAvatar.innerHTML = `<img src="${tg.initDataUnsafe.user.photo_url}" alt="" class="settings-hero-avatar-img">`;
+    }
 }
 
 /** Текущий тариф с сервера (для проверки Premium перед постингом картинки). */
@@ -993,6 +1000,10 @@ document.getElementById('mode-pill-image').addEventListener('click', () => setSt
 
 // --- Tab Navigation ---
 function switchTab(tabId) {
+    if (tabId !== 'settings' && window.SettingsHub) {
+        SettingsHub.reset();
+    }
+
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
 
@@ -1368,15 +1379,20 @@ document.getElementById('btn-save-profile').addEventListener('click', async () =
 function updatePlanUI(plan, planUntil, bonusGenerations = 0, quotaRemaining = null) {
     const badge = document.getElementById('current-plan-badge');
     const upgradeBtn = document.getElementById('btn-upgrade-pro');
+    const quotaValue = document.getElementById('settings-quota-value');
+    const quotaLabel = document.getElementById('settings-quota-label');
+    const heroPlan = document.getElementById('settings-hero-plan-badge');
 
     if (plan === 'pro' || plan === 'premium') {
         badge.className = 'plan-badge plan-pro';
         let untilLine = '';
+        let untilShort = '';
         if (planUntil) {
             try {
                 const d = new Date(planUntil);
                 if (!Number.isNaN(d.getTime())) {
                     untilLine = ` · до ${d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+                    untilShort = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
                 }
             } catch (e) { /* ignore */ }
         }
@@ -1384,7 +1400,13 @@ function updatePlanUI(plan, planUntil, bonusGenerations = 0, quotaRemaining = nu
             plan === 'premium'
                 ? `Premium · картинки в канал${untilLine} ✨`
                 : `Pro · безлимит${untilLine} ✨`;
-        upgradeBtn.classList.add('hidden');
+        if (upgradeBtn) upgradeBtn.classList.add('hidden');
+        if (quotaValue) quotaValue.textContent = '∞';
+        if (quotaLabel) quotaLabel.textContent = untilShort ? `до ${untilShort}` : 'безлимит';
+        if (heroPlan) {
+            heroPlan.textContent = plan === 'premium' ? 'PREMIUM' : 'PRO';
+            heroPlan.className = 'settings-hero-plan settings-hero-plan-paid';
+        }
     } else {
         badge.className = 'plan-badge plan-free';
         const bonusLine = bonusGenerations > 0 ? ` · +${bonusGenerations} бонус` : '';
@@ -1393,7 +1415,18 @@ function updatePlanUI(plan, planUntil, bonusGenerations = 0, quotaRemaining = nu
                 ? ` · осталось ${quotaRemaining}`
                 : '';
         badge.innerHTML = `Free · 5 бесплатных${bonusLine}${remainLine}`;
-        upgradeBtn.classList.remove('hidden');
+        if (upgradeBtn) upgradeBtn.classList.remove('hidden');
+        const remaining = quotaRemaining != null && Number.isFinite(quotaRemaining) ? quotaRemaining : 5;
+        if (quotaValue) quotaValue.textContent = String(remaining);
+        if (quotaLabel) {
+            quotaLabel.textContent = bonusGenerations > 0
+                ? `из 5 · +${bonusGenerations} бонус`
+                : 'из 5 ⚡';
+        }
+        if (heroPlan) {
+            heroPlan.textContent = 'FREE';
+            heroPlan.className = 'settings-hero-plan settings-hero-plan-free';
+        }
     }
     const hintImg = document.getElementById('hint-image-publish');
     if (hintImg) hintImg.classList.toggle('hidden', plan === 'premium');
@@ -1642,7 +1675,12 @@ if (isDesktopLikeClient()) {
     if (premiumBotBtn) premiumBotBtn.textContent = 'Скопировать @PremiumBot';
 }
 
-document.getElementById('btn-upgrade-pro').addEventListener('click', () => {
+document.getElementById('btn-upgrade-pro')?.addEventListener('click', () => {
+    if (window.SettingsHub) {
+        switchTab('settings');
+        SettingsHub.openPanel('subscription');
+        return;
+    }
     buyPlan('pro');
 });
 
@@ -1790,7 +1828,7 @@ async function runTextGeneration(opts = {}) {
         const data = await parseJsonResponse(response);
 
         if (response.status === 403 && data.error === 'limit_reached') {
-            limitMsg.innerHTML = `⚡️ Бесплатные генерации закончились. Пригласите друзей за бонус или <a href="javascript:void(0)" onclick="switchTab('settings')">перейдите на Pro →</a>`;
+            limitMsg.innerHTML = `⚡️ Бесплатные генерации закончились. Пригласите друзей за бонус или <a href="javascript:void(0)" onclick="openSettingsPanel('subscription')">перейдите на Pro →</a>`;
             limitMsg.classList.remove('hidden');
             limitMsg.classList.add('error');
             return;
@@ -1866,7 +1904,7 @@ async function runImageGeneration() {
         const data = await parseJsonResponse(response);
 
         if (response.status === 403 && data.error === 'limit_reached') {
-            limitMsg.innerHTML = `⚡️ Бесплатные генерации закончились. Пригласите друзей за бонус или <a href="javascript:void(0)" onclick="switchTab('settings')">перейдите на Pro →</a>`;
+            limitMsg.innerHTML = `⚡️ Бесплатные генерации закончились. Пригласите друзей за бонус или <a href="javascript:void(0)" onclick="openSettingsPanel('subscription')">перейдите на Pro →</a>`;
             limitMsg.classList.remove('hidden');
             limitMsg.classList.add('error');
             return;
@@ -2140,5 +2178,79 @@ loadUserData().then(() => {
         }, 800);
     }
 });
+const SettingsHub = (function initSettingsHub() {
+    const hubView = document.getElementById('settings-hub-view');
+    const moreRow = document.getElementById('settings-hub-more');
+    const moreTile = document.querySelector('[data-settings-action="toggle-more"]');
+    const panels = document.querySelectorAll('.settings-panel');
+    let activePanel = null;
+
+    function setTileActive(panelId) {
+        document.querySelectorAll('[data-settings-panel]').forEach((tile) => {
+            tile.classList.toggle('active', tile.dataset.settingsPanel === panelId);
+        });
+    }
+
+    function openPanel(panelId) {
+        if (!hubView || !panelId) return;
+        activePanel = panelId;
+        hubView.classList.add('hidden');
+        panels.forEach((panel) => {
+            panel.classList.toggle('hidden', panel.dataset.panel !== panelId);
+        });
+        setTileActive(panelId);
+        const panelEl = document.getElementById(`settings-panel-${panelId}`);
+        if (panelEl) panelEl.scrollTop = 0;
+        const tab = document.getElementById('tab-settings');
+        if (tab) {
+            tab.scrollTop = 0;
+            tab.classList.add('settings-panel-open');
+        }
+    }
+
+    function reset() {
+        activePanel = null;
+        if (hubView) hubView.classList.remove('hidden');
+        document.getElementById('tab-settings')?.classList.remove('settings-panel-open');
+        panels.forEach((panel) => panel.classList.add('hidden'));
+        document.querySelectorAll('[data-settings-panel]').forEach((tile) => tile.classList.remove('active'));
+        if (moreRow) moreRow.classList.add('hidden');
+        if (moreTile) {
+            moreTile.classList.remove('is-expanded');
+            moreTile.setAttribute('aria-expanded', 'false');
+        }
+    }
+
+    document.querySelectorAll('[data-settings-panel]').forEach((tile) => {
+        tile.addEventListener('click', () => {
+            const panelId = tile.dataset.settingsPanel;
+            if (panelId) openPanel(panelId);
+        });
+    });
+
+    moreTile?.addEventListener('click', () => {
+        if (!moreRow) return;
+        moreRow.classList.toggle('hidden');
+        const isOpen = !moreRow.classList.contains('hidden');
+        moreTile.classList.toggle('is-expanded', isOpen);
+        moreTile.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+
+    document.querySelectorAll('[data-settings-back]').forEach((btn) => {
+        btn.addEventListener('click', reset);
+    });
+
+    return { openPanel, reset, getActivePanel: () => activePanel };
+})();
+
+window.SettingsHub = SettingsHub;
+
+function openSettingsPanel(panelId) {
+    switchTab('settings');
+    SettingsHub.openPanel(panelId);
+}
+
+window.openSettingsPanel = openSettingsPanel;
+
 loadTrends();
 loadDashboardData();

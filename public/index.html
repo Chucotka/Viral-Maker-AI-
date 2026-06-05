@@ -350,223 +350,276 @@
 
         <!-- Tab 5: Settings -->
         <section id="tab-settings" class="tab-content">
-            <header class="section-header">
-                <h2>Настройки</h2>
-            </header>
-
-            <div class="settings-group">
-                <label>Твой тариф</label>
-                <div id="plan-badge-container">
-                    <div class="plan-badge plan-free" id="current-plan-badge">Free · 5 бесплатных генераций</div>
+            <div class="settings-hero">
+                <div class="settings-hero-left">
+                    <div class="settings-hero-avatar" id="settings-hero-avatar">👤</div>
+                    <span class="settings-hero-name" id="settings-hero-name">Пользователь</span>
                 </div>
-                <button class="btn btn-accent btn-full hidden" id="btn-upgrade-pro" style="margin-top: 12px;">Перейти на Pro — подписка</button>
-            </div>
-
-            <!-- Полный реферальный блок в настройках -->
-            <div class="referral-card" id="referral-settings-card">
-                <div class="referral-card-glow"></div>
-                <div class="referral-card-header">
-                    <span class="referral-lightning referral-lightning-lg">⚡</span>
-                    <div>
-                        <h3 class="referral-title">Реферальная программа</h3>
-                        <p class="referral-subtitle">Делись ссылкой — зарабатывай генерации и дни Pro</p>
-                        <p class="referral-rule-hint" data-ref-rule-hint></p>
-                    </div>
+                <div class="settings-hero-center">
+                    <span class="settings-hero-quota-value" id="settings-quota-value">5</span>
+                    <span class="settings-hero-quota-label" id="settings-quota-label">из 5 ⚡</span>
                 </div>
-
-                <div class="referral-tiers referral-tiers-full" data-ref-tiers="full" aria-label="Уровни наград"></div>
-
-                <div class="referral-stats-grid">
-                    <div class="referral-stat-box">
-                        <span class="referral-stat-value" data-ref-count>0</span>
-                        <span class="referral-stat-label">Приглашено</span>
-                    </div>
-                    <div class="referral-stat-box">
-                        <span class="referral-stat-value" data-ref-bonus>0</span>
-                        <span class="referral-stat-label">Бонус-генераций</span>
-                    </div>
-                    <div class="referral-stat-box">
-                        <span class="referral-stat-value" data-ref-total-reward>0</span>
-                        <span class="referral-stat-label">Всего заработано</span>
-                    </div>
-                </div>
-
-                <div class="referral-progress-wrap" data-ref-progress-root>
-                    <div class="referral-progress-track" aria-hidden="true">
-                        <span class="referral-progress-marker" data-ref-marker="0">
-                            <span class="referral-progress-marker-dot"></span>
-                            <span class="referral-progress-marker-label">0</span>
-                        </span>
-                        <span class="referral-progress-marker" data-ref-marker="5">
-                            <span class="referral-progress-marker-dot"></span>
-                            <span class="referral-progress-marker-label">🎯 5</span>
-                        </span>
-                        <span class="referral-progress-marker" data-ref-marker="10">
-                            <span class="referral-progress-marker-dot"></span>
-                            <span class="referral-progress-marker-label">👑 10</span>
-                        </span>
-                    </div>
-                    <div class="referral-progress-bar">
-                        <div class="referral-progress-fill" data-ref-progress style="width: 0%"></div>
-                    </div>
-                    <p class="referral-progress-label" data-ref-progress-label></p>
-                </div>
-
-                <div class="referral-activity-feed hidden" data-ref-activity-feed aria-live="polite"></div>
-
-                <button type="button" class="btn btn-referral btn-full" data-ref-invite>
-                    ⚡ Пригласить друзей — получить бонус
-                </button>
-
-                <p class="referral-rule-hint referral-rule-hint-footer" data-ref-rule-hint></p>
-            </div>
-
-            <!-- Debug-активация тарифов — только владелец (OWNER_TELEGRAM_IDS). По умолчанию hidden в HTML. -->
-            <div id="owner-test-access" class="settings-group hidden">
-                <label>Тестовый доступ</label>
-                <p class="text-hint" style="margin-bottom:10px">Только для владельца. Попросит секрет и активирует тариф без оплаты.</p>
-                <div class="plan-actions">
-                    <button type="button" class="btn btn-secondary btn-inline" id="btn-debug-pro">Активировать Pro</button>
-                    <button type="button" class="btn btn-secondary btn-inline" id="btn-debug-premium">Активировать Premium</button>
+                <div class="settings-hero-right">
+                    <span class="settings-hero-plan settings-hero-plan-free" id="settings-hero-plan-badge">FREE</span>
+                    <button type="button" class="settings-hero-upgrade hidden" id="btn-upgrade-pro">↑ Pro</button>
                 </div>
             </div>
 
-            <div id="admin-tools-panel" class="hidden">
-            <div class="settings-group">
-                <label>Ручная активация после Tribute</label>
-                <p class="text-hint" style="margin-bottom:10px">Введи <b>@username</b> или <b>userId</b>. Пользователь должен хотя бы раз открыть mini app, чтобы связка сохранилась.</p>
-                <input type="text" id="manual-target" placeholder="@username или 123456789">
-                <input type="password" id="manual-secret" placeholder="DEBUG_ADMIN_SECRET" autocomplete="off" style="margin-top:10px">
-                <div class="plan-actions" style="margin-top:12px">
-                    <button type="button" class="btn btn-secondary btn-inline" id="btn-manual-pro">Выдать Pro</button>
-                    <button type="button" class="btn btn-secondary btn-inline" id="btn-manual-premium">Выдать Premium</button>
+            <div id="settings-hub-view" class="settings-hub-view">
+                <div class="settings-hub-grid" role="navigation" aria-label="Разделы настроек">
+                    <button type="button" class="settings-hub-tile" data-settings-panel="subscription">
+                        <span class="settings-hub-icon" aria-hidden="true">💎</span>
+                        <span class="settings-hub-label">Подписка</span>
+                    </button>
+                    <button type="button" class="settings-hub-tile" data-settings-panel="referrals">
+                        <span class="settings-hub-icon" aria-hidden="true">⚡</span>
+                        <span class="settings-hub-label">Рефералы</span>
+                    </button>
+                    <button type="button" class="settings-hub-tile" data-settings-panel="profile">
+                        <span class="settings-hub-icon" aria-hidden="true">✏️</span>
+                        <span class="settings-hub-label">Профиль</span>
+                    </button>
+                    <button type="button" class="settings-hub-tile" data-settings-action="toggle-more" aria-expanded="false" aria-controls="settings-hub-more">
+                        <span class="settings-hub-icon" aria-hidden="true">⋯</span>
+                        <span class="settings-hub-label">Ещё</span>
+                    </button>
                 </div>
-                <p class="text-hint" id="manual-activate-status" style="margin-top:10px"></p>
+
+                <div class="settings-hub-more hidden" id="settings-hub-more">
+                    <button type="button" class="settings-hub-tile settings-hub-tile-sm" data-settings-panel="channel">
+                        <span class="settings-hub-icon" aria-hidden="true">📢</span>
+                        <span class="settings-hub-label">Канал</span>
+                    </button>
+                    <button type="button" class="settings-hub-tile settings-hub-tile-sm" data-settings-panel="model">
+                        <span class="settings-hub-icon" aria-hidden="true">🤖</span>
+                        <span class="settings-hub-label">Модель</span>
+                    </button>
+                    <button type="button" class="settings-hub-tile settings-hub-tile-sm" data-settings-panel="faq">
+                        <span class="settings-hub-icon" aria-hidden="true">❓</span>
+                        <span class="settings-hub-label">FAQ</span>
+                    </button>
+                    <button type="button" class="settings-hub-tile settings-hub-tile-sm" data-settings-panel="support">
+                        <span class="settings-hub-icon" aria-hidden="true">💬</span>
+                        <span class="settings-hub-label">Поддержка</span>
+                    </button>
+                </div>
             </div>
 
-            <div class="settings-group">
-                <label>Подписки пользователей</label>
-                <p class="text-hint" style="margin-bottom:10px">Активные Pro/Premium, истёкшие и Free-аккаунты с @username.</p>
-                <input type="password" id="cleanup-secret" placeholder="DEBUG_ADMIN_SECRET" autocomplete="off">
-                <div class="plan-actions" style="margin-top:12px">
-                    <button type="button" class="btn btn-secondary btn-inline" id="btn-cleanup-load">Обновить список</button>
-                    <button type="button" class="btn btn-secondary btn-inline" id="btn-cleanup-clear">Скрыть</button>
-                </div>
-                <p class="text-hint" id="cleanup-status" style="margin-top:8px"></p>
-
-                <div id="subs-dashboard" class="subs-dashboard hidden">
-                    <div class="subs-stats-row subs-stats-row-analytics">
-                        <div class="subs-stat subs-stat-total">
-                            <span class="subs-stat-value" id="subs-count-total">0</span>
-                            <span class="subs-stat-label">Всего в базе</span>
-                        </div>
-                        <div class="subs-stat subs-stat-mau30">
-                            <span class="subs-stat-value" id="subs-count-mau30">0</span>
-                            <span class="subs-stat-label">Заходили 30 дн</span>
-                        </div>
-                        <div class="subs-stat subs-stat-mau7">
-                            <span class="subs-stat-value" id="subs-count-mau7">0</span>
-                            <span class="subs-stat-label">Заходили 7 дн</span>
+            <div id="settings-panels" class="settings-panels">
+                <div class="settings-panel hidden" id="settings-panel-subscription" data-panel="subscription">
+                    <button type="button" class="settings-panel-back" data-settings-back>← Назад</button>
+                    <h3 class="settings-panel-title">Подписка</h3>
+                    <div class="settings-group">
+                        <label>Твой тариф</label>
+                        <div id="plan-badge-container">
+                            <div class="plan-badge plan-free" id="current-plan-badge">Free · 5 бесплатных генераций</div>
                         </div>
                     </div>
-                    <p class="text-hint subs-analytics-hint">Считаем по lastSeen в Redis (открытие app). Старые пользователи без lastSeen попадут в счёт после следующего визита.</p>
-
-                    <div class="subs-stats-row">
-                        <div class="subs-stat subs-stat-active">
-                            <span class="subs-stat-value" id="subs-count-active">0</span>
-                            <span class="subs-stat-label">Активные</span>
+                    <div class="plans-container">
+                        <div class="plan-card active">
+                            <div class="plan-header">
+                                <h4>Free</h4>
+                                <span class="plan-price">0 Stars</span>
+                            </div>
+                            <p>5 бесплатных генераций на аккаунт. Бонусы за друзей — отдельно, не сгорают.</p>
                         </div>
-                        <div class="subs-stat subs-stat-expired">
-                            <span class="subs-stat-value" id="subs-count-expired">0</span>
-                            <span class="subs-stat-label">Истёкшие</span>
+                        <div class="plan-card" id="plan-pro" style="cursor: pointer;">
+                            <div class="plan-header">
+                                <h4>Pro</h4>
+                                <span class="plan-price">99 Stars / карта</span>
+                            </div>
+                            <p>Безлимит · аналитика · 2 AI-варианта</p>
+                            <div class="plan-actions">
+                                <button type="button" class="btn btn-secondary btn-inline" id="plan-pro-tribute">Картой через Tribute</button>
+                            </div>
                         </div>
-                        <div class="subs-stat subs-stat-free">
-                            <span class="subs-stat-value" id="subs-count-free">0</span>
-                            <span class="subs-stat-label">Free</span>
+                        <div class="plan-card" id="plan-premium" style="cursor: pointer;">
+                            <div class="plan-header">
+                                <h4>Premium</h4>
+                                <span class="plan-price">299 Stars / карта</span>
+                            </div>
+                            <p>Pro + картинки в канал · 3 AI-варианта · ×2 rate limit</p>
+                            <div class="plan-actions">
+                                <button type="button" class="btn btn-secondary btn-inline" id="plan-premium-tribute">Картой через Tribute</button>
+                            </div>
+                        </div>
+                        <div class="stars-help-card" id="stars-help-card">
+                            <div class="stars-help-title">Оплата в Telegram идет через Stars</div>
+                            <p class="text-hint stars-help-text">
+                                Если Stars не открываются, оплатите картой через Tribute. Также можно купить Stars через @PremiumBot и вернуться к оплате.
+                            </p>
+                            <div class="stars-help-actions">
+                                <button type="button" class="btn btn-secondary" id="btn-open-premiumbot">Купить Stars / Открыть @PremiumBot</button>
+                            </div>
                         </div>
                     </div>
-
-                    <div class="subs-tabs" role="tablist">
-                        <button type="button" class="subs-tab active" data-subs-tab="active">✅ Активные</button>
-                        <button type="button" class="subs-tab" data-subs-tab="expired">⏱ Истёкшие</button>
-                        <button type="button" class="subs-tab" data-subs-tab="free">👤 Free</button>
+                    <div id="owner-test-access" class="settings-group hidden">
+                        <label>Тестовый доступ</label>
+                        <p class="text-hint" style="margin-bottom:10px">Только для владельца. Попросит секрет и активирует тариф без оплаты.</p>
+                        <div class="plan-actions">
+                            <button type="button" class="btn btn-secondary btn-inline" id="btn-debug-pro">Активировать Pro</button>
+                            <button type="button" class="btn btn-secondary btn-inline" id="btn-debug-premium">Активировать Premium</button>
+                        </div>
                     </div>
-
-                    <div id="subs-panel-active" class="subs-panel"></div>
-                    <div id="subs-panel-expired" class="subs-panel hidden"></div>
-                    <div id="subs-panel-free" class="subs-panel hidden"></div>
-                </div>
-            </div>
-            </div>
-
-            <div class="settings-group">
-                <label>Профиль автора</label>
-                <p class="text-hint" style="margin-bottom:10px">Сохраняется на сервере — учитывается в промптах генерации.</p>
-                <input type="text" id="profile-niche" placeholder="Ниша (например: финтех для фрилансеров)" maxlength="120">
-                <input type="text" id="profile-language" placeholder="Язык ответа (например: русский, короткие фразы)" maxlength="40" style="margin-top:10px">
-                <textarea id="profile-style" placeholder="Стиль и ограничения (тон, запреты, обращение на «ты»…)" maxlength="200" rows="3" style="margin-top:10px"></textarea>
-                <textarea id="profile-brand-memory" placeholder="Память бренда (ЦА, оффер, сильные темы, что нельзя повторять)" maxlength="1000" rows="4" style="margin-top:10px"></textarea>
-                <button type="button" class="btn btn-secondary btn-full" id="btn-save-profile" style="margin-top:12px">Сохранить профиль</button>
-            </div>
-
-            <div class="settings-group">
-                <label>Канал для автопостинга</label>
-                <input type="text" id="settings-channel" placeholder="@my_awesome_channel">
-                <p class="text-hint">Убедитесь, что бот является администратором.</p>
-            </div>
-
-            <div class="settings-group">
-                <label>Модель Gemini</label>
-                <select id="settings-model">
-                    <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                    <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite (дешевле)</option>
-                </select>
-            </div>
-
-            <div class="plans-container">
-                <h3>Тарифы</h3>
-                <div class="plan-card active">
-                    <div class="plan-header">
-                        <h4>Free</h4>
-                        <span class="plan-price">0 Stars</span>
-                    </div>
-                    <p>5 бесплатных генераций на аккаунт. Бонусы за друзей — отдельно, не сгорают.</p>
-                </div>
-                <div class="plan-card" id="plan-pro" style="cursor: pointer;">
-                    <div class="plan-header">
-                        <h4>Pro</h4>
-                        <span class="plan-price">99 Stars / карта</span>
-                    </div>
-                    <p>Безлимит · аналитика · 2 AI-варианта</p>
-                    <div class="plan-actions">
-                        <button type="button" class="btn btn-secondary btn-inline" id="plan-pro-tribute">Картой через Tribute</button>
-                    </div>
-                </div>
-                <div class="plan-card" id="plan-premium" style="cursor: pointer;">
-                    <div class="plan-header">
-                        <h4>Premium</h4>
-                        <span class="plan-price">299 Stars / карта</span>
-                    </div>
-                    <p>Pro + картинки в канал · 3 AI-варианта · ×2 rate limit</p>
-                    <div class="plan-actions">
-                        <button type="button" class="btn btn-secondary btn-inline" id="plan-premium-tribute">Картой через Tribute</button>
-                    </div>
-                </div>
-                <div class="stars-help-card" id="stars-help-card">
-                    <div class="stars-help-title">Оплата в Telegram идет через Stars</div>
-                    <p class="text-hint stars-help-text">
-                        Если Stars не открываются, оплатите картой через Tribute. Также можно купить Stars через @PremiumBot и вернуться к оплате.
-                    </p>
-                    <div class="stars-help-actions">
-                        <button type="button" class="btn btn-secondary" id="btn-open-premiumbot">Купить Stars / Открыть @PremiumBot</button>
+                    <div id="admin-tools-panel" class="hidden">
+                        <div class="settings-group">
+                            <label>Ручная активация после Tribute</label>
+                            <p class="text-hint" style="margin-bottom:10px">Введи <b>@username</b> или <b>userId</b>. Пользователь должен хотя бы раз открыть mini app, чтобы связка сохранилась.</p>
+                            <input type="text" id="manual-target" placeholder="@username или 123456789">
+                            <input type="password" id="manual-secret" placeholder="DEBUG_ADMIN_SECRET" autocomplete="off" style="margin-top:10px">
+                            <div class="plan-actions" style="margin-top:12px">
+                                <button type="button" class="btn btn-secondary btn-inline" id="btn-manual-pro">Выдать Pro</button>
+                                <button type="button" class="btn btn-secondary btn-inline" id="btn-manual-premium">Выдать Premium</button>
+                            </div>
+                            <p class="text-hint" id="manual-activate-status" style="margin-top:10px"></p>
+                        </div>
+                        <div class="settings-group">
+                            <label>Подписки пользователей</label>
+                            <p class="text-hint" style="margin-bottom:10px">Активные Pro/Premium, истёкшие и Free-аккаунты с @username.</p>
+                            <input type="password" id="cleanup-secret" placeholder="DEBUG_ADMIN_SECRET" autocomplete="off">
+                            <div class="plan-actions" style="margin-top:12px">
+                                <button type="button" class="btn btn-secondary btn-inline" id="btn-cleanup-load">Обновить список</button>
+                                <button type="button" class="btn btn-secondary btn-inline" id="btn-cleanup-clear">Скрыть</button>
+                            </div>
+                            <p class="text-hint" id="cleanup-status" style="margin-top:8px"></p>
+                            <div id="subs-dashboard" class="subs-dashboard hidden">
+                                <div class="subs-stats-row subs-stats-row-analytics">
+                                    <div class="subs-stat subs-stat-total">
+                                        <span class="subs-stat-value" id="subs-count-total">0</span>
+                                        <span class="subs-stat-label">Всего в базе</span>
+                                    </div>
+                                    <div class="subs-stat subs-stat-mau30">
+                                        <span class="subs-stat-value" id="subs-count-mau30">0</span>
+                                        <span class="subs-stat-label">Заходили 30 дн</span>
+                                    </div>
+                                    <div class="subs-stat subs-stat-mau7">
+                                        <span class="subs-stat-value" id="subs-count-mau7">0</span>
+                                        <span class="subs-stat-label">Заходили 7 дн</span>
+                                    </div>
+                                </div>
+                                <p class="text-hint subs-analytics-hint">Считаем по lastSeen в Redis (открытие app). Старые пользователи без lastSeen попадут в счёт после следующего визита.</p>
+                                <div class="subs-stats-row">
+                                    <div class="subs-stat subs-stat-active">
+                                        <span class="subs-stat-value" id="subs-count-active">0</span>
+                                        <span class="subs-stat-label">Активные</span>
+                                    </div>
+                                    <div class="subs-stat subs-stat-expired">
+                                        <span class="subs-stat-value" id="subs-count-expired">0</span>
+                                        <span class="subs-stat-label">Истёкшие</span>
+                                    </div>
+                                    <div class="subs-stat subs-stat-free">
+                                        <span class="subs-stat-value" id="subs-count-free">0</span>
+                                        <span class="subs-stat-label">Free</span>
+                                    </div>
+                                </div>
+                                <div class="subs-tabs" role="tablist">
+                                    <button type="button" class="subs-tab active" data-subs-tab="active">✅ Активные</button>
+                                    <button type="button" class="subs-tab" data-subs-tab="expired">⏱ Истёкшие</button>
+                                    <button type="button" class="subs-tab" data-subs-tab="free">👤 Free</button>
+                                </div>
+                                <div id="subs-panel-active" class="subs-panel"></div>
+                                <div id="subs-panel-expired" class="subs-panel hidden"></div>
+                                <div id="subs-panel-free" class="subs-panel hidden"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="settings-group faq-section">
-                <label>Частые вопросы</label>
-                <p class="text-hint" style="margin-bottom:12px">Коротко о тарифах, генерации, картинках и канале.</p>
-                <div class="faq-list">
+                <div class="settings-panel hidden" id="settings-panel-referrals" data-panel="referrals">
+                    <button type="button" class="settings-panel-back" data-settings-back>← Назад</button>
+                    <h3 class="settings-panel-title">Рефералы</h3>
+                    <div class="referral-card referral-card-compact" id="referral-settings-card">
+                        <div class="referral-card-glow"></div>
+                        <div class="referral-card-header">
+                            <span class="referral-lightning">⚡</span>
+                            <div>
+                                <h3 class="referral-title">Пригласи друзей — получи Pro</h3>
+                                <p class="referral-subtitle">Генерации и дни Pro за подтверждённых друзей</p>
+                                <p class="referral-rule-hint" data-ref-rule-hint></p>
+                            </div>
+                        </div>
+                        <div class="referral-stats-row">
+                            <div class="referral-stat">
+                                <span class="referral-stat-value" data-ref-count>0</span>
+                                <span class="referral-stat-label">друзей</span>
+                            </div>
+                            <div class="referral-stat">
+                                <span class="referral-stat-value" data-ref-bonus>0</span>
+                                <span class="referral-stat-label">бонус-ген.</span>
+                            </div>
+                            <div class="referral-stat">
+                                <span class="referral-stat-value" data-ref-total-reward>0</span>
+                                <span class="referral-stat-label">наград</span>
+                            </div>
+                        </div>
+                        <div class="referral-tiers referral-tiers-compact" data-ref-tiers="compact" aria-label="Уровни наград"></div>
+                        <div class="referral-progress-wrap" data-ref-progress-root>
+                            <div class="referral-progress-track" aria-hidden="true">
+                                <span class="referral-progress-marker" data-ref-marker="0">
+                                    <span class="referral-progress-marker-dot"></span>
+                                    <span class="referral-progress-marker-label">0</span>
+                                </span>
+                                <span class="referral-progress-marker" data-ref-marker="5">
+                                    <span class="referral-progress-marker-dot"></span>
+                                    <span class="referral-progress-marker-label">5</span>
+                                </span>
+                                <span class="referral-progress-marker" data-ref-marker="10">
+                                    <span class="referral-progress-marker-dot"></span>
+                                    <span class="referral-progress-marker-label">10</span>
+                                </span>
+                            </div>
+                            <div class="referral-progress-bar">
+                                <div class="referral-progress-fill" data-ref-progress style="width: 0%"></div>
+                            </div>
+                            <p class="referral-progress-label" data-ref-progress-label></p>
+                        </div>
+                        <div class="referral-activity-feed hidden" data-ref-activity-feed aria-live="polite"></div>
+                        <button type="button" class="btn btn-referral btn-full" data-ref-invite>
+                            ⚡ Пригласить друзей — получить бонус
+                        </button>
+                        <p class="referral-rule-hint referral-rule-hint-footer" data-ref-rule-hint></p>
+                    </div>
+                </div>
+
+                <div class="settings-panel hidden" id="settings-panel-profile" data-panel="profile">
+                    <button type="button" class="settings-panel-back" data-settings-back>← Назад</button>
+                    <h3 class="settings-panel-title">Профиль автора</h3>
+                    <div class="settings-group">
+                        <p class="text-hint" style="margin-bottom:10px">Сохраняется на сервере — учитывается в промптах генерации.</p>
+                        <input type="text" id="profile-niche" placeholder="Ниша (например: финтех для фрилансеров)" maxlength="120">
+                        <input type="text" id="profile-language" placeholder="Язык ответа (например: русский, короткие фразы)" maxlength="40" style="margin-top:10px">
+                        <textarea id="profile-style" placeholder="Стиль и ограничения (тон, запреты, обращение на «ты»…)" maxlength="200" rows="3" style="margin-top:10px"></textarea>
+                        <textarea id="profile-brand-memory" placeholder="Память бренда (ЦА, оффер, сильные темы, что нельзя повторять)" maxlength="1000" rows="4" style="margin-top:10px"></textarea>
+                        <button type="button" class="btn btn-secondary btn-full" id="btn-save-profile" style="margin-top:12px">Сохранить профиль</button>
+                    </div>
+                </div>
+
+                <div class="settings-panel hidden" id="settings-panel-channel" data-panel="channel">
+                    <button type="button" class="settings-panel-back" data-settings-back>← Назад</button>
+                    <h3 class="settings-panel-title">Канал для автопостинга</h3>
+                    <div class="settings-group">
+                        <input type="text" id="settings-channel" placeholder="@my_awesome_channel">
+                        <p class="text-hint">Убедитесь, что бот является администратором. Текст — на любом тарифе, картинки — на Premium.</p>
+                    </div>
+                </div>
+
+                <div class="settings-panel hidden" id="settings-panel-model" data-panel="model">
+                    <button type="button" class="settings-panel-back" data-settings-back>← Назад</button>
+                    <h3 class="settings-panel-title">Модель Gemini</h3>
+                    <div class="settings-group">
+                        <select id="settings-model">
+                            <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                            <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite (дешевле)</option>
+                        </select>
+                        <p class="text-hint">Flash — быстрее и точнее, Lite — экономнее при большом объёме.</p>
+                    </div>
+                </div>
+
+                <div class="settings-panel hidden" id="settings-panel-faq" data-panel="faq">
+                    <button type="button" class="settings-panel-back" data-settings-back>← Назад</button>
+                    <h3 class="settings-panel-title">Частые вопросы</h3>
+                    <p class="text-hint settings-panel-lead">Коротко о тарифах, генерации, картинках и канале.</p>
+                    <div class="faq-list faq-list-cards">
                     <details class="faq-item">
                         <summary class="faq-question">Сколько генераций на тарифе Free?</summary>
                         <p class="faq-answer">На Free — <b>5 бесплатных генераций на аккаунт</b>. Лимит не обновляется каждый день. Отдельно копятся <b>бонусные генерации</b> за приглашённых друзей — они не сгорают и тратятся, когда бесплатные 5 закончились.</p>
@@ -611,17 +664,21 @@
                         <summary class="faq-question">Лимит исчерпан — что делать?</summary>
                         <p class="faq-answer">Пригласите друзей (бонусные генерации), оформите <b>Pro</b> для безлимита или дождитесь, пока не накопите бонусов. На Free новые «5 бесплатных» каждый день <b>не начисляются</b>.</p>
                     </details>
+                    </div>
                 </div>
-            </div>
 
-            <div class="settings-group contact-section">
-                <label>Связаться с нами</label>
-                <div class="contact-card">
-                    <p class="contact-card-text">
-                        Вопросы по тарифам, оплате, сохранению картинок, каналу или ошибкам — напишите в поддержку в Telegram.
-                    </p>
-                    <button type="button" class="btn btn-secondary btn-full" id="btn-contact-support">Написать в поддержку</button>
-                    <p class="text-hint contact-card-hint" id="contact-support-hint">Откроется чат в Telegram. Если бот просит — нажмите Start и отправьте сообщение.</p>
+                <div class="settings-panel hidden" id="settings-panel-support" data-panel="support">
+                    <button type="button" class="settings-panel-back" data-settings-back>← Назад</button>
+                    <h3 class="settings-panel-title">Связаться с нами</h3>
+                    <div class="settings-group contact-section">
+                        <div class="contact-card">
+                            <p class="contact-card-text">
+                                Вопросы по тарифам, оплате, сохранению картинок, каналу или ошибкам — напишите в поддержку в Telegram.
+                            </p>
+                            <button type="button" class="btn btn-secondary btn-full" id="btn-contact-support">Написать в поддержку</button>
+                            <p class="text-hint contact-card-hint" id="contact-support-hint">Откроется чат в Telegram. Если бот просит — нажмите Start и отправьте сообщение.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>

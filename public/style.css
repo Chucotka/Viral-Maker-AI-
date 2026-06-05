@@ -308,38 +308,334 @@ input[type="text"]:focus, textarea:focus, select:focus {
 .chart-bar { width: 100%; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 4px; transition: height 0.3s; }
 .chart-label { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
 
-/* Settings Tab */
+/* Settings Tab — compact hub (variant D) */
+#tab-settings {
+    padding-top: 16px;
+}
+
+.settings-hero {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    transition: padding 0.2s ease, margin 0.2s ease;
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(255, 224, 102, 0.14) 0%, rgba(255, 149, 0, 0.1) 45%, rgba(0, 122, 255, 0.08) 100%);
+    border: 1px solid rgba(255, 149, 0, 0.28);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+}
+
+.settings-hero-left {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    min-width: 0;
+}
+
+.settings-hero-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    overflow: hidden;
+}
+
+.settings-hero-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.settings-hero-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.settings-hero-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.settings-hero-quota-value {
+    font-size: 32px;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--neon-yellow, #ffe066);
+    text-shadow: 0 0 16px rgba(255, 224, 102, 0.35);
+    transition: font-size 0.2s ease;
+}
+
+#tab-settings.settings-panel-open .settings-hero {
+    padding: 10px 14px;
+    margin-bottom: 10px;
+}
+
+#tab-settings.settings-panel-open .settings-hero-quota-value {
+    font-size: 26px;
+}
+
+.settings-hero-quota-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    white-space: nowrap;
+}
+
+.settings-hero-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.settings-hero-plan {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+}
+
+.settings-hero-plan-free {
+    background: rgba(0, 0, 0, 0.28);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+}
+
+.settings-hero-plan-paid {
+    background: linear-gradient(135deg, #ffd700, #ffa500);
+    color: #000;
+    box-shadow: 0 2px 10px rgba(255, 215, 0, 0.25);
+}
+
+.settings-hero-upgrade {
+    appearance: none;
+    -webkit-appearance: none;
+    border: none;
+    border-radius: 10px;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.35);
+}
+
+.settings-hub-grid,
+.settings-hub-more {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.settings-hub-more {
+    animation: settingsMoreIn 0.22s ease-out;
+}
+
+@keyframes settingsMoreIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.settings-hub-tile {
+    appearance: none;
+    -webkit-appearance: none;
+    font: inherit;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 78px;
+    padding: 12px 8px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s, transform 0.15s;
+}
+
+.settings-hub-tile-sm {
+    min-height: 68px;
+}
+
+.settings-hub-tile:active {
+    transform: scale(0.98);
+}
+
+.settings-hub-tile.active,
+.settings-hub-tile.is-expanded {
+    border-color: rgba(0, 122, 255, 0.55);
+    background: rgba(0, 122, 255, 0.12);
+}
+
+.settings-hub-icon {
+    font-size: 22px;
+    line-height: 1;
+}
+
+.settings-hub-tile-sm .settings-hub-icon {
+    font-size: 20px;
+}
+
+.settings-hub-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.settings-hub-tile.active .settings-hub-label,
+.settings-hub-tile.is-expanded .settings-hub-label {
+    color: var(--accent);
+}
+
+.settings-panels {
+    display: block;
+}
+
+.settings-panel {
+    animation: settingsPanelIn 0.2s ease-out;
+}
+
+@keyframes settingsPanelIn {
+    from { opacity: 0; transform: translateX(8px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.settings-panel-back {
+    appearance: none;
+    -webkit-appearance: none;
+    font: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 12px;
+    padding: 8px 0;
+    border: none;
+    background: none;
+    color: var(--accent);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.settings-panel-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 14px;
+}
+
+.settings-panel-lead {
+    margin: -6px 0 14px;
+}
+
+.settings-group {
+    margin-bottom: 18px;
+}
+
+.settings-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.settings-group input[type="text"],
+.settings-group input[type="password"],
+.settings-group textarea,
+.settings-group select {
+    width: 100%;
+}
+
 .plan-badge { display: inline-block; padding: 8px 16px; border-radius: 20px; font-weight: 600; font-size: 14px; }
 .plan-free { background-color: var(--surface); color: var(--text-muted); border: 1px solid var(--border); }
 .plan-pro { background: linear-gradient(135deg, #ffd700, #ffa500); color: #000; box-shadow: 0 4px 12px rgba(255, 215, 0, 0.2); }
 
-.plans-container { margin-top: 24px; }
+.plans-container { margin-top: 8px; }
 
-.faq-section { margin-top: 8px; }
+.faq-section { margin-top: 0; }
 .faq-list {
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
+.faq-list-cards {
+    gap: 10px;
+}
+
 .faq-item {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 14px;
     overflow: hidden;
 }
+
+.faq-list-cards .faq-item {
+    background: linear-gradient(180deg, #2e2e32 0%, #26262a 100%);
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
 .faq-item[open] {
     border-color: rgba(0, 122, 255, 0.45);
 }
+
+.faq-list-cards .faq-item[open] {
+    border-color: rgba(255, 149, 0, 0.45);
+}
+
 .faq-question {
     list-style: none;
     cursor: pointer;
-    padding: 14px 40px 14px 14px;
+    padding: 14px 40px 14px 38px;
     font-size: 15px;
     font-weight: 600;
     line-height: 1.35;
     position: relative;
     user-select: none;
 }
+
+.faq-list-cards .faq-question {
+    background: linear-gradient(90deg, var(--neon-yellow, #ffe066), var(--neon-orange, #ff9500));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.faq-question::before {
+    content: '❓';
+    position: absolute;
+    left: 12px;
+    top: 14px;
+    font-size: 14px;
+    -webkit-text-fill-color: initial;
+}
+
 .faq-question::-webkit-details-marker { display: none; }
 .faq-question::after {
     content: '+';
@@ -351,16 +647,27 @@ input[type="text"]:focus, textarea:focus, select:focus {
     font-weight: 400;
     color: var(--text-muted);
     transition: transform 0.2s;
+    -webkit-text-fill-color: var(--text-muted);
 }
 .faq-item[open] .faq-question::after {
     content: '−';
     color: var(--accent);
+    -webkit-text-fill-color: var(--accent);
 }
 .faq-answer {
-    padding: 0 14px 14px;
+    padding: 0 14px 14px 38px;
     font-size: 14px;
     line-height: 1.5;
     color: var(--text-muted);
+    position: relative;
+}
+
+.faq-list-cards .faq-answer::before {
+    content: '💡';
+    position: absolute;
+    left: 12px;
+    top: 2px;
+    font-size: 14px;
 }
 .faq-answer b {
     color: var(--text);
