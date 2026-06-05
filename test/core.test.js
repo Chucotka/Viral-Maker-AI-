@@ -82,7 +82,7 @@ describe('telegramInitData', () => {
 });
 
 describe('kvUserStore quota', () => {
-  it('free user at daily limit cannot generate without bonus', () => {
+  it('free user at generation limit cannot generate without bonus', () => {
     const rec = { plan: 'free', dailyCount: FREE_DAILY_LIMIT, bonusGenerations: 0 };
     const q = getEffectiveQuota(rec, FREE_DAILY_LIMIT);
     assert.equal(q.canGenerate, false);
@@ -90,7 +90,7 @@ describe('kvUserStore quota', () => {
     assert.equal(q.totalRemaining, 0);
   });
 
-  it('free user uses bonus only after daily limit exhausted', () => {
+  it('free user uses bonus only after free pool exhausted', () => {
     const rec = { plan: 'free', dailyCount: FREE_DAILY_LIMIT, bonusGenerations: 3 };
     const q = getEffectiveQuota(rec, FREE_DAILY_LIMIT);
     assert.equal(q.canGenerate, true);

@@ -1365,7 +1365,7 @@ function updatePlanUI(plan, planUntil, bonusGenerations = 0, quotaRemaining = nu
             quotaRemaining != null && Number.isFinite(quotaRemaining)
                 ? ` · осталось ${quotaRemaining}`
                 : '';
-        badge.innerHTML = `Free · 5 генераций/день${bonusLine}${remainLine}`;
+        badge.innerHTML = `Free · 5 бесплатных${bonusLine}${remainLine}`;
         upgradeBtn.classList.remove('hidden');
     }
     const hintImg = document.getElementById('hint-image-publish');
@@ -1762,7 +1762,7 @@ async function runTextGeneration(opts = {}) {
         const data = await parseJsonResponse(response);
 
         if (response.status === 403 && data.error === 'limit_reached') {
-            limitMsg.innerHTML = `⚡️ Лимит 5 генераций исчерпан. <a href="javascript:void(0)" onclick="tg.openLink('https://t.me/tribute')">Перейти на Pro →</a>`;
+            limitMsg.innerHTML = `⚡️ Бесплатные генерации закончились. Пригласите друзей за бонус или <a href="javascript:void(0)" onclick="switchTab('settings')">перейдите на Pro →</a>`;
             limitMsg.classList.remove('hidden');
             limitMsg.classList.add('error');
             return;
@@ -1778,7 +1778,7 @@ async function runTextGeneration(opts = {}) {
         if (data.remainingToday !== undefined) {
             const remaining = data.remainingToday;
             if (remaining <= 2) {
-                limitMsg.innerHTML = `⚡️ Осталось генераций сегодня: <b>${remaining}</b> из 5.`;
+                limitMsg.innerHTML = `⚡️ Осталось бесплатных генераций: <b>${remaining}</b>.`;
                 limitMsg.classList.remove('hidden', 'error');
                 limitMsg.classList.add('warning');
             }
@@ -1838,7 +1838,7 @@ async function runImageGeneration() {
         const data = await parseJsonResponse(response);
 
         if (response.status === 403 && data.error === 'limit_reached') {
-            limitMsg.innerHTML = `⚡️ Лимит 5 генераций исчерпан. <a href="javascript:void(0)" onclick="tg.openLink('https://t.me/tribute')">Перейти на Pro →</a>`;
+            limitMsg.innerHTML = `⚡️ Бесплатные генерации закончились. Пригласите друзей за бонус или <a href="javascript:void(0)" onclick="switchTab('settings')">перейдите на Pro →</a>`;
             limitMsg.classList.remove('hidden');
             limitMsg.classList.add('error');
             return;
@@ -1915,7 +1915,7 @@ async function runImageGeneration() {
         if (data.remainingToday !== undefined) {
             const remaining = data.remainingToday;
             if (remaining <= 2) {
-                limitMsg.innerHTML = `⚡️ Осталось генераций сегодня: <b>${remaining}</b> из 5.`;
+                limitMsg.innerHTML = `⚡️ Осталось бесплатных генераций: <b>${remaining}</b>.`;
                 limitMsg.classList.remove('hidden', 'error');
                 limitMsg.classList.add('warning');
             }

@@ -66,7 +66,7 @@
 
     const metaExtra =
       item.status === 'free'
-        ? `Генераций сегодня: ${item.dailyCount || 0}${item.bonusGenerations ? ` · бонус: ${item.bonusGenerations}` : ''}${item.lastSeen ? ` · был: ${formatDate(item.lastSeen)}` : ''}`
+        ? `Free использовано: ${item.dailyCount || 0}/5${item.bonusGenerations ? ` · бонус: ${item.bonusGenerations}` : ''}${item.lastSeen ? ` · был: ${formatDate(item.lastSeen)}` : ''}`
         : item.referralCount
           ? `Рефералов: ${item.referralCount}${item.lastSeen ? ` · был: ${formatDate(item.lastSeen)}` : ''}`
           : item.lastSeen
