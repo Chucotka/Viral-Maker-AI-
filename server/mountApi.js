@@ -7,6 +7,9 @@ const { sendSafeError } = require('../lib/httpErrors');
 
 /** path → { module, methods } */
 const API_ROUTES = [
+  { path: '/api/auth/telegram-login', module: '../api/auth-login', methods: ['post'] },
+  { path: '/api/auth/logout', module: '../api/auth-logout', methods: ['post'] },
+  { path: '/api/auth/session', module: '../api/auth-session', methods: ['get'] },
   { path: '/api/user', module: '../api/user', methods: ['get', 'post'] },
   { path: '/api/generate', module: '../api/generate', methods: ['post'] },
   { path: '/api/generate-image', module: '../api/generate-image', methods: ['post'] },

@@ -38,6 +38,60 @@ h3 { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
 .text-hint { color: var(--text-muted); font-size: 12px; margin-top: 4px; }
 .hidden { display: none !important; }
 
+/* Web login (innoko.ru/app) */
+.web-auth-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.82);
+    backdrop-filter: blur(8px);
+}
+.web-auth-overlay.hidden { display: none !important; }
+.web-auth-card {
+    width: 100%;
+    max-width: 400px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px 24px;
+    text-align: center;
+}
+.web-auth-brand {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+.web-auth-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+.web-auth-hint {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.45;
+    margin-bottom: 20px;
+}
+.web-auth-widget {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.web-auth-footnote {
+    margin-top: 16px;
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+
 /* Tabs */
 .tab-content {
     flex: 1;

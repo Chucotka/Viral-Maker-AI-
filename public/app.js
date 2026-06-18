@@ -1,7 +1,5 @@
-// Initialize Telegram Web App
-const tg = window.Telegram.WebApp;
-tg.expand();
-tg.ready();
+// Telegram Web App или веб (innoko.ru/app)
+const tg = window.VMRuntime?.tg || window.Telegram?.WebApp || {};
 
 const PREMIUM_BOT_URL = 'https://t.me/PremiumBot';
 const PREMIUM_BOT_HANDLE = '@PremiumBot';
@@ -14,8 +12,9 @@ const SETTINGS_KEY = 'vm_settings_v1';
 const DEFAULT_INTENT = 'auto';
 const DEFAULT_RISK = 'balanced';
 
-/** Заголовки для Vercel API: подпись Telegram Mini App (обязательно). */
+/** Заголовки API: initData (Telegram) или cookie-сессия (веб). */
 function miniAppHeaders(jsonBody = false) {
+    if (window.VMRuntime?.headers) return window.VMRuntime.headers(jsonBody);
     const h = {};
     if (jsonBody) h['Content-Type'] = 'application/json';
     if (tg.initData) h['X-Telegram-Init-Data'] = tg.initData;
@@ -1293,7 +1292,13 @@ async function loadUserData(options = {}) {
         if (response.status === 401 || response.status === 503) {
             const msg = data.message || data.error || 'Проверьте настройки сервера (KV, Telegram).';
             console.warn('loadUserData:', response.status, msg);
-            if (response.status === 401 && !silent) tg.showAlert('Откройте приложение из Telegram, чтобы загрузить профиль.');
+            if (response.status === 401 && !silent) {
+                if (window.VMRuntime?.isWeb && window.VMWebAuth) {
+                    window.VMWebAuth.showOverlay();
+                } else {
+                    tg.showAlert?.('Откройте приложение из Telegram, чтобы загрузить профиль.');
+                }
+            }
             return;
         }
         if (data && data.plan) {
@@ -2165,7 +2170,16 @@ if (window.AdminSubs) AdminSubs.mount();
 document.getElementById('btn-analytics-upgrade')?.addEventListener('click', () => buyPlan('pro'));
 updatePlanUI('free', null);
 recoverActiveGenerationOnLoad();
-loadUserData().then(() => {
+async function bootApp() {
+    if (window.VMRuntime?.isWeb && window.VMWebAuth) {
+        try {
+            await window.VMWebAuth.ensureSession();
+        } catch (e) {
+            console.warn('web auth:', e);
+            return;
+        }
+    }
+    await loadUserData();
     if (window.VMOnboarding && !VMOnboarding.isDone()) {
         setTimeout(() => VMOnboarding.show(), 400);
     }
@@ -2177,7 +2191,8 @@ loadUserData().then(() => {
             });
         }, 800);
     }
-});
+}
+bootApp();
 const SettingsHub = (function initSettingsHub() {
     const hubView = document.getElementById('settings-hub-view');
     const moreRow = document.getElementById('settings-hub-more');
