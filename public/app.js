@@ -693,8 +693,14 @@ function alertFromGenerateError(message) {
         text = 'Сервис Google временно перегружен. Подождите минуту и попробуйте снова.';
     } else if (/User location is not supported for the API use/i.test(m)) {
         text = 'Этот ключ Gemini недоступен из текущего региона. Нужен другой проект или ключ с поддержкой этого региона.';
-    } else if (/API[_ ]?key|401|403|PERMISSION_DENIED|invalid api/i.test(m)) {
-        text = 'Проблема с ключом или доступом к API. Проверьте GEMINI_API_KEY на сервере.';
+    } else if (/GEMINI_API_KEY|gemini_api_key|missing_api_key|API[_ ]?key|invalid api/i.test(m)) {
+        text = 'На сервере не настроен или неверный GEMINI_API_KEY. Добавьте ключ в .env на VPS и выполните: pm2 restart viral-maker';
+    } else if (/gemini_billing|биллинг/i.test(m)) {
+        text = 'В Google AI Studio нужно включить биллинг для генерации изображений.';
+    } else if (/gemini_region|региона сервера/i.test(m)) {
+        text = 'Ключ Gemini недоступен из региона сервера. Создайте новый ключ в Google AI Studio.';
+    } else if (/internal_error|Внутренняя ошибка сервера/i.test(m)) {
+        text = 'Сбой генерации на сервере. На VPS: pm2 logs viral-maker --lines 50 и node scripts/gemini-image-smoke.js';
     } else if (/404|not found for API version|no longer available|ListModels/i.test(m)) {
         text = 'Модель недоступна для вашего ключа. Обновите приложение или проверьте доступ в Google AI Studio.';
     } else if (/missing_init_data|invalid_init_data|Откройте приложение из Telegram/i.test(m)) {

@@ -123,6 +123,22 @@ npm run dev
 
 Откройте `http://127.0.0.1:3001/app/` — появится виджет входа (домен localhost не пройдёт BotFather; для теста используйте ngrok с innoko.ru или тестируйте в Telegram).
 
+## Ошибка при генерации изображения
+
+На VPS:
+
+```bash
+cd /var/www/viral-maker   # или ваш путь к репозиторию
+git pull
+npm ci
+node scripts/gemini-image-smoke.js   # прямой тест GEMINI_API_KEY
+bash scripts/verify-env.sh           # полная проверка .env + Gemini
+pm2 restart viral-maker
+pm2 logs viral-maker --lines 80      # строка [generate-image] покажет причину
+```
+
+Частые причины: пустой `GEMINI_API_KEY`, ключ без доступа к image-моделям, не включён биллинг в Google AI Studio.
+
 ## Отвязка от Vercel
 
 После проверки на `innoko.ru/app` удалите проект на Vercel (Settings → Danger Zone → Delete Project).
