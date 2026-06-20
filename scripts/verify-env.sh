@@ -23,6 +23,10 @@ ok() { echo "OK: $1"; }
 
 prefix="${TELEGRAM_BOT_TOKEN%%:*}"
 bot_id="${TELEGRAM_BOT_ID:-$prefix}"
+echo "INFO: id в токене = ${#prefix} цифр, используется bot_id=$bot_id"
+if [[ "$bot_id" == "520170966" ]]; then
+  fail "bot_id=520170966 — пропущена 8 в начале. Добавьте TELEGRAM_BOT_ID=8520170966 и токен в кавычках"
+fi
 [[ "$bot_id" =~ ^[0-9]{8,12}$ ]] || fail "TELEGRAM_BOT_ID / префикс токена некорректен: '$bot_id'"
 
 if [[ "$prefix" != "$bot_id" ]]; then
