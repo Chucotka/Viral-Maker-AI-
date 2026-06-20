@@ -94,7 +94,8 @@ echo "OK: local /api/ping"
 
 echo "==> nginx"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cp "$SCRIPT_DIR/nginx-innoko.conf" /etc/nginx/sites-available/innoko.ru
+cp "$SCRIPT_DIR/nginx-innoko-locations.conf" /etc/nginx/snippets/innoko-locations.conf
+cp "$SCRIPT_DIR/nginx-innoko-bootstrap.conf" /etc/nginx/sites-available/innoko.ru
 ln -sf /etc/nginx/sites-available/innoko.ru /etc/nginx/sites-enabled/innoko.ru
 rm -f /etc/nginx/sites-enabled/default
 nginx -t
@@ -102,10 +103,15 @@ systemctl reload nginx
 
 echo "==> SSL (certbot)"
 if certbot certificates 2>/dev/null | grep -q innoko.ru; then
-  certbot renew --quiet || certbot --nginx -d innoko.ru -d www.innoko.ru -d app.innoko.ru --non-interactive --agree-tos --register-unsafely-without-email --redirect
+  certbot renew --quiet || true
 else
-  certbot --nginx -d innoko.ru -d www.innoko.ru -d app.innoko.ru --non-interactive --agree-tos --register-unsafely-without-email --redirect
+  certbot --nginx -d innoko.ru -d www.innoko.ru -d app.innoko.ru --non-interactive --agree-tos --register-unsafely-without-email
 fi
+
+echo "==> nginx (HTTPS + редирект HTTP→HTTPS)"
+cp "$SCRIPT_DIR/nginx-innoko.conf" /etc/nginx/sites-available/innoko.ru
+nginx -t
+systemctl reload nginx
 
 echo ""
 echo "============================================"
