@@ -147,4 +147,8 @@ node scripts/gemini-geo-check.js   # быстрая проверка досту�
 
 ## Отвязка от Vercel
 
-После проверки на `innoko.ru/app` удалите проект на Vercel (Settings → Danger Zone → Delete Project).
+Проект **не использует Vercel** — продакшен только на VPS (`app.innoko.ru`).
+
+1. В [Vercel Dashboard](https://vercel.com) откройте старый проект → **Settings → Danger Zone → Delete Project**
+2. В BotFather проверьте Menu Button и webhook: `https://app.innoko.ru/app` и `https://app.innoko.ru/api/webhook`
+3. Обновление на сервере: `bash scripts/deploy-vps.sh` (или `npm run deploy` из каталога приложения на VPS)

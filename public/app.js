@@ -712,7 +712,7 @@ function alertFromGenerateError(message) {
         }
         text = 'Откройте мини-приложение из Telegram (кнопка в боте), чтобы подпись сессии передалась на сервер.';
     } else if (/kv_required|Redis/i.test(m)) {
-        text = 'На сервере не настроено хранилище Redis. Добавьте Upstash Redis в Vercel и переменные окружения.';
+        text = 'На сервере не настроено хранилище Redis. Добавьте UPSTASH_REDIS_REST_URL и UPSTASH_REDIS_REST_TOKEN в .env на VPS.';
     } else if (/rate_limit|429|Слишком много запросов/i.test(m)) {
         text = 'Слишком много запросов за короткое время. Подождите около минуты и попробуйте снова.';
     } else if (/504|FUNCTION_INVOCATION_TIMEOUT|timeout|timed out|aborted/i.test(m)) {
@@ -737,11 +737,11 @@ async function parseJsonResponse(response) {
         if (/^\s*<!DOCTYPE|^\s*<html/i.test(body)) {
             if (status >= 500) {
                 throw new Error(
-                    `Сбой сервера (HTTP ${status}): пришла страница ошибки, а не JSON. Это обычно не ключ Gemini — смотрите логи Vercel → Functions → /api/generate.`,
+                    `Сбой сервера (HTTP ${status}): пришла страница ошибки, а не JSON. Смотрите логи: pm2 logs viral-maker`,
                 );
             }
             throw new Error(
-                `Сервер вернул HTML (HTTP ${status}), а не JSON. Проверьте URL мини-приложения в BotFather (должен совпадать с Vercel, не старый ngrok).`,
+                `Сервер вернул HTML (HTTP ${status}), а не JSON. Проверьте URL мини-приложения в BotFather (должен быть https://app.innoko.ru/app).`,
             );
         }
         throw new Error(`Сервер вернул неверный ответ (HTTP ${status}). Попробуйте ещё раз.`);
