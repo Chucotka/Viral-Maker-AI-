@@ -1568,6 +1568,10 @@ function getCleanupSecret() {
     return manualInput ? manualInput.value.trim() : '';
 }
 
+function adminAlert(message) {
+    (window.VMRuntime?.alert || tg.showAlert || window.alert)?.(String(message || ''));
+}
+
 function renderCleanupList(items) {
     void items;
     // legacy noop — UI moved to AdminSubs
@@ -1578,7 +1582,7 @@ async function loadCleanupPlans() {
     const secret = getCleanupSecret();
     if (!secret) {
         if (statusEl) statusEl.textContent = 'Введите DEBUG_ADMIN_SECRET в поле выше.';
-        tg.showAlert('Введите DEBUG_ADMIN_SECRET в поле выше.');
+        adminAlert('Введите DEBUG_ADMIN_SECRET в поле выше.');
         return;
     }
 
@@ -1596,7 +1600,7 @@ async function loadCleanupPlans() {
         if (!response.ok) {
             const message = data.message || data.error || 'Не удалось получить список.';
             if (statusEl) statusEl.textContent = message;
-            tg.showAlert(message);
+            adminAlert(message);
             return;
         }
 
@@ -1623,7 +1627,7 @@ async function loadCleanupPlans() {
     } catch (error) {
         console.error('Cleanup list error:', error);
         if (statusEl) statusEl.textContent = 'Ошибка при загрузке списка.';
-        tg.showAlert('Ошибка при загрузке подписок.');
+        adminAlert('Ошибка при загрузке подписок.');
     }
 }
 
@@ -1632,7 +1636,7 @@ async function resetCleanupPlan(userId, username = '') {
     const secret = getCleanupSecret();
     if (!secret) {
         if (statusEl) statusEl.textContent = 'Введите DEBUG_ADMIN_SECRET в поле выше.';
-        tg.showAlert('Введите DEBUG_ADMIN_SECRET в поле выше.');
+        adminAlert('Введите DEBUG_ADMIN_SECRET в поле выше.');
         return;
     }
 
@@ -1655,7 +1659,7 @@ async function resetCleanupPlan(userId, username = '') {
         if (!response.ok) {
             const message = data.message || data.error || 'Не удалось сбросить тариф.';
             if (statusEl) statusEl.textContent = message;
-            tg.showAlert(message);
+            adminAlert(message);
             return;
         }
 
@@ -1670,7 +1674,7 @@ async function resetCleanupPlan(userId, username = '') {
     } catch (error) {
         console.error('Cleanup reset error:', error);
         if (statusEl) statusEl.textContent = 'Ошибка при сбросе тарифа.';
-        tg.showAlert('Ошибка при сбросе тарифа.');
+        adminAlert('Ошибка при сбросе тарифа.');
     }
 }
 
