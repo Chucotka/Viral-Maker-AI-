@@ -94,6 +94,10 @@ h3 { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
 }
 .web-auth-widget-embed iframe {
     border: none;
+    background: transparent;
+}
+.web-auth-widget-failed iframe {
+    display: none;
 }
 .web-auth-login-btn {
     display: block;
