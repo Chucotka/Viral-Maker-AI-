@@ -1,22 +1,14 @@
 /**
- * Вход через Telegram Login Widget для веб-версии (app.innoko.ru/app).
- * Полный редирект на oauth.telegram.org — без popup (Chrome не блокирует).
+ * Вход через Telegram для веб-версии (app.innoko.ru/app).
  */
 (function initWebAuth(global) {
   const overlay = () => document.getElementById('web-auth-overlay');
   const widgetHost = () => document.getElementById('web-auth-widget');
 
-  function botUsername() {
-    const meta = document.querySelector('meta[name="vm-bot-username"]');
-    const fromMeta = meta?.getAttribute('content')?.trim().replace(/^@+/, '');
-    if (fromMeta) return fromMeta;
-    return 'viral_maker_ai_bot';
-  }
-
   function showOverlay() {
     const el = overlay();
     if (el) el.classList.remove('hidden');
-    mountLoginButton();
+    mountLoginUi();
   }
 
   function hideOverlay() {
@@ -62,55 +54,55 @@
     }
   }
 
-  function buildOAuthUrl(botId) {
-    const origin = global.location.origin;
-    const returnTo = `${origin}/app/`;
-    const params = new URLSearchParams({
-      bot_id: String(botId),
-      origin,
-      request_access: 'write',
-      return_to: returnTo,
-    });
-    return `https://oauth.telegram.org/auth?${params.toString()}`;
-  }
-
   async function fetchAuthConfig() {
     const res = await global.VMRuntime.apiFetch('/api/auth/config');
     const data = await res.json().catch(() => ({}));
-    if (!res.ok || !data.botId) {
+    if (!res.ok || !data.loginUrl) {
       throw new Error(data.message || 'Не удалось загрузить настройки входа');
     }
     return data;
   }
 
-  async function mountLoginButton() {
+  async function mountLoginUi() {
     const host = widgetHost();
     if (!host || host.dataset.mounted === '1') return;
     host.dataset.mounted = '1';
-    host.innerHTML = '';
+    host.innerHTML = '<p class="web-auth-loading">Загрузка…</p>';
 
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'web-auth-login-btn';
-    btn.textContent = 'Войти через Telegram';
-    btn.addEventListener('click', async () => {
-      btn.disabled = true;
-      btn.textContent = 'Открываем Telegram…';
-      try {
-        const cfg = await fetchAuthConfig();
-        global.location.href = buildOAuthUrl(cfg.botId);
-      } catch (e) {
-        btn.disabled = false;
-        btn.textContent = 'Войти через Telegram';
-        global.VMRuntime?.alert(e.message || 'Ошибка входа');
-      }
-    });
-    host.appendChild(btn);
+    try {
+      const cfg = await fetchAuthConfig();
+      host.innerHTML = '';
 
-    const hint = document.createElement('p');
-    hint.className = 'web-auth-alt';
-    hint.innerHTML = 'Или откройте <a href="https://t.me/viral_maker_ai_bot" target="_blank" rel="noopener">бот в Telegram</a>';
-    host.appendChild(hint);
+      const tgLink = document.createElement('a');
+      tgLink.className = 'web-auth-login-btn web-auth-login-btn-primary';
+      tgLink.href = cfg.telegramBotUrl || 'https://t.me/viral_maker_ai_bot';
+      tgLink.textContent = 'Открыть в Telegram (рекомендуется)';
+      host.appendChild(tgLink);
+
+      const oauthLink = document.createElement('a');
+      oauthLink.className = 'web-auth-login-btn web-auth-login-btn-secondary';
+      oauthLink.href = cfg.loginUrl;
+      oauthLink.textContent = 'Войти через браузер';
+      host.appendChild(oauthLink);
+
+      const hint = document.createElement('p');
+      hint.className = 'web-auth-alt';
+      hint.textContent =
+        'Если «Войти через браузер» не открывается — используйте Telegram. В России oauth.telegram.org иногда недоступен.';
+      host.appendChild(hint);
+    } catch (e) {
+      host.innerHTML = '';
+      const err = document.createElement('p');
+      err.className = 'web-auth-alt';
+      err.textContent = e.message || 'Ошибка настройки входа';
+      host.appendChild(err);
+
+      const fallback = document.createElement('a');
+      fallback.className = 'web-auth-login-btn';
+      fallback.href = 'https://t.me/viral_maker_ai_bot';
+      fallback.textContent = 'Открыть бот в Telegram';
+      host.appendChild(fallback);
+    }
   }
 
   async function loginWithWidget(user) {
