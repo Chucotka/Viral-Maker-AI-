@@ -23,6 +23,28 @@
     if (el) el.classList.add('hidden');
   }
 
+  function authCallbackUrl() {
+    return `${global.location.origin}/api/auth/telegram-callback`;
+  }
+
+  function showAuthErrorFromUrl() {
+    try {
+      const err = new URL(global.location.href).searchParams.get('auth_error');
+      if (!err) return;
+      const messages = {
+        invalid: 'Не удалось подтвердить вход через Telegram. Попробуйте снова.',
+        session: 'На сервере не настроен SESSION_SECRET. Обратитесь к администратору.',
+        server: 'Сервер не настроен (нет токена бота).',
+      };
+      global.VMRuntime?.alert(messages[err] || 'Ошибка входа');
+      const u = new URL(global.location.href);
+      u.searchParams.delete('auth_error');
+      global.history.replaceState({}, '', u.pathname + u.search);
+    } catch {
+      /* ignore */
+    }
+  }
+
   function mountWidget() {
     const host = widgetHost();
     if (!host || host.dataset.mounted === '1') return;
@@ -35,7 +57,7 @@
     script.setAttribute('data-telegram-login', botUsername());
     script.setAttribute('data-size', 'large');
     script.setAttribute('data-request-access', 'write');
-    script.setAttribute('data-onauth', 'onTelegramWebLogin(user)');
+    script.setAttribute('data-auth-url', authCallbackUrl());
     host.appendChild(script);
   }
 
@@ -73,6 +95,8 @@
 
   async function ensureSession() {
     if (global.VMRuntime?.isTelegram) return true;
+
+    showAuthErrorFromUrl();
 
     const sessionRes = await global.VMRuntime.apiFetch('/api/auth/session');
     const session = await sessionRes.json().catch(() => ({}));
