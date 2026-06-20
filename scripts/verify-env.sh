@@ -40,7 +40,13 @@ if [[ -z "$size" || "$size" -lt 1000 ]]; then
 fi
 ok "OAuth bot_id=$bot_id"
 
-curl -sf http://127.0.0.1:${PORT:-3001}/api/ping | grep -q pong && ok "local /api/ping" || fail "приложение не отвечает на :${PORT:-3001}"
-
-echo ""
-echo "Проверка пройдена. pm2 restart viral-maker --update-env"
+for i in 1 2 3 4 5 6 7 8 9 10; do
+  if curl -sf "http://127.0.0.1:${PORT:-3001}/api/ping" | grep -q pong; then
+    ok "local /api/ping"
+    echo ""
+    echo "Проверка пройдена."
+    exit 0
+  fi
+  sleep 1
+done
+fail "приложение не отвечает на :${PORT:-3001} — см. pm2 logs viral-maker"
