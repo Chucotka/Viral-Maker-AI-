@@ -5,6 +5,9 @@
  */
 require('dotenv').config({ quiet: true });
 
+const { configureGeminiNetwork } = require('../lib/geminiNetwork');
+configureGeminiNetwork();
+
 const { generateGeminiImage, IMAGE_MODEL_CHAIN } = require('../lib/geminiImageRest');
 
 function fail(msg) {
