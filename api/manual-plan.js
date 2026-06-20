@@ -1,5 +1,5 @@
 const { resolveTelegramUser } = require('../lib/miniAppAuth');
-const { hasAdminApiAccess } = require('../lib/adminAccess');
+const { checkAdminApiAccess } = require('../lib/adminAccess');
 const { sendSafeError } = require('../lib/httpErrors');
 const { readDebugSecret, normalizeDebugPlan } = require('../lib/debugPlan');
 const {
@@ -34,9 +34,22 @@ function parseAction(value) {
 function requireAdmin(req, res) {
   const auth = resolveTelegramUser(req, res);
   if (!auth) return null;
-  if (!hasAdminApiAccess(req, auth.userId)) {
-    console.warn('Manual plan ignored: forbidden', { userId: auth.userId });
-    res.status(403).json({ error: 'forbidden' });
+  const access = checkAdminApiAccess(req, auth.userId);
+  if (access === 'not_owner') {
+    console.warn('Manual plan ignored: not_owner', { userId: auth.userId });
+    res.status(403).json({ error: 'forbidden', message: 'Доступ только для владельца приложения.' });
+    return null;
+  }
+  if (access === 'secret_required') {
+    res.status(403).json({ error: 'secret_required', message: 'Введите DEBUG_ADMIN_SECRET.' });
+    return null;
+  }
+  if (access === 'invalid_secret') {
+    console.warn('Manual plan ignored: invalid_secret', { userId: auth.userId });
+    res.status(403).json({
+      error: 'invalid_secret',
+      message: 'Неверный DEBUG_ADMIN_SECRET. Обновите страницу и введите актуальный секрет.',
+    });
     return null;
   }
   return auth;

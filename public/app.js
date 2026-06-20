@@ -1,7 +1,5 @@
-// Initialize Telegram Web App
-const tg = window.Telegram.WebApp;
-tg.expand();
-tg.ready();
+// Telegram Web App или веб (innoko.ru/app)
+const tg = window.VMRuntime?.tg || window.Telegram?.WebApp || {};
 
 const PREMIUM_BOT_URL = 'https://t.me/PremiumBot';
 const PREMIUM_BOT_HANDLE = '@PremiumBot';
@@ -14,8 +12,9 @@ const SETTINGS_KEY = 'vm_settings_v1';
 const DEFAULT_INTENT = 'auto';
 const DEFAULT_RISK = 'balanced';
 
-/** Заголовки для Vercel API: подпись Telegram Mini App (обязательно). */
+/** Заголовки API: initData (Telegram) или cookie-сессия (веб). */
 function miniAppHeaders(jsonBody = false) {
+    if (window.VMRuntime?.headers) return window.VMRuntime.headers(jsonBody);
     const h = {};
     if (jsonBody) h['Content-Type'] = 'application/json';
     if (tg.initData) h['X-Telegram-Init-Data'] = tg.initData;
@@ -387,8 +386,10 @@ function loadSavedSettings() {
     return readLocalObject(SETTINGS_KEY, {});
 }
 
-// Set user name if available (отображение; userId на сервере только из initData)
-if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+// Имя/аватар: Telegram initData или веб-сессия (VMWebAuth.applyUserToUi)
+if (tg.initDataUnsafe && tg.initDataUnsafe.user && window.VMWebAuth) {
+    window.VMWebAuth.applyUserToUi(tg.initDataUnsafe.user);
+} else if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
     const firstName = tg.initDataUnsafe.user.first_name;
     document.getElementById('user-name').textContent = firstName;
     const settingsHeroName = document.getElementById('settings-hero-name');
@@ -694,11 +695,21 @@ function alertFromGenerateError(message) {
         text = 'Сервис Google временно перегружен. Подождите минуту и попробуйте снова.';
     } else if (/User location is not supported for the API use/i.test(m)) {
         text = 'Этот ключ Gemini недоступен из текущего региона. Нужен другой проект или ключ с поддержкой этого региона.';
-    } else if (/API[_ ]?key|401|403|PERMISSION_DENIED|invalid api/i.test(m)) {
-        text = 'Проблема с ключом или доступом к API. Проверьте GEMINI_API_KEY на сервере.';
+    } else if (/GEMINI_API_KEY|gemini_api_key|missing_api_key|API[_ ]?key|invalid api/i.test(m)) {
+        text = 'На сервере не настроен или неверный GEMINI_API_KEY. Добавьте ключ в .env на VPS и выполните: pm2 restart viral-maker';
+    } else if (/gemini_billing|биллинг/i.test(m)) {
+        text = 'В Google AI Studio нужно включить биллинг для генерации изображений.';
+    } else if (/gemini_region|региона сервера/i.test(m)) {
+        text = 'Ключ Gemini недоступен из региона сервера. Создайте новый ключ в Google AI Studio.';
+    } else if (/internal_error|Внутренняя ошибка сервера/i.test(m)) {
+        text = 'Сбой генерации на сервере. На VPS: pm2 logs viral-maker --lines 50 и node scripts/gemini-image-smoke.js';
     } else if (/404|not found for API version|no longer available|ListModels/i.test(m)) {
         text = 'Модель недоступна для вашего ключа. Обновите приложение или проверьте доступ в Google AI Studio.';
     } else if (/missing_init_data|invalid_init_data|Откройте приложение из Telegram/i.test(m)) {
+        if (window.VMRuntime?.isWeb && window.VMWebAuth) {
+            window.VMWebAuth.showOverlay();
+            return;
+        }
         text = 'Откройте мини-приложение из Telegram (кнопка в боте), чтобы подпись сессии передалась на сервер.';
     } else if (/kv_required|Redis/i.test(m)) {
         text = 'На сервере не настроено хранилище Redis. Добавьте Upstash Redis в Vercel и переменные окружения.';
@@ -709,7 +720,7 @@ function alertFromGenerateError(message) {
     } else if (m && m.length < 320 && !/^Ошибка генерации \(\d+\)$/.test(m)) {
         text = m;
     }
-    tg.showAlert(text);
+    (window.VMRuntime?.alert || tg.showAlert)?.(text);
 }
 
 async function parseJsonResponse(response) {
@@ -1293,7 +1304,17 @@ async function loadUserData(options = {}) {
         if (response.status === 401 || response.status === 503) {
             const msg = data.message || data.error || 'Проверьте настройки сервера (KV, Telegram).';
             console.warn('loadUserData:', response.status, msg);
-            if (response.status === 401 && !silent) tg.showAlert('Откройте приложение из Telegram, чтобы загрузить профиль.');
+            if (response.status === 401) {
+                if (window.VMRuntime?.isWeb && window.VMWebAuth) {
+                    window.VMWebAuth.showOverlay();
+                } else if (!silent) {
+                    (window.VMRuntime?.alert || tg.showAlert)?.(
+                        'Откройте приложение из Telegram, чтобы загрузить профиль.',
+                    );
+                }
+            } else if (!silent) {
+                (window.VMRuntime?.alert || tg.showAlert)?.(msg);
+            }
             return;
         }
         if (data && data.plan) {
@@ -1312,6 +1333,9 @@ async function loadUserData(options = {}) {
             updatePlanUI(data.plan, data.planUntil || null, data.bonusGenerations || 0, data.quotaRemaining);
         }
         applyOwnerOnlySections(Boolean(data?.isOwner));
+        if (data?.user && window.VMWebAuth) {
+            window.VMWebAuth.applyUserToUi(data.user);
+        }
         if (data && data.profile) {
             document.getElementById('profile-niche').value = data.profile.niche || '';
             document.getElementById('profile-language').value = data.profile.language || '';
@@ -1341,12 +1365,12 @@ async function loadUserData(options = {}) {
 }
 
 document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) {
-        loadUserData({ silent: true });
-    }
+    if (document.hidden || window.VMRuntime?.isWeb) return;
+    loadUserData({ silent: true });
 });
 
 window.addEventListener('focus', () => {
+    if (window.VMRuntime?.isWeb) return;
     loadUserData({ silent: true });
 });
 
@@ -1549,6 +1573,10 @@ function getCleanupSecret() {
     return manualInput ? manualInput.value.trim() : '';
 }
 
+function adminAlert(message) {
+    (window.VMRuntime?.alert || tg.showAlert || window.alert)?.(String(message || ''));
+}
+
 function renderCleanupList(items) {
     void items;
     // legacy noop — UI moved to AdminSubs
@@ -1559,7 +1587,7 @@ async function loadCleanupPlans() {
     const secret = getCleanupSecret();
     if (!secret) {
         if (statusEl) statusEl.textContent = 'Введите DEBUG_ADMIN_SECRET в поле выше.';
-        tg.showAlert('Введите DEBUG_ADMIN_SECRET в поле выше.');
+        adminAlert('Введите DEBUG_ADMIN_SECRET в поле выше.');
         return;
     }
 
@@ -1577,7 +1605,7 @@ async function loadCleanupPlans() {
         if (!response.ok) {
             const message = data.message || data.error || 'Не удалось получить список.';
             if (statusEl) statusEl.textContent = message;
-            tg.showAlert(message);
+            adminAlert(message);
             return;
         }
 
@@ -1604,7 +1632,7 @@ async function loadCleanupPlans() {
     } catch (error) {
         console.error('Cleanup list error:', error);
         if (statusEl) statusEl.textContent = 'Ошибка при загрузке списка.';
-        tg.showAlert('Ошибка при загрузке подписок.');
+        adminAlert('Ошибка при загрузке подписок.');
     }
 }
 
@@ -1613,7 +1641,7 @@ async function resetCleanupPlan(userId, username = '') {
     const secret = getCleanupSecret();
     if (!secret) {
         if (statusEl) statusEl.textContent = 'Введите DEBUG_ADMIN_SECRET в поле выше.';
-        tg.showAlert('Введите DEBUG_ADMIN_SECRET в поле выше.');
+        adminAlert('Введите DEBUG_ADMIN_SECRET в поле выше.');
         return;
     }
 
@@ -1636,7 +1664,7 @@ async function resetCleanupPlan(userId, username = '') {
         if (!response.ok) {
             const message = data.message || data.error || 'Не удалось сбросить тариф.';
             if (statusEl) statusEl.textContent = message;
-            tg.showAlert(message);
+            adminAlert(message);
             return;
         }
 
@@ -1651,7 +1679,7 @@ async function resetCleanupPlan(userId, username = '') {
     } catch (error) {
         console.error('Cleanup reset error:', error);
         if (statusEl) statusEl.textContent = 'Ошибка при сбросе тарифа.';
-        tg.showAlert('Ошибка при сбросе тарифа.');
+        adminAlert('Ошибка при сбросе тарифа.');
     }
 }
 
@@ -2165,7 +2193,16 @@ if (window.AdminSubs) AdminSubs.mount();
 document.getElementById('btn-analytics-upgrade')?.addEventListener('click', () => buyPlan('pro'));
 updatePlanUI('free', null);
 recoverActiveGenerationOnLoad();
-loadUserData().then(() => {
+async function bootApp() {
+    if (window.VMRuntime?.isWeb && window.VMWebAuth) {
+        try {
+            await window.VMWebAuth.ensureSession();
+        } catch (e) {
+            console.warn('web auth:', e);
+            return;
+        }
+    }
+    await loadUserData();
     if (window.VMOnboarding && !VMOnboarding.isDone()) {
         setTimeout(() => VMOnboarding.show(), 400);
     }
@@ -2177,7 +2214,8 @@ loadUserData().then(() => {
             });
         }, 800);
     }
-});
+}
+bootApp();
 const SettingsHub = (function initSettingsHub() {
     const hubView = document.getElementById('settings-hub-view');
     const moreRow = document.getElementById('settings-hub-more');
