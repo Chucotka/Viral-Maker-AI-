@@ -1,9 +1,17 @@
 /**
  * Вход через Telegram для веб-версии (app.innoko.ru/app).
+ * Виджет (iframe) — без редиректа на oauth.telegram.org (из РФ часто блокируется).
  */
 (function initWebAuth(global) {
   const overlay = () => document.getElementById('web-auth-overlay');
   const widgetHost = () => document.getElementById('web-auth-widget');
+
+  function botUsername() {
+    const meta = document.querySelector('meta[name="vm-bot-username"]');
+    const fromMeta = meta?.getAttribute('content')?.trim().replace(/^@+/, '');
+    if (fromMeta) return fromMeta;
+    return 'viral_maker_ai_bot';
+  }
 
   function showOverlay() {
     const el = overlay();
@@ -57,10 +65,26 @@
   async function fetchAuthConfig() {
     const res = await global.VMRuntime.apiFetch('/api/auth/config');
     const data = await res.json().catch(() => ({}));
-    if (!res.ok || !data.loginUrl) {
+    if (!res.ok || !data.callbackUrl) {
       throw new Error(data.message || 'Не удалось загрузить настройки входа');
     }
     return data;
+  }
+
+  function mountTelegramWidget(callbackUrl) {
+    const box = document.createElement('div');
+    box.className = 'web-auth-widget-embed';
+
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = 'https://telegram.org/js/telegram-widget.js?22';
+    script.setAttribute('data-telegram-login', botUsername());
+    script.setAttribute('data-size', 'large');
+    script.setAttribute('data-request-access', 'write');
+    script.setAttribute('data-auth-url', callbackUrl);
+    script.setAttribute('data-onauth', 'onTelegramWebLogin(user)');
+    box.appendChild(script);
+    return box;
   }
 
   async function mountLoginUi() {
@@ -73,22 +97,17 @@
       const cfg = await fetchAuthConfig();
       host.innerHTML = '';
 
-      const tgLink = document.createElement('a');
-      tgLink.className = 'web-auth-login-btn web-auth-login-btn-primary';
-      tgLink.href = cfg.telegramBotUrl || 'https://t.me/viral_maker_ai_bot';
-      tgLink.textContent = 'Открыть в Telegram (рекомендуется)';
-      host.appendChild(tgLink);
+      host.appendChild(mountTelegramWidget(cfg.callbackUrl));
 
-      const oauthLink = document.createElement('a');
-      oauthLink.className = 'web-auth-login-btn web-auth-login-btn-secondary';
-      oauthLink.href = cfg.loginUrl;
-      oauthLink.textContent = 'Войти через браузер';
-      host.appendChild(oauthLink);
+      const tgLink = document.createElement('a');
+      tgLink.className = 'web-auth-login-btn web-auth-login-btn-secondary';
+      tgLink.href = cfg.telegramBotUrl || 'https://t.me/viral_maker_ai_bot';
+      tgLink.textContent = 'Или откройте бот в Telegram';
+      host.appendChild(tgLink);
 
       const hint = document.createElement('p');
       hint.className = 'web-auth-alt';
-      hint.textContent =
-        'Если «Войти через браузер» не открывается — используйте Telegram. В России oauth.telegram.org иногда недоступен.';
+      hint.textContent = 'Нажмите синюю кнопку Telegram выше — без перехода на заблокированный oauth.telegram.org';
       host.appendChild(hint);
     } catch (e) {
       host.innerHTML = '';
@@ -98,7 +117,7 @@
       host.appendChild(err);
 
       const fallback = document.createElement('a');
-      fallback.className = 'web-auth-login-btn';
+      fallback.className = 'web-auth-login-btn web-auth-login-btn-primary';
       fallback.href = 'https://t.me/viral_maker_ai_bot';
       fallback.textContent = 'Открыть бот в Telegram';
       host.appendChild(fallback);

@@ -42,6 +42,7 @@ module.exports = async (req, res) => {
     telegramBotUrl,
     webAppUrl: resolveWebAppUrl(),
     oauthOrigin: origin,
+    callbackUrl: `${origin}/api/auth/telegram-callback`,
   });
 };
 

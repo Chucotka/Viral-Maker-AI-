@@ -86,6 +86,15 @@ h3 { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
     justify-content: center;
     gap: 12px;
 }
+.web-auth-widget-embed {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.web-auth-widget-embed iframe {
+    border: none;
+}
 .web-auth-login-btn {
     display: block;
     width: 100%;

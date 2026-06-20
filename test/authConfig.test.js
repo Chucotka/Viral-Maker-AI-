@@ -42,6 +42,7 @@ describe('auth-config', () => {
     assert.match(body.loginUrl, /origin=https%3A%2F%2Fapp\.innoko\.ru/);
     assert.match(body.loginUrl, /return_to=https%3A%2F%2Fapp\.innoko\.ru%2Fapp%2F/);
     assert.equal(body.webAppUrl, 'https://app.innoko.ru/app/');
+    assert.equal(body.callbackUrl, 'https://app.innoko.ru/api/auth/telegram-callback');
     assert.equal(body.telegramBotUrl, 'https://t.me/viral_maker_ai_bot');
   });
 
