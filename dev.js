@@ -1,4 +1,4 @@
-require('dotenv').config({ quiet: true });
+require('dotenv').config({ quiet: true, override: true });
 const { configureGeminiNetwork } = require('./lib/geminiNetwork');
 configureGeminiNetwork();
 
