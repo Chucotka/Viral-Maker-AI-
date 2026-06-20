@@ -1,17 +1,11 @@
 /**
  * Вход через Telegram для веб-версии (app.innoko.ru/app).
- * iframe через /tg-oauth/ — обход блокировки oauth.telegram.org в РФ.
+ * Редирект на /tg-oauth/auth — обход блокировки oauth.telegram.org в РФ.
+ * В Telegram Mini App используется initData (без этого модуля).
  */
 (function initWebAuth(global) {
   const overlay = () => document.getElementById('web-auth-overlay');
   const widgetHost = () => document.getElementById('web-auth-widget');
-
-  function botUsername() {
-    const meta = document.querySelector('meta[name="vm-bot-username"]');
-    const fromMeta = meta?.getAttribute('content')?.trim().replace(/^@+/, '');
-    if (fromMeta) return fromMeta;
-    return 'viral_maker_ai_bot';
-  }
 
   function showOverlay() {
     const el = overlay();
@@ -71,80 +65,12 @@
     return data;
   }
 
-  function createRedirectButton(cfg, label) {
+  function createLoginButton(cfg) {
     const btn = document.createElement('a');
-    btn.className = 'web-auth-login-btn web-auth-login-btn-primary';
+    btn.className = 'web-auth-login-btn web-auth-login-btn-primary web-auth-login-btn-telegram';
     btn.href = cfg.proxiedLoginUrl || cfg.loginUrl;
-    btn.textContent = label || 'Войти через Telegram';
+    btn.innerHTML = '<span class="web-auth-tg-icon" aria-hidden="true"></span>Войти через Telegram';
     return btn;
-  }
-
-  function mountProxiedEmbed(cfg) {
-    const box = document.createElement('div');
-    box.className = 'web-auth-widget-embed';
-
-    const embedUrl = cfg.proxiedEmbedUrl || cfg.embedUrl;
-    if (!embedUrl) {
-      box.appendChild(createRedirectButton(cfg));
-      return box;
-    }
-
-    const iframe = document.createElement('iframe');
-    iframe.setAttribute('title', 'Войти через Telegram');
-    iframe.setAttribute('allowtransparency', 'true');
-    iframe.setAttribute('scrolling', 'no');
-    iframe.width = '238';
-    iframe.height = '40';
-    iframe.style.border = 'none';
-    iframe.style.overflow = 'hidden';
-    iframe.src = embedUrl;
-
-    const allowedOrigins = new Set([global.location.origin]);
-    try {
-      allowedOrigins.add(new URL(embedUrl, global.location.href).origin);
-    } catch {
-      /* ignore */
-    }
-
-    let authed = false;
-    function onMessage(event) {
-      if (event.source !== iframe.contentWindow) return;
-      if (!allowedOrigins.has(event.origin)) return;
-      let data;
-      try {
-        data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-      } catch {
-        return;
-      }
-      if (!data || typeof data !== 'object') return;
-      if (data.event === 'resize') {
-        if (data.height) iframe.height = String(data.height);
-        if (data.width) iframe.width = String(data.width);
-        return;
-      }
-      if (data.event === 'auth_user' && data.auth_data && !data.init) {
-        authed = true;
-        global.removeEventListener('message', onMessage);
-        global.onTelegramWebLogin(data.auth_data);
-      }
-    }
-    global.addEventListener('message', onMessage);
-
-    box.appendChild(iframe);
-
-    global.setTimeout(() => {
-      if (authed) return;
-      try {
-        const doc = iframe.contentDocument || iframe.contentWindow?.document;
-        if (doc && doc.body && doc.body.childElementCount === 0) {
-          box.classList.add('web-auth-widget-failed');
-        }
-      } catch {
-        /* cross-origin until proxy loads — ignore */
-      }
-    }, 8000);
-
-    return box;
   }
 
   async function mountLoginUi() {
@@ -157,21 +83,17 @@
       const cfg = await fetchAuthConfig();
       host.innerHTML = '';
 
-      host.appendChild(mountProxiedEmbed(cfg));
-
-      const redirectBtn = createRedirectButton(cfg, 'Войти через Telegram (если кнопка не видна)');
-      redirectBtn.className = 'web-auth-login-btn web-auth-login-btn-secondary';
-      host.appendChild(redirectBtn);
+      host.appendChild(createLoginButton(cfg));
 
       const tgLink = document.createElement('a');
       tgLink.className = 'web-auth-login-btn web-auth-login-btn-secondary';
       tgLink.href = cfg.telegramBotUrl || 'https://t.me/viral_maker_ai_bot';
-      tgLink.textContent = 'Или откройте бот в Telegram';
+      tgLink.textContent = 'Открыть мини-приложение в Telegram';
       host.appendChild(tgLink);
 
       const hint = document.createElement('p');
       hint.className = 'web-auth-alt';
-      hint.textContent = 'Вход идёт через app.innoko.ru — без прямого доступа к заблокированному oauth.telegram.org';
+      hint.textContent = 'Один аккаунт в браузере и в Telegram: генерации, подписка и история общие.';
       host.appendChild(hint);
     } catch (e) {
       host.innerHTML = '';
