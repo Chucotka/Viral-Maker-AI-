@@ -1,14 +1,35 @@
 const { resolveWebAuthOrigin, resolveWebAppUrl } = require('../lib/webOrigin');
 
-function buildTelegramLoginUrl(botId, origin) {
-  const returnTo = resolveWebAppUrl();
+const DEFAULT_OAUTH_BASE = 'https://oauth.telegram.org';
+
+function resolveOAuthProxyBase(origin) {
+  const path = String(process.env.TELEGRAM_OAUTH_PROXY_PATH || '/tg-oauth').trim() || '/tg-oauth';
+  const normalized = path.startsWith('/') ? path : `/${path}`;
+  return `${origin}${normalized}`;
+}
+
+function buildTelegramLoginUrl(botId, origin, options = {}) {
+  const oauthBase = options.oauthBase || DEFAULT_OAUTH_BASE;
+  const returnTo = options.returnTo || resolveWebAppUrl();
   const params = new URLSearchParams({
     bot_id: String(botId),
     origin,
     request_access: 'write',
     return_to: returnTo,
   });
-  return `https://oauth.telegram.org/auth?${params.toString()}`;
+  return `${oauthBase}/auth?${params.toString()}`;
+}
+
+function buildTelegramEmbedUrl(botUsername, origin, options = {}) {
+  const oauthBase = options.oauthBase || DEFAULT_OAUTH_BASE;
+  const returnTo = options.returnTo || resolveWebAppUrl();
+  const params = new URLSearchParams({
+    origin,
+    return_to: returnTo,
+    size: 'large',
+    request_access: 'write',
+  });
+  return `${oauthBase}/embed/${encodeURIComponent(botUsername)}?${params.toString()}`;
 }
 
 module.exports = async (req, res) => {
@@ -32,18 +53,36 @@ module.exports = async (req, res) => {
   }
 
   const origin = resolveWebAuthOrigin();
+  const callbackUrl = `${origin}/api/auth/telegram-callback`;
+  const webAppUrl = resolveWebAppUrl();
+  const oauthProxyBase = resolveOAuthProxyBase(origin);
   const loginUrl = buildTelegramLoginUrl(botId, origin);
+  const proxiedLoginUrl = buildTelegramLoginUrl(botId, origin, {
+    oauthBase: oauthProxyBase,
+    returnTo: callbackUrl,
+  });
+  const embedUrl = buildTelegramEmbedUrl(botUsername, origin, { returnTo: webAppUrl });
+  const proxiedEmbedUrl = buildTelegramEmbedUrl(botUsername, origin, {
+    oauthBase: oauthProxyBase,
+    returnTo: webAppUrl,
+  });
   const telegramBotUrl = `https://t.me/${botUsername}`;
 
   return res.json({
     botId: String(botId),
     botUsername,
     loginUrl,
+    proxiedLoginUrl,
+    embedUrl,
+    proxiedEmbedUrl,
     telegramBotUrl,
-    webAppUrl: resolveWebAppUrl(),
+    webAppUrl,
     oauthOrigin: origin,
-    callbackUrl: `${origin}/api/auth/telegram-callback`,
+    oauthProxyBase,
+    callbackUrl,
   });
 };
 
 module.exports.buildTelegramLoginUrl = buildTelegramLoginUrl;
+module.exports.buildTelegramEmbedUrl = buildTelegramEmbedUrl;
+module.exports.resolveOAuthProxyBase = resolveOAuthProxyBase;

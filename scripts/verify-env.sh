@@ -44,6 +44,15 @@ if [[ -z "$size" || "$size" -lt 1000 ]]; then
 fi
 ok "OAuth bot_id=$bot_id"
 
+if [[ "${SKIP_GEMINI_SMOKE:-}" != "1" ]]; then
+  echo "INFO: проверка Gemini (SKIP_GEMINI_SMOKE=1 чтобы пропустить)..."
+  if node scripts/gemini-image-smoke.js; then
+    ok "Gemini image generation"
+  else
+    fail "Gemini image generation — проверьте GEMINI_API_KEY в Google AI Studio"
+  fi
+fi
+
 for i in 1 2 3 4 5 6 7 8 9 10; do
   if curl -sf "http://127.0.0.1:${PORT:-3001}/api/ping" | grep -q pong; then
     ok "local /api/ping"
