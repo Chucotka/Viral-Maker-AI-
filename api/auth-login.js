@@ -29,7 +29,7 @@ module.exports = async (req, res) => {
     const startParam = parseStartParam(req.body);
     let sessionToken;
     try {
-      sessionToken = signSession({ userId, user: validated.user, startParam });
+      sessionToken = signSession({ userId, user: validated.user, startParam, authKind: 'telegram' });
     } catch (e) {
       return res.status(500).json({
         error: 'session_misconfigured',

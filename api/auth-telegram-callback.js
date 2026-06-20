@@ -19,7 +19,7 @@ module.exports = async (req, res) => {
 
   try {
     const userId = String(validated.user.id);
-    const sessionToken = signSession({ userId, user: validated.user });
+    const sessionToken = signSession({ userId, user: validated.user, authKind: 'telegram' });
     setSessionCookie(res, sessionToken);
     return res.redirect(302, appUrl);
   } catch (e) {

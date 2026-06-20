@@ -1306,7 +1306,8 @@ async function loadUserData(options = {}) {
             console.warn('loadUserData:', response.status, msg);
             if (response.status === 401) {
                 if (window.VMRuntime?.isWeb && window.VMWebAuth) {
-                    window.VMWebAuth.showOverlay();
+                    await window.VMWebAuth.ensureSession();
+                    if (!silent) await loadUserData({ silent: true });
                 } else if (!silent) {
                     (window.VMRuntime?.alert || tg.showAlert)?.(
                         'Откройте приложение из Telegram, чтобы загрузить профиль.',
@@ -1335,6 +1336,10 @@ async function loadUserData(options = {}) {
         applyOwnerOnlySections(Boolean(data?.isOwner));
         if (data?.user && window.VMWebAuth) {
             window.VMWebAuth.applyUserToUi(data.user);
+        }
+        const guestBlock = document.getElementById('web-guest-link-block');
+        if (guestBlock) {
+            guestBlock.classList.toggle('hidden', !(window.VMRuntime?.isWeb && data?.isGuest));
         }
         if (data && data.profile) {
             document.getElementById('profile-niche').value = data.profile.niche || '';
@@ -1372,6 +1377,10 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('focus', () => {
     if (window.VMRuntime?.isWeb) return;
     loadUserData({ silent: true });
+});
+
+document.getElementById('btn-link-telegram')?.addEventListener('click', () => {
+    window.VMWebAuth?.showOverlay();
 });
 
 document.getElementById('btn-save-profile').addEventListener('click', async () => {
@@ -2195,12 +2204,7 @@ updatePlanUI('free', null);
 recoverActiveGenerationOnLoad();
 async function bootApp() {
     if (window.VMRuntime?.isWeb && window.VMWebAuth) {
-        try {
-            await window.VMWebAuth.ensureSession();
-        } catch (e) {
-            console.warn('web auth:', e);
-            return;
-        }
+        await window.VMWebAuth.ensureSession();
     }
     await loadUserData();
     if (window.VMOnboarding && !VMOnboarding.isDone()) {
