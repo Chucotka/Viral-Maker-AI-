@@ -24,7 +24,10 @@ const publicDir = path.join(__dirname, '../public');
 app.use(express.static(publicDir));
 
 /** Веб-версия на innoko.ru/app */
-app.get('/app', (req, res) => res.redirect(301, '/app/'));
+app.get('/app', (req, res, next) => {
+  if (req.path !== '/app') return next();
+  return res.redirect(301, '/app/');
+});
 app.use('/app', express.static(publicDir, { index: 'index.html' }));
 
 mountApiRoutes(app);
