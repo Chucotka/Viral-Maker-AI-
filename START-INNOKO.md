@@ -40,8 +40,15 @@ bash scripts/setup-vps-innoko.sh
 
 ### 4. BotFather
 
-- `/setdomain` → `innoko.ru`
+- `/setdomain` → `app.innoko.ru`
 - Menu Button → `https://app.innoko.ru`
+
+**`.env` на VPS — токен бота в кавычках** (иначе теряется первая цифра `8`):
+
+```env
+TELEGRAM_BOT_ID=8520170966
+TELEGRAM_BOT_TOKEN="8520170966:полный_токен_из_BotFather"
+```
 
 ```bash
 curl "https://api.telegram.org/bot<ТОКЕН>/setWebhook?url=https://app.innoko.ru/api/webhook"
