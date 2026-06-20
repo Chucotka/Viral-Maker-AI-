@@ -32,6 +32,9 @@ app.use('/app', express.static(publicDir, { index: 'index.html' }));
 
 mountApiRoutes(app);
 
+/** Совместимость: Manus/legacy путь → тот же callback, что /api/auth/telegram-callback */
+app.get('/auth/telegram/callback', require('../api/auth-telegram-callback'));
+
 /** Dev-only health check (на Vercel используйте /api/webhook GET). */
 app.get('/api/ping', (req, res) => res.send('pong'));
 

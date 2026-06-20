@@ -1,14 +1,7 @@
-function resolveWebOrigin() {
-  const raw = String(process.env.WEBAPP_URL || 'https://app.innoko.ru').trim();
-  try {
-    return new URL(raw).origin;
-  } catch {
-    return 'https://app.innoko.ru';
-  }
-}
+const { resolveWebAuthOrigin, resolveWebAppUrl } = require('../lib/webOrigin');
 
 function buildTelegramLoginUrl(botId, origin) {
-  const returnTo = `${origin}/app/`;
+  const returnTo = resolveWebAppUrl();
   const params = new URLSearchParams({
     bot_id: String(botId),
     origin,
@@ -38,7 +31,7 @@ module.exports = async (req, res) => {
     });
   }
 
-  const origin = resolveWebOrigin();
+  const origin = resolveWebAuthOrigin();
   const loginUrl = buildTelegramLoginUrl(botId, origin);
   const telegramBotUrl = `https://t.me/${botUsername}`;
 
@@ -47,8 +40,9 @@ module.exports = async (req, res) => {
     botUsername,
     loginUrl,
     telegramBotUrl,
+    webAppUrl: resolveWebAppUrl(),
+    oauthOrigin: origin,
   });
 };
 
 module.exports.buildTelegramLoginUrl = buildTelegramLoginUrl;
-module.exports.resolveWebOrigin = resolveWebOrigin;

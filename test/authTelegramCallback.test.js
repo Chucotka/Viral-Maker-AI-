@@ -27,6 +27,7 @@ describe('auth-telegram-callback', () => {
     };
     process.env.TELEGRAM_BOT_TOKEN = '123456:ABC-DEF';
     process.env.SESSION_SECRET = 'test-session-secret';
+    process.env.WEBAPP_URL = 'https://app.innoko.ru';
   });
 
   afterEach(() => {
@@ -49,7 +50,7 @@ describe('auth-telegram-callback', () => {
     };
     await handler({ method: 'GET', query }, res);
     assert.equal(res.statusCode, 302);
-    assert.equal(res.location, '/app/');
+    assert.equal(res.location, 'https://app.innoko.ru/app/');
     assert.match(headers['set-cookie'], /vm_session=/);
   });
 });
