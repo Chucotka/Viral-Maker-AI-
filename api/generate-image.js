@@ -14,7 +14,7 @@ const {
   isSurpriseRequest,
 } = require('../lib/buildTextPrompt');
 const { assertGenerateRateLimit } = require('../lib/rateLimitKv');
-const { sendSafeError } = require('../lib/httpErrors');
+const { sendMappedError } = require('../lib/httpErrors');
 const {
   putImageDownload,
   buildDownloadFileName,
@@ -98,7 +98,11 @@ module.exports = async (req, res) => {
     });
 
     const { remainingToday } = await incrementGenerationCount(auth.userId, rec);
-    await confirmReferralAfterFirstGeneration(auth.userId);
+    try {
+      await confirmReferralAfterFirstGeneration(auth.userId);
+    } catch (refErr) {
+      console.error('confirmReferralAfterFirstGeneration:', refErr.message);
+    }
 
     const historyTs = Date.now();
     try {
@@ -135,7 +139,6 @@ module.exports = async (req, res) => {
       downloadFileName,
     });
   } catch (e) {
-    console.error('IMAGE GENERATION ERROR:', e.message);
-    sendSafeError(res, e, 'generate-image');
+    sendMappedError(res, e, 'generate-image');
   }
 };

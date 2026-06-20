@@ -1,17 +1,11 @@
 /**
  * Вход через Telegram для веб-версии (app.innoko.ru/app).
- * Виджет (iframe) — без редиректа на oauth.telegram.org (из РФ часто блокируется).
+ * Редирект на /tg-oauth/auth — обход блокировки oauth.telegram.org в РФ.
+ * В Telegram Mini App используется initData (без этого модуля).
  */
 (function initWebAuth(global) {
   const overlay = () => document.getElementById('web-auth-overlay');
   const widgetHost = () => document.getElementById('web-auth-widget');
-
-  function botUsername() {
-    const meta = document.querySelector('meta[name="vm-bot-username"]');
-    const fromMeta = meta?.getAttribute('content')?.trim().replace(/^@+/, '');
-    if (fromMeta) return fromMeta;
-    return 'viral_maker_ai_bot';
-  }
 
   function showOverlay() {
     const el = overlay();
@@ -71,20 +65,12 @@
     return data;
   }
 
-  function mountTelegramWidget(callbackUrl) {
-    const box = document.createElement('div');
-    box.className = 'web-auth-widget-embed';
-
-    const script = document.createElement('script');
-    script.async = true;
-    script.src = 'https://telegram.org/js/telegram-widget.js?22';
-    script.setAttribute('data-telegram-login', botUsername());
-    script.setAttribute('data-size', 'large');
-    script.setAttribute('data-request-access', 'write');
-    script.setAttribute('data-auth-url', callbackUrl);
-    script.setAttribute('data-onauth', 'onTelegramWebLogin(user)');
-    box.appendChild(script);
-    return box;
+  function createLoginButton(cfg) {
+    const btn = document.createElement('a');
+    btn.className = 'web-auth-login-btn web-auth-login-btn-primary web-auth-login-btn-telegram';
+    btn.href = cfg.proxiedLoginUrl || cfg.loginUrl;
+    btn.innerHTML = '<span class="web-auth-tg-icon" aria-hidden="true"></span>Войти через Telegram';
+    return btn;
   }
 
   async function mountLoginUi() {
@@ -97,17 +83,17 @@
       const cfg = await fetchAuthConfig();
       host.innerHTML = '';
 
-      host.appendChild(mountTelegramWidget(cfg.callbackUrl));
+      host.appendChild(createLoginButton(cfg));
 
       const tgLink = document.createElement('a');
       tgLink.className = 'web-auth-login-btn web-auth-login-btn-secondary';
       tgLink.href = cfg.telegramBotUrl || 'https://t.me/viral_maker_ai_bot';
-      tgLink.textContent = 'Или откройте бот в Telegram';
+      tgLink.textContent = 'Открыть мини-приложение в Telegram';
       host.appendChild(tgLink);
 
       const hint = document.createElement('p');
       hint.className = 'web-auth-alt';
-      hint.textContent = 'Нажмите синюю кнопку Telegram выше — без перехода на заблокированный oauth.telegram.org';
+      hint.textContent = 'Один аккаунт в браузере и в Telegram: генерации, подписка и история общие.';
       host.appendChild(hint);
     } catch (e) {
       host.innerHTML = '';
@@ -142,10 +128,18 @@
     return data;
   }
 
+  function displayName(user) {
+    if (!user || typeof user !== 'object') return '';
+    return String(user.first_name || user.username || '').trim();
+  }
+
   function applyUserToUi(user) {
     if (!user) return;
+    const name = displayName(user) || 'Пользователь';
     const nameEl = document.getElementById('user-name');
-    if (nameEl && user.first_name) nameEl.textContent = user.first_name;
+    if (nameEl) nameEl.textContent = name;
+    const settingsHeroName = document.getElementById('settings-hero-name');
+    if (settingsHeroName) settingsHeroName.textContent = name;
     const avatar = document.getElementById('user-avatar');
     if (avatar && user.photo_url) {
       avatar.innerHTML = `<img src="${user.photo_url}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`;
@@ -174,6 +168,7 @@
     const sessionRes = await global.VMRuntime.apiFetch('/api/auth/session');
     const session = await sessionRes.json().catch(() => ({}));
     if (session.authenticated) {
+      if (session.user) applyUserToUi(session.user);
       hideOverlay();
       return true;
     }

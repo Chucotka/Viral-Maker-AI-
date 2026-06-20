@@ -386,8 +386,10 @@ function loadSavedSettings() {
     return readLocalObject(SETTINGS_KEY, {});
 }
 
-// Set user name if available (отображение; userId на сервере только из initData)
-if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+// Имя/аватар: Telegram initData или веб-сессия (VMWebAuth.applyUserToUi)
+if (tg.initDataUnsafe && tg.initDataUnsafe.user && window.VMWebAuth) {
+    window.VMWebAuth.applyUserToUi(tg.initDataUnsafe.user);
+} else if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
     const firstName = tg.initDataUnsafe.user.first_name;
     document.getElementById('user-name').textContent = firstName;
     const settingsHeroName = document.getElementById('settings-hero-name');
@@ -693,8 +695,14 @@ function alertFromGenerateError(message) {
         text = 'Сервис Google временно перегружен. Подождите минуту и попробуйте снова.';
     } else if (/User location is not supported for the API use/i.test(m)) {
         text = 'Этот ключ Gemini недоступен из текущего региона. Нужен другой проект или ключ с поддержкой этого региона.';
-    } else if (/API[_ ]?key|401|403|PERMISSION_DENIED|invalid api/i.test(m)) {
-        text = 'Проблема с ключом или доступом к API. Проверьте GEMINI_API_KEY на сервере.';
+    } else if (/GEMINI_API_KEY|gemini_api_key|missing_api_key|API[_ ]?key|invalid api/i.test(m)) {
+        text = 'На сервере не настроен или неверный GEMINI_API_KEY. Добавьте ключ в .env на VPS и выполните: pm2 restart viral-maker';
+    } else if (/gemini_billing|биллинг/i.test(m)) {
+        text = 'В Google AI Studio нужно включить биллинг для генерации изображений.';
+    } else if (/gemini_region|региона сервера/i.test(m)) {
+        text = 'Ключ Gemini недоступен из региона сервера. Создайте новый ключ в Google AI Studio.';
+    } else if (/internal_error|Внутренняя ошибка сервера/i.test(m)) {
+        text = 'Сбой генерации на сервере. На VPS: pm2 logs viral-maker --lines 50 и node scripts/gemini-image-smoke.js';
     } else if (/404|not found for API version|no longer available|ListModels/i.test(m)) {
         text = 'Модель недоступна для вашего ключа. Обновите приложение или проверьте доступ в Google AI Studio.';
     } else if (/missing_init_data|invalid_init_data|Откройте приложение из Telegram/i.test(m)) {
@@ -1325,6 +1333,9 @@ async function loadUserData(options = {}) {
             updatePlanUI(data.plan, data.planUntil || null, data.bonusGenerations || 0, data.quotaRemaining);
         }
         applyOwnerOnlySections(Boolean(data?.isOwner));
+        if (data?.user && window.VMWebAuth) {
+            window.VMWebAuth.applyUserToUi(data.user);
+        }
         if (data && data.profile) {
             document.getElementById('profile-niche').value = data.profile.niche || '';
             document.getElementById('profile-language').value = data.profile.language || '';
@@ -1562,6 +1573,10 @@ function getCleanupSecret() {
     return manualInput ? manualInput.value.trim() : '';
 }
 
+function adminAlert(message) {
+    (window.VMRuntime?.alert || tg.showAlert || window.alert)?.(String(message || ''));
+}
+
 function renderCleanupList(items) {
     void items;
     // legacy noop — UI moved to AdminSubs
@@ -1572,7 +1587,7 @@ async function loadCleanupPlans() {
     const secret = getCleanupSecret();
     if (!secret) {
         if (statusEl) statusEl.textContent = 'Введите DEBUG_ADMIN_SECRET в поле выше.';
-        tg.showAlert('Введите DEBUG_ADMIN_SECRET в поле выше.');
+        adminAlert('Введите DEBUG_ADMIN_SECRET в поле выше.');
         return;
     }
 
@@ -1590,7 +1605,7 @@ async function loadCleanupPlans() {
         if (!response.ok) {
             const message = data.message || data.error || 'Не удалось получить список.';
             if (statusEl) statusEl.textContent = message;
-            tg.showAlert(message);
+            adminAlert(message);
             return;
         }
 
@@ -1617,7 +1632,7 @@ async function loadCleanupPlans() {
     } catch (error) {
         console.error('Cleanup list error:', error);
         if (statusEl) statusEl.textContent = 'Ошибка при загрузке списка.';
-        tg.showAlert('Ошибка при загрузке подписок.');
+        adminAlert('Ошибка при загрузке подписок.');
     }
 }
 
@@ -1626,7 +1641,7 @@ async function resetCleanupPlan(userId, username = '') {
     const secret = getCleanupSecret();
     if (!secret) {
         if (statusEl) statusEl.textContent = 'Введите DEBUG_ADMIN_SECRET в поле выше.';
-        tg.showAlert('Введите DEBUG_ADMIN_SECRET в поле выше.');
+        adminAlert('Введите DEBUG_ADMIN_SECRET в поле выше.');
         return;
     }
 
@@ -1649,7 +1664,7 @@ async function resetCleanupPlan(userId, username = '') {
         if (!response.ok) {
             const message = data.message || data.error || 'Не удалось сбросить тариф.';
             if (statusEl) statusEl.textContent = message;
-            tg.showAlert(message);
+            adminAlert(message);
             return;
         }
 
@@ -1664,7 +1679,7 @@ async function resetCleanupPlan(userId, username = '') {
     } catch (error) {
         console.error('Cleanup reset error:', error);
         if (statusEl) statusEl.textContent = 'Ошибка при сбросе тарифа.';
-        tg.showAlert('Ошибка при сбросе тарифа.');
+        adminAlert('Ошибка при сбросе тарифа.');
     }
 }
 
