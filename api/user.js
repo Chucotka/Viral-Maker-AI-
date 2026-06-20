@@ -1,4 +1,4 @@
-const { resolveTelegramUser } = require('../lib/miniAppAuth');
+const { resolveAppUser } = require('../lib/miniAppAuth');
 const { isKvConfigured, getQuotaState, saveUserRecord, saveTelegramIdentity } = require('../lib/kvUserStore');
 const { isAppOwner } = require('../lib/appOwner');
 const { sendSafeError } = require('../lib/httpErrors');
@@ -33,7 +33,7 @@ module.exports = async (req, res) => {
       });
     }
 
-    const auth = resolveTelegramUser(req, res);
+    const auth = resolveAppUser(req, res);
     if (!auth) return;
     await saveTelegramIdentity(auth.userId, auth.user);
 
