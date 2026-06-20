@@ -32,7 +32,7 @@ git clone https://github.com/Chucotka/Viral-Maker-AI-.git /var/www/viral-maker
 cd /var/www/viral-maker
 git checkout cursor/web-auth-innoko-site-e202 2>/dev/null || git checkout main
 cp .env.example .env
-nano .env   # ключи из Vercel
+nano .env   # ключи (Gemini, Telegram, Upstash Redis)
 bash scripts/setup-vps-innoko.sh
 ```
 

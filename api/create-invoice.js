@@ -12,7 +12,7 @@ async function handleTributeLink(req, res) {
   if (!config.webLink) {
     return res.status(503).json({
       error: 'tribute_not_configured',
-      message: 'Добавьте TRIBUTE_PRO_WEBLINK / TRIBUTE_PREMIUM_WEBLINK в Vercel.',
+      message: 'Добавьте TRIBUTE_PRO_WEBLINK / TRIBUTE_PREMIUM_WEBLINK в .env на сервере.',
     });
   }
   return res.json({ plan: config.plan, link: config.webLink });

@@ -7,7 +7,7 @@ require('dotenv').config({ quiet: true });
 const crypto = require('crypto');
 const https = require('https');
 
-const BASE = (process.env.WEBAPP_URL || 'https://viral-maker-ai.vercel.app').replace(/\/$/, '');
+const BASE = (process.env.WEBAPP_URL || 'https://app.innoko.ru').replace(/\/$/, '');
 const results = [];
 
 function pass(name, detail = '') {

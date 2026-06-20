@@ -25,8 +25,14 @@ function parseBody(rawBody) {
 
 module.exports = async (req, res) => {
   if (req.method === 'POST') {
-    req.rawBody = await readRawBody(req);
-    req.body = parseBody(req.rawBody);
+    // В Express (server/index.js) rawBody уже ставится в json.verify.
+    // Повторное чтение stream даст пустой body и сломает подпись.
+    if (!req.rawBody || !Buffer.isBuffer(req.rawBody) || req.rawBody.length === 0) {
+      req.rawBody = await readRawBody(req);
+    }
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+      req.body = parseBody(req.rawBody);
+    }
   }
   return handleTributeWebhook(req, res);
 };

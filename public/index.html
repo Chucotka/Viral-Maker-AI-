@@ -12,10 +12,9 @@
     <div id="web-auth-overlay" class="web-auth-overlay hidden" aria-hidden="true">
         <div class="web-auth-card">
             <p class="web-auth-brand">Innoko · Viral Maker AI</p>
-            <h1 class="web-auth-title">Войдите через Telegram</h1>
-            <p class="web-auth-hint">Тот же аккаунт, что в мини-приложении: генерации, подписка и история сохраняются.</p>
+            <h1 class="web-auth-title">Привязать Telegram</h1>
+            <p class="web-auth-hint">Необязательно. Приложение уже работает в браузере — привязка нужна для синхронизации с мини-приложением.</p>
             <div id="web-auth-widget" class="web-auth-widget"></div>
-            <p class="web-auth-footnote">BotFather → /setdomain → app.innoko.ru</p>
         </div>
     </div>
     <div class="app-container">
@@ -595,6 +594,10 @@
                     <button type="button" class="settings-panel-back" data-settings-back>← Назад</button>
                     <h3 class="settings-panel-title">Профиль автора</h3>
                     <div class="settings-group">
+                        <div id="web-guest-link-block" class="hidden" style="margin-bottom:14px">
+                            <p class="text-hint">Вы вошли как гость в браузере. Привяжите Telegram, чтобы синхронизировать данные с мини-приложением и оплачивать подписку.</p>
+                            <button type="button" class="btn btn-secondary btn-full" id="btn-link-telegram" style="margin-top:10px">Привязать Telegram</button>
+                        </div>
                         <p class="text-hint" style="margin-bottom:10px">Сохраняется на сервере — учитывается в промптах генерации.</p>
                         <input type="text" id="profile-niche" placeholder="Ниша (например: финтех для фрилансеров)" maxlength="120">
                         <input type="text" id="profile-language" placeholder="Язык ответа (например: русский, короткие фразы)" maxlength="40" style="margin-top:10px">

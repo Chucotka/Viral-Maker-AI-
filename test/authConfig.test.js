@@ -44,6 +44,9 @@ describe('auth-config', () => {
     assert.equal(body.webAppUrl, 'https://app.innoko.ru/app/');
     assert.equal(body.callbackUrl, 'https://app.innoko.ru/api/auth/telegram-callback');
     assert.equal(body.telegramBotUrl, 'https://t.me/viral_maker_ai_bot');
+    assert.match(body.proxiedLoginUrl, /^https:\/\/app\.innoko\.ru\/tg-oauth\/auth\?/);
+    assert.match(body.proxiedEmbedUrl, /^https:\/\/app\.innoko\.ru\/tg-oauth\/embed\//);
+    assert.match(body.proxiedLoginUrl, /return_to=https%3A%2F%2Fapp\.innoko\.ru%2Fapi%2Fauth%2Ftelegram-callback/);
   });
 
   it('uses app.innoko.ru oauth origin when WEBAPP_URL is innoko.ru', async () => {

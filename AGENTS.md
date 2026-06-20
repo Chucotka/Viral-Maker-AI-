@@ -27,7 +27,8 @@ Copy env once: `cp .env.example .env` and fill secrets (see `SETUP.md`).
 | Node dev server (`npm run dev`) | Static UI + `/api/*` |
 | Upstash Redis (`UPSTASH_*`) | User, quotas, generation, payments |
 | `GEMINI_API_KEY` | Text/image generation |
-| `TELEGRAM_BOT_TOKEN` + valid Mini App `initData` | Authenticated API (401 in plain browser) |
+| `TELEGRAM_BOT_TOKEN` + valid Mini App `initData` | Telegram Mini App auth |
+| Guest web session | Browser at `/app/` (auto cookie, no Telegram) |
 | HTTPS tunnel (ngrok) + `WEBAPP_URL` | Real Telegram Mini App E2E |
 
 **Without secrets:** `/api/ping`, `/api/trends` (default trends), and static dashboard UI work. Generation and `/api/user` need Redis + Telegram.
@@ -49,6 +50,6 @@ Health: `curl http://127.0.0.1:3001/api/ping` → `pong`.
 
 - Default port is **3001** (`PORT` in `.env`), not 3000.
 - `nodemon` reloads on file changes; after `npm ci`, restart dev server if routes behave oddly.
-- Opening `http://127.0.0.1:3001/` in a desktop browser loads UI and trends; **AI generation** still requires Telegram `initData` and backend keys.
-- Production deploy: `npm run deploy` (Vercel); local dev does not need Vercel CLI for day-to-day work.
+- Opening `http://127.0.0.1:3001/app/` in a browser uses guest web session; generation needs Redis + `GEMINI_API_KEY`.
+- Production: VPS at `app.innoko.ru` — deploy with `npm run deploy` (runs `scripts/deploy-vps.sh` on the server) or `bash scripts/deploy-vps.sh` on VPS after `git pull`.
 - Optional integration smoke: `node scripts/payment-smoke.js` (needs deployed/tunneled `WEBAPP_URL`).
