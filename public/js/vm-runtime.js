@@ -44,11 +44,11 @@
 
   function alert(message, title) {
     const text = String(message || '');
-    if (tg?.showAlert) {
+    if (hasInitData && tg?.showAlert) {
       tg.showAlert(text);
       return;
     }
-    if (tg?.showPopup) {
+    if (hasInitData && tg?.showPopup) {
       tg.showPopup({ title: title || 'Viral Maker AI', message: text });
       return;
     }

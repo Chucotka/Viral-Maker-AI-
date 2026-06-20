@@ -698,6 +698,10 @@ function alertFromGenerateError(message) {
     } else if (/404|not found for API version|no longer available|ListModels/i.test(m)) {
         text = 'Модель недоступна для вашего ключа. Обновите приложение или проверьте доступ в Google AI Studio.';
     } else if (/missing_init_data|invalid_init_data|Откройте приложение из Telegram/i.test(m)) {
+        if (window.VMRuntime?.isWeb && window.VMWebAuth) {
+            window.VMWebAuth.showOverlay();
+            return;
+        }
         text = 'Откройте мини-приложение из Telegram (кнопка в боте), чтобы подпись сессии передалась на сервер.';
     } else if (/kv_required|Redis/i.test(m)) {
         text = 'На сервере не настроено хранилище Redis. Добавьте Upstash Redis в Vercel и переменные окружения.';
@@ -708,7 +712,7 @@ function alertFromGenerateError(message) {
     } else if (m && m.length < 320 && !/^Ошибка генерации \(\d+\)$/.test(m)) {
         text = m;
     }
-    tg.showAlert(text);
+    (window.VMRuntime?.alert || tg.showAlert)?.(text);
 }
 
 async function parseJsonResponse(response) {
@@ -1292,12 +1296,16 @@ async function loadUserData(options = {}) {
         if (response.status === 401 || response.status === 503) {
             const msg = data.message || data.error || 'Проверьте настройки сервера (KV, Telegram).';
             console.warn('loadUserData:', response.status, msg);
-            if (response.status === 401 && !silent) {
+            if (response.status === 401) {
                 if (window.VMRuntime?.isWeb && window.VMWebAuth) {
                     window.VMWebAuth.showOverlay();
-                } else {
-                    tg.showAlert?.('Откройте приложение из Telegram, чтобы загрузить профиль.');
+                } else if (!silent) {
+                    (window.VMRuntime?.alert || tg.showAlert)?.(
+                        'Откройте приложение из Telegram, чтобы загрузить профиль.',
+                    );
                 }
+            } else if (!silent) {
+                (window.VMRuntime?.alert || tg.showAlert)?.(msg);
             }
             return;
         }
@@ -1346,12 +1354,12 @@ async function loadUserData(options = {}) {
 }
 
 document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) {
-        loadUserData({ silent: true });
-    }
+    if (document.hidden || window.VMRuntime?.isWeb) return;
+    loadUserData({ silent: true });
 });
 
 window.addEventListener('focus', () => {
+    if (window.VMRuntime?.isWeb) return;
     loadUserData({ silent: true });
 });
 
