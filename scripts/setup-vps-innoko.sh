@@ -4,7 +4,7 @@ set -euo pipefail
 
 APP_DIR="${APP_DIR:-/var/www/viral-maker}"
 REPO_URL="${REPO_URL:-https://github.com/Chucotka/Viral-Maker-AI-.git}"
-MANUS_ORIGIN="${MANUS_ORIGIN:-https://cname.manus.space}"
+MANUS_ORIGIN="${MANUS_ORIGIN:-https://innokoai.manus.space}"
 
 echo "==> Пакеты"
 export DEBIAN_FRONTEND=noninteractive

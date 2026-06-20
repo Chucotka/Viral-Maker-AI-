@@ -79,11 +79,11 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # Лендинг Manus (уточните origin в Manus → Domains)
+    # Лендинг Manus (URL проекта в Manus → Settings → Domains)
     location / {
-        proxy_pass https://cname.manus.space;
+        proxy_pass https://innokoai.manus.space;
         proxy_ssl_server_name on;
-        proxy_set_header Host cname.manus.space;
+        proxy_set_header Host innokoai.manus.space;
         proxy_set_header X-Forwarded-Host $host;
     }
 }
