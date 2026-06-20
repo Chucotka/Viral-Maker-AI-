@@ -55,8 +55,10 @@ source_env
 missing=()
 [[ -z "${TELEGRAM_BOT_TOKEN:-}" ]] && missing+=("TELEGRAM_BOT_TOKEN")
 [[ -z "${GEMINI_API_KEY:-}" ]] && missing+=("GEMINI_API_KEY")
-[[ -z "${UPSTASH_REDIS_REST_URL:-}" ]] && missing+=("UPSTASH_REDIS_REST_URL")
-[[ -z "${UPSTASH_REDIS_REST_TOKEN:-}" ]] && missing+=("UPSTASH_REDIS_REST_TOKEN")
+redis_url="${UPSTASH_REDIS_REST_URL:-${KV_REST_API_URL:-}}"
+redis_token="${UPSTASH_REDIS_REST_TOKEN:-${KV_REST_API_TOKEN:-}}"
+[[ -z "$redis_url" ]] && missing+=("UPSTASH_REDIS_REST_URL или KV_REST_API_URL")
+[[ -z "$redis_token" ]] && missing+=("UPSTASH_REDIS_REST_TOKEN или KV_REST_API_TOKEN")
 
 if [[ ${#missing[@]} -gt 0 ]]; then
   echo "!!! Заполните в .env: ${missing[*]}"
