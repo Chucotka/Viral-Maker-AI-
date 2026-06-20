@@ -1,5 +1,6 @@
 /**
- * Вход через Telegram Login Widget для веб-версии (innoko.ru/app).
+ * Вход через Telegram Login Widget для веб-версии (app.innoko.ru/app).
+ * Полный редирект на oauth.telegram.org — без popup (Chrome не блокирует).
  */
 (function initWebAuth(global) {
   const overlay = () => document.getElementById('web-auth-overlay');
@@ -15,7 +16,7 @@
   function showOverlay() {
     const el = overlay();
     if (el) el.classList.remove('hidden');
-    mountWidget();
+    mountLoginButton();
   }
 
   function hideOverlay() {
@@ -23,8 +24,24 @@
     if (el) el.classList.add('hidden');
   }
 
-  function authCallbackUrl() {
-    return `${global.location.origin}/api/auth/telegram-callback`;
+  function parseTgAuthResultFromHash() {
+    try {
+      const hash = String(global.location.hash || '');
+      const re = /[#?&]tgAuthResult=([A-Za-z0-9\-_=]*)/;
+      const match = hash.match(re);
+      if (!match) return null;
+      let data = match[1] || '';
+      data = data.replace(/-/g, '+').replace(/_/g, '/');
+      const pad = data.length % 4;
+      if (pad > 1) data += new Array(5 - pad).join('=');
+      const user = JSON.parse(global.atob(data));
+      const clean = new URL(global.location.href);
+      clean.hash = '';
+      global.history.replaceState({}, '', clean.pathname + clean.search);
+      return user;
+    } catch {
+      return null;
+    }
   }
 
   function showAuthErrorFromUrl() {
@@ -45,20 +62,55 @@
     }
   }
 
-  function mountWidget() {
+  function buildOAuthUrl(botId) {
+    const origin = global.location.origin;
+    const returnTo = `${origin}/app/`;
+    const params = new URLSearchParams({
+      bot_id: String(botId),
+      origin,
+      request_access: 'write',
+      return_to: returnTo,
+    });
+    return `https://oauth.telegram.org/auth?${params.toString()}`;
+  }
+
+  async function fetchAuthConfig() {
+    const res = await global.VMRuntime.apiFetch('/api/auth/config');
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.botId) {
+      throw new Error(data.message || 'Не удалось загрузить настройки входа');
+    }
+    return data;
+  }
+
+  async function mountLoginButton() {
     const host = widgetHost();
     if (!host || host.dataset.mounted === '1') return;
     host.dataset.mounted = '1';
     host.innerHTML = '';
 
-    const script = document.createElement('script');
-    script.async = true;
-    script.src = 'https://telegram.org/js/telegram-widget.js?22';
-    script.setAttribute('data-telegram-login', botUsername());
-    script.setAttribute('data-size', 'large');
-    script.setAttribute('data-request-access', 'write');
-    script.setAttribute('data-auth-url', authCallbackUrl());
-    host.appendChild(script);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'web-auth-login-btn';
+    btn.textContent = 'Войти через Telegram';
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      btn.textContent = 'Открываем Telegram…';
+      try {
+        const cfg = await fetchAuthConfig();
+        global.location.href = buildOAuthUrl(cfg.botId);
+      } catch (e) {
+        btn.disabled = false;
+        btn.textContent = 'Войти через Telegram';
+        global.VMRuntime?.alert(e.message || 'Ошибка входа');
+      }
+    });
+    host.appendChild(btn);
+
+    const hint = document.createElement('p');
+    hint.className = 'web-auth-alt';
+    hint.innerHTML = 'Или откройте <a href="https://t.me/viral_maker_ai_bot" target="_blank" rel="noopener">бот в Telegram</a>';
+    host.appendChild(hint);
   }
 
   async function loginWithWidget(user) {
@@ -97,6 +149,16 @@
     if (global.VMRuntime?.isTelegram) return true;
 
     showAuthErrorFromUrl();
+
+    const hashUser = parseTgAuthResultFromHash();
+    if (hashUser) {
+      try {
+        await loginWithWidget(hashUser);
+        return true;
+      } catch (e) {
+        global.VMRuntime?.alert(e.message || 'Не удалось войти');
+      }
+    }
 
     const sessionRes = await global.VMRuntime.apiFetch('/api/auth/session');
     const session = await sessionRes.json().catch(() => ({}));

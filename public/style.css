@@ -81,8 +81,34 @@ h3 { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
 .web-auth-widget {
     min-height: 48px;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 12px;
+}
+.web-auth-login-btn {
+    width: 100%;
+    max-width: 280px;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 12px;
+    background: #2AABEE;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.web-auth-login-btn:disabled {
+    opacity: 0.7;
+    cursor: wait;
+}
+.web-auth-alt {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 0;
+}
+.web-auth-alt a {
+    color: var(--accent);
 }
 .web-auth-footnote {
     margin-top: 16px;
