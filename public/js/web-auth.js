@@ -142,10 +142,18 @@
     return data;
   }
 
+  function displayName(user) {
+    if (!user || typeof user !== 'object') return '';
+    return String(user.first_name || user.username || '').trim();
+  }
+
   function applyUserToUi(user) {
     if (!user) return;
+    const name = displayName(user) || 'Пользователь';
     const nameEl = document.getElementById('user-name');
-    if (nameEl && user.first_name) nameEl.textContent = user.first_name;
+    if (nameEl) nameEl.textContent = name;
+    const settingsHeroName = document.getElementById('settings-hero-name');
+    if (settingsHeroName) settingsHeroName.textContent = name;
     const avatar = document.getElementById('user-avatar');
     if (avatar && user.photo_url) {
       avatar.innerHTML = `<img src="${user.photo_url}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`;
@@ -174,6 +182,7 @@
     const sessionRes = await global.VMRuntime.apiFetch('/api/auth/session');
     const session = await sessionRes.json().catch(() => ({}));
     if (session.authenticated) {
+      if (session.user) applyUserToUi(session.user);
       hideOverlay();
       return true;
     }

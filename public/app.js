@@ -386,8 +386,10 @@ function loadSavedSettings() {
     return readLocalObject(SETTINGS_KEY, {});
 }
 
-// Set user name if available (отображение; userId на сервере только из initData)
-if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+// Имя/аватар: Telegram initData или веб-сессия (VMWebAuth.applyUserToUi)
+if (tg.initDataUnsafe && tg.initDataUnsafe.user && window.VMWebAuth) {
+    window.VMWebAuth.applyUserToUi(tg.initDataUnsafe.user);
+} else if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
     const firstName = tg.initDataUnsafe.user.first_name;
     document.getElementById('user-name').textContent = firstName;
     const settingsHeroName = document.getElementById('settings-hero-name');
@@ -1331,6 +1333,9 @@ async function loadUserData(options = {}) {
             updatePlanUI(data.plan, data.planUntil || null, data.bonusGenerations || 0, data.quotaRemaining);
         }
         applyOwnerOnlySections(Boolean(data?.isOwner));
+        if (data?.user && window.VMWebAuth) {
+            window.VMWebAuth.applyUserToUi(data.user);
+        }
         if (data && data.profile) {
             document.getElementById('profile-niche').value = data.profile.niche || '';
             document.getElementById('profile-language').value = data.profile.language || '';
