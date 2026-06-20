@@ -137,7 +137,13 @@ pm2 restart viral-maker
 pm2 logs viral-maker --lines 80      # строка [generate-image] покажет причину
 ```
 
-Частые причины: пустой `GEMINI_API_KEY`, ключ без доступа к image-моделям, не включён биллинг в Google AI Studio.
+Частые причины: пустой `GEMINI_API_KEY`, ключ без доступа к image-моделям, не включён биллинг в Google AI Studio, **Google блокирует IP VPS** (`User location is not supported`).
+
+```bash
+node scripts/gemini-geo-check.js   # быстрая проверка доступности Gemini с сервера
+```
+
+Если geo-check падает — см. `scripts/cloudflare-gemini-relay/README.md` или задайте `GEMINI_HTTPS_PROXY`.
 
 ## Отвязка от Vercel
 

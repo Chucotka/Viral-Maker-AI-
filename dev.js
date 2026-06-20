@@ -1,4 +1,7 @@
 require('dotenv').config({ quiet: true });
+const { configureGeminiNetwork } = require('./lib/geminiNetwork');
+configureGeminiNetwork();
+
 const http = require('http');
 const app = require('./server/index.js');
 
