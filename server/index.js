@@ -1,6 +1,6 @@
 /**
  * Express dev-сервер для локальной разработки.
- * Все API-маршруты монтируются из api/*.js (тот же код, что на Vercel).
+ * Все API-маршруты монтируются из api/*.js (единый код для VPS и локальной разработки).
  */
 const express = require('express');
 const path = require('path');
@@ -20,22 +20,20 @@ app.use(
 
 const publicDir = path.join(__dirname, '../public');
 
-/** Корень — Telegram Mini App и legacy URL. */
-app.use(express.static(publicDir));
+/** SPA на корне: innoko.ru/#/dashboard (как levsha.studio) */
+app.use(express.static(publicDir, { index: 'index.html' }));
 
-/** Веб-версия на innoko.ru/app */
-app.get('/app', (req, res, next) => {
-  if (req.path !== '/app') return next();
-  return res.redirect(301, '/app/');
+/** Legacy URL → hash-роут */
+app.get(['/app', '/app/'], (req, res) => {
+  res.redirect(301, '/#/dashboard');
 });
-app.use('/app', express.static(publicDir, { index: 'index.html' }));
 
 mountApiRoutes(app);
 
 /** Совместимость: Manus/legacy путь → тот же callback, что /api/auth/telegram-callback */
 app.get('/auth/telegram/callback', require('../api/auth-telegram-callback'));
 
-/** Dev-only health check (на Vercel используйте /api/webhook GET). */
+/** Health check */
 app.get('/api/ping', (req, res) => res.send('pong'));
 
 module.exports = app;
