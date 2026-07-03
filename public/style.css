@@ -113,6 +113,22 @@ h3 { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
     background: #2AABEE;
     color: #fff;
 }
+.web-auth-login-btn-telegram {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+.web-auth-tg-icon {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M9.78 15.28l-.28 3.92c.4 0 .57-.17.78-.38l1.87-1.78 3.88 2.85c.71.39 1.21.19 1.4-.65l2.55-12c.23-1.05-.38-1.46-1.07-1.2L2.6 9.77c-1.04.4-1.03.97-.19 1.23l4.6 1.44L18.9 6.5c.56-.37 1.08-.17.66.2'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+.user-name-login {
+    color: var(--accent);
+    font-weight: 600;
+}
 .web-auth-login-btn-secondary {
     background: var(--surface);
     color: var(--text);

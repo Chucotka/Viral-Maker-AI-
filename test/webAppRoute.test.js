@@ -18,14 +18,14 @@ function request(path) {
   });
 }
 
-describe('web app route /app', () => {
+describe('web app routes', () => {
   it('/app redirects once to /app/', async () => {
     const res = await request('/app');
     assert.equal(res.status, 301);
     assert.equal(res.location, '/app/');
   });
 
-  it('/app/ serves HTML without redirect loop', async () => {
+  it('/app/ serves HTML', async () => {
     const res = await request('/app/');
     assert.equal(res.status, 200);
   });
