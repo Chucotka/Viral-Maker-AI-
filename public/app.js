@@ -21,6 +21,26 @@ function miniAppHeaders(jsonBody = false) {
     return h;
 }
 
+function showAppAlert(message, title) {
+    if (window.VMRuntime?.alert) {
+        window.VMRuntime.alert(message, title);
+        return;
+    }
+    if (typeof tg.showAlert === 'function') {
+        tg.showAlert(String(message || ''));
+        return;
+    }
+    window.alert(String(message || ''));
+}
+
+function showAppPopup(opts) {
+    if (typeof tg.showPopup === 'function') {
+        tg.showPopup(opts);
+        return;
+    }
+    showAppAlert(opts?.message || '', opts?.title);
+}
+
 function escapeHtml(s) {
     return String(s)
         .replace(/&/g, '&amp;')
@@ -508,16 +528,29 @@ function handlePremiumBotAction() {
 }
 
 async function buyPlanViaTribute(plan) {
+    if (window.VMWebAuth?.isGuest?.()) {
+        showAppAlert(
+            'Войдите через Telegram — подписка активируется на ваш Telegram ID после оплаты.',
+            'Нужен вход',
+        );
+        window.VMWebAuth.showOverlay?.();
+        return;
+    }
     try {
-        const response = await fetch(`/api/tribute-link?plan=${encodeURIComponent(plan)}`);
+        const channel = window.VMRuntime?.isTelegram ? 'telegram' : 'web';
+        const response = await fetch(
+            `/api/tribute-link?plan=${encodeURIComponent(plan)}&channel=${encodeURIComponent(channel)}`,
+        );
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-            tg.showAlert(data.message || data.error || 'Не удалось открыть Tribute.');
+            showAppAlert(data.message || data.error || 'Не удалось открыть Tribute.');
             return;
         }
         if (data.link) {
-            startPlanRefreshPolling();
-            if (typeof tg.openLink === 'function') {
+            startPlanRefreshPolling(plan);
+            if (window.VMRuntime?.isTelegram && typeof tg.openTelegramLink === 'function' && data.telegramLink) {
+                tg.openTelegramLink(data.telegramLink);
+            } else if (typeof tg.openLink === 'function') {
                 tg.openLink(data.link);
             } else {
                 window.open(data.link, '_blank', 'noopener');
@@ -525,7 +558,7 @@ async function buyPlanViaTribute(plan) {
         }
     } catch (error) {
         console.error('Tribute payment error:', error);
-        tg.showAlert('Произошла ошибка при открытии Tribute.');
+        showAppAlert('Произошла ошибка при открытии Tribute.');
     }
 }
 
@@ -536,24 +569,35 @@ function stopPlanRefreshPolling() {
     }
 }
 
-function startPlanRefreshPolling() {
+function startPlanRefreshPolling(expectedPlan) {
     stopPlanRefreshPolling();
     let attempts = 0;
     planRefreshTimer = setInterval(async () => {
         attempts += 1;
         const previousPlan = userPlan;
         await loadUserData({ silent: true });
-        if (userPlan !== previousPlan && (userPlan === 'pro' || userPlan === 'premium')) {
+        const activated =
+            userPlan !== previousPlan &&
+            (userPlan === 'pro' || userPlan === 'premium') &&
+            (!expectedPlan || userPlan === expectedPlan || expectedPlan === 'pro');
+        if (activated) {
             stopPlanRefreshPolling();
-            tg.showPopup({
+            showAppPopup({
                 title: 'Подписка активирована',
-                message: userPlan === 'premium' ? 'Premium уже доступен в приложении.' : 'Pro уже доступен в приложении.',
+                message:
+                    userPlan === 'premium'
+                        ? 'Premium уже доступен в приложении.'
+                        : 'Pro уже доступен в приложении.',
                 buttons: [{ type: 'ok' }],
             });
             return;
         }
-        if (attempts >= 20) {
+        if (attempts >= 30) {
             stopPlanRefreshPolling();
+            showAppAlert(
+                'Если оплата прошла, но тариф не обновился — подождите минуту и обновите страницу. При проблеме напишите в поддержку с чеком.',
+                'Проверка оплаты',
+            );
         }
     }, 4000);
 }

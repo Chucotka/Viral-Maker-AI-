@@ -23,7 +23,7 @@ const API_ROUTES = [
   { path: '/api/tribute-link', module: '../api/create-invoice', methods: ['get'] },
   { path: '/api/debug-plan', module: '../api/manual-plan', methods: ['post'] },
   { path: '/api/manual-plan', module: '../api/manual-plan', methods: ['get', 'post'] },
-  { path: '/api/tribute-webhook', module: '../api/tribute-webhook', methods: ['post'] },
+  { path: '/api/tribute-webhook', module: '../api/tribute-webhook', methods: ['get', 'head', 'post'] },
   { path: '/api/webhook', module: '../api/webhook', methods: ['get', 'post'] },
   { path: '/api/trends', module: '../api/trends', methods: ['get'] },
   { path: '/api/health', module: '../api/health', methods: ['get'] },

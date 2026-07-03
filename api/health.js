@@ -15,6 +15,9 @@ module.exports = async (req, res) => {
     tribute: Boolean(process.env.TRIBUTE_API_KEY),
     session: Boolean(process.env.SESSION_SECRET || process.env.DEBUG_ADMIN_SECRET),
     webapp_url: process.env.WEBAPP_URL || null,
+    tribute_webhook_url: process.env.WEBAPP_URL
+      ? `${String(process.env.WEBAPP_URL).replace(/\/$/, '')}/api/tribute-webhook`
+      : null,
     ts: new Date().toISOString(),
   };
 

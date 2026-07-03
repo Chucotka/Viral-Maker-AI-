@@ -21,6 +21,27 @@ describe('apiErrorMap', () => {
   });
 });
 
+describe('tribute payment link', () => {
+  it('returns telegram link when channel=telegram', async () => {
+    process.env.TRIBUTE_PRO_WEBLINK = 'https://web.tribute.tg/p/vya';
+    process.env.TRIBUTE_PRO_PRODUCT_ID = '121282';
+    const handler = require('../api/create-invoice');
+    let body;
+    const res = {
+      json(data) {
+        body = data;
+      },
+      status() {
+        return this;
+      },
+    };
+    await handler({ method: 'GET', query: { plan: 'pro', channel: 'telegram' } }, res);
+    assert.match(body.link, /^https:\/\/t\.me\/tribute\/app\?startapp=p121282$/);
+    delete process.env.TRIBUTE_PRO_WEBLINK;
+    delete process.env.TRIBUTE_PRO_PRODUCT_ID;
+  });
+});
+
 describe('tributeWebhook signature', () => {
   it('verifies HMAC with raw JSON body', () => {
     const { verifyTributeSignature, readTributeSignature } = require('../lib/tributeWebhook');

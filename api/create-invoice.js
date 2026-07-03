@@ -9,13 +9,22 @@ async function handleTributeLink(req, res) {
   if (!config) {
     return res.status(400).json({ error: 'invalid_plan' });
   }
-  if (!config.webLink) {
+  if (!config.webLink && !config.telegramLink) {
     return res.status(503).json({
       error: 'tribute_not_configured',
       message: 'Добавьте TRIBUTE_PRO_WEBLINK / TRIBUTE_PREMIUM_WEBLINK в .env на сервере.',
     });
   }
-  return res.json({ plan: config.plan, link: config.webLink });
+  const preferTelegram = String(req.query?.channel || '').toLowerCase() === 'telegram';
+  const link =
+    preferTelegram && config.telegramLink ? config.telegramLink : config.webLink || config.telegramLink;
+  return res.json({
+    plan: config.plan,
+    link,
+    webLink: config.webLink,
+    telegramLink: config.telegramLink,
+    productId: config.productId,
+  });
 }
 
 module.exports = async (req, res) => {
