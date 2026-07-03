@@ -22,6 +22,26 @@
     }
   }
 
+  function showMergeNotice() {
+    global.VMRuntime?.alert?.(
+      'Ваши генерации и настройки сохранены в Telegram-аккаунте.',
+      'Вход выполнен',
+    );
+  }
+
+  function consumeQueryFlag(name) {
+    try {
+      const u = new URL(global.location.href);
+      if (u.searchParams.get(name) !== '1') return false;
+      u.searchParams.delete(name);
+      const qs = u.searchParams.toString();
+      global.history.replaceState({}, '', u.pathname + (qs ? `?${qs}` : '') + u.hash);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   function parseTgAuthResultFromHash() {
     try {
       const hash = String(global.location.hash || '');
@@ -75,7 +95,7 @@
 
       const hint = document.createElement('p');
       hint.className = 'web-auth-alt';
-      hint.textContent = 'Telegram нужен для синхронизации с мини-приложением и оплаты подписки.';
+      hint.textContent = 'Генерации и настройки сохранятся в вашем Telegram-аккаунте.';
       host.appendChild(hint);
     } catch (e) {
       host.innerHTML = `<p class="web-auth-alt">${e.message || 'Ошибка'}</p>`;
@@ -92,6 +112,8 @@
     if (data.user) applyUserToUi(data.user, false);
     hideOverlay();
     global.__vmWebGuest = false;
+    if (data.mergedGuest) showMergeNotice();
+    await global.loadUserData?.();
     return data;
   }
 
@@ -162,6 +184,8 @@
         global.VMRuntime?.alert(e.message || 'Не удалось войти');
       }
     }
+
+    if (consumeQueryFlag('guest_merged')) showMergeNotice();
 
     const sessionRes = await global.VMRuntime.apiFetch('/api/auth/session');
     const session = await sessionRes.json().catch(() => ({}));
