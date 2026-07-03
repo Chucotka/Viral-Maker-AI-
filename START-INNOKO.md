@@ -40,23 +40,28 @@ bash scripts/setup-vps-innoko.sh
 
 ### 4. BotFather
 
-- `/setdomain` → `app.innoko.ru`
-- Menu Button → `https://app.innoko.ru`
+- `/setdomain` → `innoko.ru`
+- Menu Button → `https://innoko.ru/`
 
-**`.env` на VPS — токен бота в кавычках** (иначе теряется первая цифра `8`):
+**`.env` на VPS:**
 
 ```env
+WEBAPP_URL=https://innoko.ru
 TELEGRAM_BOT_ID=8520170966
 TELEGRAM_BOT_TOKEN="8520170966:полный_токен_из_BotFather"
 ```
 
 ```bash
-curl "https://api.telegram.org/bot<ТОКЕН>/setWebhook?url=https://app.innoko.ru/api/webhook"
+curl "https://api.telegram.org/bot<ТОКЕН>/setWebhook?url=https://innoko.ru/api/webhook"
 ```
 
 ---
 
 ## Проверка без VPN
+
+- `https://innoko.ru/#/dashboard` — приложение на сайте
+- `https://innoko.ru/#/studio` — студия
+- `https://innoko.ru/landing` — маркетинговый лендинг (Manus)
 
 Телефон, VPN выключен:
 
