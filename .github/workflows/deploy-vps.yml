@@ -10,6 +10,7 @@ on:
   push:
     branches:
       - cursor/guest-telegram-link-e202
+      - cursor/product-hardening-e202
       - cursor/fix-app-launch-e202
 
 jobs:
