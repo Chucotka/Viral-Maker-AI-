@@ -1,6 +1,7 @@
 const { validateTelegramLoginWidget } = require('../lib/telegramLoginWidget');
 const { signSession, setSessionCookie } = require('../lib/webSession');
 const { resolveWebAppUrl } = require('../lib/webOrigin');
+const { mergeGuestIntoTelegram, readGuestUserIdFromRequest } = require('../lib/guestAccountMerge');
 
 module.exports = async (req, res) => {
   if (req.method !== 'GET') return res.status(405).end();
@@ -19,9 +20,18 @@ module.exports = async (req, res) => {
 
   try {
     const userId = String(validated.user.id);
-    const sessionToken = signSession({ userId, user: validated.user });
+    let mergedGuest = false;
+    const guestUserId = readGuestUserIdFromRequest(req);
+    if (guestUserId) {
+      const mergeResult = await mergeGuestIntoTelegram(guestUserId, userId, validated.user);
+      mergedGuest = mergeResult.merged === true;
+    }
+
+    const sessionToken = signSession({ userId, user: validated.user, authKind: 'telegram' });
     setSessionCookie(res, sessionToken);
-    return res.redirect(302, appUrl);
+    const redirectUrl = new URL(appUrl);
+    if (mergedGuest) redirectUrl.searchParams.set('guest_merged', '1');
+    return res.redirect(302, redirectUrl.toString());
   } catch (e) {
     return res.redirect(302, `${appUrl}?auth_error=session`);
   }

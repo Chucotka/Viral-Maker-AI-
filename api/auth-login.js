@@ -1,6 +1,7 @@
 const { validateTelegramLoginWidget } = require('../lib/telegramLoginWidget');
 const { signSession, setSessionCookie } = require('../lib/webSession');
 const { sendSafeError } = require('../lib/httpErrors');
+const { mergeGuestIntoTelegram, readGuestUserIdFromRequest } = require('../lib/guestAccountMerge');
 
 function parseStartParam(body) {
   const raw = body?.startParam || body?.startapp || '';
@@ -27,6 +28,13 @@ module.exports = async (req, res) => {
 
     const userId = String(validated.user.id);
     const startParam = parseStartParam(req.body);
+    const guestUserId = readGuestUserIdFromRequest(req);
+
+    let mergeResult = { merged: false };
+    if (guestUserId) {
+      mergeResult = await mergeGuestIntoTelegram(guestUserId, userId, validated.user);
+    }
+
     let sessionToken;
     try {
       sessionToken = signSession({ userId, user: validated.user, startParam, authKind: 'telegram' });
@@ -38,7 +46,12 @@ module.exports = async (req, res) => {
     }
 
     setSessionCookie(res, sessionToken);
-    return res.json({ ok: true, userId, user: validated.user });
+    return res.json({
+      ok: true,
+      userId,
+      user: validated.user,
+      mergedGuest: mergeResult.merged === true,
+    });
   } catch (e) {
     sendSafeError(res, e, 'auth-login');
   }
