@@ -20,13 +20,15 @@ app.use(
 
 const publicDir = path.join(__dirname, '../public');
 
-/** SPA на корне: innoko.ru/#/dashboard (как levsha.studio) */
-app.use(express.static(publicDir, { index: 'index.html' }));
+/** Корень — для локальной разработки и Telegram Mini App */
+app.use(express.static(publicDir));
 
-/** Legacy URL → hash-роут */
-app.get(['/app', '/app/'], (req, res) => {
-  res.redirect(301, '/#/dashboard');
+/** Веб-приложение: app.innoko.ru/app */
+app.get('/app', (req, res, next) => {
+  if (req.path !== '/app') return next();
+  return res.redirect(301, '/app/');
 });
+app.use('/app', express.static(publicDir, { index: 'index.html' }));
 
 mountApiRoutes(app);
 

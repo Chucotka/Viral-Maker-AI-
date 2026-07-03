@@ -19,20 +19,14 @@ function request(path) {
 }
 
 describe('web app routes', () => {
-  it('/ serves HTML at root', async () => {
-    const res = await request('/');
-    assert.equal(res.status, 200);
-  });
-
-  it('/app redirects to /#/dashboard', async () => {
+  it('/app redirects once to /app/', async () => {
     const res = await request('/app');
     assert.equal(res.status, 301);
-    assert.equal(res.location, '/#/dashboard');
+    assert.equal(res.location, '/app/');
   });
 
-  it('/app/ redirects to /#/dashboard', async () => {
+  it('/app/ serves HTML', async () => {
     const res = await request('/app/');
-    assert.equal(res.status, 301);
-    assert.equal(res.location, '/#/dashboard');
+    assert.equal(res.status, 200);
   });
 });

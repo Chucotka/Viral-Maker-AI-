@@ -21,6 +21,9 @@
   function syncHash(tabId, replace = true) {
     if (global.VMRuntime?.isTelegram) return;
     const next = hashForTab(tabId);
+    const path = global.location.pathname || '/';
+    const onApp = path.startsWith('/app');
+    if (!onApp && !global.location.hash) return;
     if (global.location.hash === next) return;
     if (replace) {
       global.history.replaceState(null, '', next);
@@ -52,8 +55,6 @@
 
     if (global.location.hash) {
       applyFromHash();
-    } else {
-      syncHash(DEFAULT_TAB);
     }
   }
 

@@ -51,6 +51,8 @@ module.exports = async (req, res) => {
         plan: rec.plan,
         dailyCount: rec.dailyCount,
         userId: auth.userId,
+        user: auth.user || null,
+        isGuest: auth.authKind === 'guest',
         isOwner: isAppOwner(auth.userId),
         planUntil: rec.planUntil || null,
         bonusGenerations: rec.bonusGenerations || 0,

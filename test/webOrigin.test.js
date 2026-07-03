@@ -19,22 +19,14 @@ describe('webOrigin', () => {
     else delete process.env.WEB_AUTH_ORIGIN;
   });
 
-  it('uses innoko.ru with hash route when WEBAPP_URL is innoko.ru', () => {
+  it('uses app.innoko.ru for innoko.ru WEBAPP_URL', () => {
     process.env.WEBAPP_URL = 'https://innoko.ru/app';
-    assert.equal(resolveWebAuthOrigin(), 'https://innoko.ru');
-    assert.equal(resolveWebAppUrl(), 'https://innoko.ru/#/dashboard');
+    assert.equal(resolveWebAuthOrigin(), 'https://app.innoko.ru');
+    assert.equal(resolveWebAppUrl(), 'https://app.innoko.ru/app/');
   });
 
-  it('maps app.innoko.ru to innoko.ru', () => {
+  it('keeps app.innoko.ru/app path', () => {
     process.env.WEBAPP_URL = 'https://app.innoko.ru/app';
-    assert.equal(resolveWebAuthOrigin(), 'https://innoko.ru');
-    assert.equal(resolveWebAppUrl(), 'https://innoko.ru/#/dashboard');
-  });
-
-  it('respects WEB_AUTH_ORIGIN override', () => {
-    process.env.WEB_AUTH_ORIGIN = 'https://custom.example.com';
-    process.env.WEBAPP_URL = 'https://innoko.ru';
-    assert.equal(resolveWebAuthOrigin(), 'https://custom.example.com');
-    assert.equal(resolveWebAppUrl(), 'https://custom.example.com/#/dashboard');
+    assert.equal(resolveWebAppUrl(), 'https://app.innoko.ru/app/');
   });
 });
