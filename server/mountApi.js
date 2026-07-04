@@ -1,5 +1,5 @@
 /**
- * Монтирует Vercel handlers (api/*.js) на Express dev-сервер.
+ * Монтирует API handlers (api/*.js) на Express dev-сервер.
  * Единый источник правды для dev и prod — устраняет drift server vs api.
  */
 
