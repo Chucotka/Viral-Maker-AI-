@@ -6,9 +6,10 @@ on:
       branch:
         description: 'Branch to deploy'
         required: true
-        default: 'cursor/production-hardening-e202'
+        default: 'cursor/guest-onboarding-p1-e202'
   push:
     branches:
+      - cursor/guest-onboarding-p1-e202
       - cursor/production-hardening-e202
       - cursor/referral-e2e-e202
       - cursor/product-hardening-e202
