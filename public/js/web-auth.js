@@ -31,6 +31,13 @@
 
   function readStartParamFromUrl() {
     try {
+      const u = new URL(global.location.href);
+      const fromUrl = u.searchParams.get('startapp') || u.searchParams.get('start_param');
+      if (fromUrl && String(fromUrl).trim()) return String(fromUrl).trim();
+    } catch {
+      /* ignore */
+    }
+    try {
       const stored = global.sessionStorage?.getItem('vm_start_param');
       if (stored && String(stored).trim()) return String(stored).trim();
     } catch {
@@ -39,13 +46,6 @@
     if (global.ReferralSystem?.readStartParam) {
       const fromRef = global.ReferralSystem.readStartParam();
       if (fromRef) return fromRef;
-    }
-    try {
-      const u = new URL(global.location.href);
-      const raw = u.searchParams.get('startapp') || u.searchParams.get('start_param');
-      if (raw && String(raw).trim()) return String(raw).trim();
-    } catch {
-      /* ignore */
     }
     return null;
   }

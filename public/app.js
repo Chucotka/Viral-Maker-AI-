@@ -1332,6 +1332,26 @@ function applyOwnerOnlySections(isOwnerFromServer) {
     });
 }
 
+function updateReferralInviteBanner(referral) {
+    const invited = referral?.referrerId && !referral?.referralConfirmed;
+    let el = document.getElementById('referral-invite-banner');
+    if (!invited) {
+        el?.classList.add('hidden');
+        return;
+    }
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'referral-invite-banner';
+        el.className = 'referral-invite-banner';
+        const host = document.querySelector('#tab-dashboard .main-cta-container');
+        if (host) host.before(el);
+        else document.querySelector('#tab-dashboard')?.prepend(el);
+    }
+    el.classList.remove('hidden');
+    el.innerHTML =
+        '🎁 <strong>Вы по приглашению.</strong> Сделайте первую генерацию в Studio — друг получит +10 бонусных генераций.';
+}
+
 async function loadUserData(options = {}) {
     const { silent = false } = options;
     try {
@@ -1393,6 +1413,7 @@ async function loadUserData(options = {}) {
                     'Вы перешли по приглашению. После вашей первой генерации друг получит +10 бонусных генераций.',
             });
         }
+        updateReferralInviteBanner(data?.referral);
         if (data?.supportChatLink) {
             supportChatLink = data.supportChatLink;
         }
@@ -1861,7 +1882,7 @@ async function runTextGeneration(opts = {}) {
     limitMsg.classList.add('hidden');
 
     if (!topic) {
-        tg.showAlert(opts.emptyTopicMessage || 'Пожалуйста, введите тему или идею.');
+        showAppAlert(opts.emptyTopicMessage || 'Пожалуйста, введите тему или идею.');
         return;
     }
 
