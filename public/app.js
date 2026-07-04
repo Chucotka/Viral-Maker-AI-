@@ -1639,14 +1639,14 @@ async function activateManualPlan(plan) {
     const statusEl = document.getElementById('manual-activate-status');
     const target = targetInput ? targetInput.value.trim() : '';
     if (!target) {
-        tg.showAlert('Введите @username или userId.');
+        showAppAlert('Введите @username или userId.');
         return;
     }
 
     const secret = secretInput ? secretInput.value.trim() : '';
     if (!secret) {
         if (statusEl) statusEl.textContent = 'Введите DEBUG_ADMIN_SECRET в поле ниже @username/userId.';
-        tg.showAlert('Введите DEBUG_ADMIN_SECRET в поле ниже @username/userId.');
+        showAppAlert('Введите DEBUG_ADMIN_SECRET в поле ниже @username/userId.');
         return;
     }
 
@@ -1665,7 +1665,7 @@ async function activateManualPlan(plan) {
         if (!response.ok) {
             const message = data.message || data.error || 'Не удалось активировать тариф.';
             if (statusEl) statusEl.textContent = message;
-            tg.showAlert(message);
+            showAppAlert(message);
             return;
         }
 
@@ -1673,15 +1673,15 @@ async function activateManualPlan(plan) {
         const until = data.planUntil ? new Date(data.planUntil).toLocaleDateString('ru-RU') : '';
         const text = `${data.plan === 'premium' ? 'Premium' : 'Pro'} выдан пользователю ${targetLabel}${until ? ` до ${until}` : ''}.`;
         if (statusEl) statusEl.textContent = text;
-        tg.showPopup({
+        showAppPopup({
             title: 'Готово',
             message: text,
             buttons: [{ type: 'ok' }],
         });
     } catch (error) {
         console.error('Manual plan error:', error);
-        if (statusEl) statusEl.textContent = 'Ошибка при ручной активации тарифа.';
-        tg.showAlert('Ошибка при ручной активации тарифа.');
+        if (statusEl) statusEl.textContent = error?.message || 'Ошибка при ручной активации тарифа.';
+        showAppAlert(error?.message || 'Ошибка при ручной активации тарифа.');
     }
 }
 
@@ -1703,7 +1703,7 @@ async function loadCleanupPlans() {
     const secret = getCleanupSecret();
     if (!secret) {
         if (statusEl) statusEl.textContent = 'Введите DEBUG_ADMIN_SECRET в поле выше.';
-        tg.showAlert('Введите DEBUG_ADMIN_SECRET в поле выше.');
+        showAppAlert('Введите DEBUG_ADMIN_SECRET в поле выше.');
         return;
     }
 
@@ -1719,9 +1719,9 @@ async function loadCleanupPlans() {
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-            const message = data.message || data.error || 'Не удалось получить список.';
+            const message = data.message || data.error || `Не удалось получить список (HTTP ${response.status}).`;
             if (statusEl) statusEl.textContent = message;
-            tg.showAlert(message);
+            showAppAlert(message);
             return;
         }
 
@@ -1738,6 +1738,8 @@ async function loadCleanupPlans() {
 
         if (window.AdminSubs) {
             AdminSubs.renderOverview(overview);
+        } else {
+            throw new Error('AdminSubs не загружен. Обновите страницу.');
         }
 
         const t = overview.totals || {};
@@ -1747,8 +1749,9 @@ async function loadCleanupPlans() {
         }
     } catch (error) {
         console.error('Cleanup list error:', error);
-        if (statusEl) statusEl.textContent = 'Ошибка при загрузке списка.';
-        tg.showAlert('Ошибка при загрузке подписок.');
+        const message = error?.message || 'Ошибка при загрузке списка.';
+        if (statusEl) statusEl.textContent = message;
+        showAppAlert(message);
     }
 }
 
@@ -1757,7 +1760,7 @@ async function resetCleanupPlan(userId, username = '') {
     const secret = getCleanupSecret();
     if (!secret) {
         if (statusEl) statusEl.textContent = 'Введите DEBUG_ADMIN_SECRET в поле выше.';
-        tg.showAlert('Введите DEBUG_ADMIN_SECRET в поле выше.');
+        showAppAlert('Введите DEBUG_ADMIN_SECRET в поле выше.');
         return;
     }
 
@@ -1780,12 +1783,12 @@ async function resetCleanupPlan(userId, username = '') {
         if (!response.ok) {
             const message = data.message || data.error || 'Не удалось сбросить тариф.';
             if (statusEl) statusEl.textContent = message;
-            tg.showAlert(message);
+            showAppAlert(message);
             return;
         }
 
         if (statusEl) statusEl.textContent = `Пользователь ${label} сброшен в Free.`;
-        tg.showPopup({
+        showAppPopup({
             title: 'Готово',
             message: `Тариф пользователя ${label} сброшен в Free.`,
             buttons: [{ type: 'ok' }],
@@ -1794,8 +1797,8 @@ async function resetCleanupPlan(userId, username = '') {
         await loadUserData({ silent: true });
     } catch (error) {
         console.error('Cleanup reset error:', error);
-        if (statusEl) statusEl.textContent = 'Ошибка при сбросе тарифа.';
-        tg.showAlert('Ошибка при сбросе тарифа.');
+        if (statusEl) statusEl.textContent = error?.message || 'Ошибка при сбросе тарифа.';
+        showAppAlert(error?.message || 'Ошибка при сбросе тарифа.');
     }
 }
 
