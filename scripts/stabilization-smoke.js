@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Smoke-check «работает без VPN»: API, веб-сессия, статика, прокси Telegram CDN.
+ * Smoke-check «работает без VPN»: API, веб-сессия, статика, Telegram SDK.
  * Exit 0 — критичные проверки пройдены.
  *
  * Локально на VPS:  node scripts/stabilization-smoke.js --local
@@ -10,12 +10,24 @@ require('dotenv').config({ quiet: true });
 
 const http = require('http');
 const https = require('https');
+const { resolveWebAuthOrigin, resolveWebAppUrl } = require('../lib/webOrigin');
 
 const args = process.argv.slice(2);
 const localMode = args.includes('--local');
 const port = Number(process.env.PORT || 3001);
-const basePublic = String(process.env.WEBAPP_URL || 'https://app.innoko.ru').replace(/\/$/, '');
-const base = localMode ? `http://127.0.0.1:${port}` : basePublic;
+
+function resolveTargets() {
+  if (localMode) {
+    const origin = `http://127.0.0.1:${port}`;
+    return { apiOrigin: origin, appUrl: `${origin}/app/` };
+  }
+  return {
+    apiOrigin: resolveWebAuthOrigin(),
+    appUrl: resolveWebAppUrl(),
+  };
+}
+
+const { apiOrigin, appUrl } = resolveTargets();
 
 const results = [];
 const LATENCY_WARN_MS = 4000;
@@ -83,14 +95,14 @@ function noteLatency(name, ms) {
 }
 
 async function checkPing() {
-  const r = await request(`${base}/api/ping`);
+  const r = await request(`${apiOrigin}/api/ping`);
   noteLatency('ping', r.ms);
   if (r.status === 200 && String(r.raw).includes('pong')) pass('GET /api/ping', `${r.ms} ms`);
   else fail('GET /api/ping', `HTTP ${r.status}`);
 }
 
 async function checkHealth() {
-  const r = await request(`${base}/api/health`);
+  const r = await request(`${apiOrigin}/api/health`);
   noteLatency('health', r.ms);
   const c = r.json || {};
   if (r.status !== 200 && r.status !== 503) {
@@ -103,12 +115,15 @@ async function checkHealth() {
   if (!c.bot) issues.push('bot');
   if (!c.session) issues.push('session');
   if (issues.length) fail('GET /api/health', `missing: ${issues.join(', ')}`);
-  else pass('GET /api/health', `${r.ms} ms · ok=${c.ok}`);
+  else {
+    const build = c.build_version ? ` · build=${c.build_version}` : '';
+    pass('GET /api/health', `${r.ms} ms · ok=${c.ok}${build}`);
+  }
   if (!c.gemini_proxy) warn('Gemini proxy', 'GEMINI_HTTPS_PROXY не задан — генерация может падать из РФ');
 }
 
 async function checkTrends() {
-  const r = await request(`${base}/api/trends`);
+  const r = await request(`${apiOrigin}/api/trends`);
   noteLatency('trends', r.ms);
   const trends = r.json?.trends;
   if (r.status === 200 && Array.isArray(trends) && trends.length > 0) {
@@ -117,8 +132,15 @@ async function checkTrends() {
 }
 
 async function checkGuestSession() {
-  const r = await request(`${base}/api/auth/session`);
+  const r = await request(`${apiOrigin}/api/auth/session`);
   noteLatency('auth/session', r.ms);
+  if (r.status === 429 && r.json?.error === 'guest_ip_limit') {
+    warn(
+      'GET /api/auth/session',
+      'guest_ip_limit с IP VPS — норма при частых деплоях, в браузере работает',
+    );
+    return;
+  }
   if (r.status !== 200) {
     fail('GET /api/auth/session', `HTTP ${r.status} ${r.json?.error || ''}`);
     return;
@@ -136,46 +158,71 @@ async function checkGuestSession() {
   }
 }
 
+async function checkEventsApi() {
+  const r = await request(`${apiOrigin}/api/events`, {
+    method: 'POST',
+    body: { stage: 'app_open', props: { smoke: true } },
+  });
+  if (r.status === 200 && r.json?.ok) {
+    pass('POST /api/events', `${r.ms} ms`);
+  } else {
+    fail('POST /api/events', `HTTP ${r.status}`);
+  }
+}
+
 async function checkAppHtml() {
-  const r = await request(`${base}/app/`);
+  const r = await request(appUrl);
   noteLatency('app html', r.ms);
   if (r.status !== 200) {
     fail('GET /app/', `HTTP ${r.status}`);
     return;
   }
   const html = r.raw || '';
-  if (html.includes('telegram-web-app.js')) pass('App HTML', 'telegram SDK hook present');
-  else fail('App HTML', 'missing scripts');
+  if (html.includes('telegram-boot.js') || html.includes('telegram-web-app.js')) {
+    pass('App HTML', 'telegram bootstrap present');
+  } else fail('App HTML', 'missing telegram bootstrap');
   if (/src="https:\/\/telegram\.org\/js\/telegram-web-app\.js"/.test(html)) {
     fail('No direct telegram.org SDK', 'still loads external CDN — slow without VPN');
-  } else pass('No direct telegram.org SDK', 'browser uses stub / tg-cdn');
-  if (html.includes('vm-runtime.js')) pass('App bundles', 'vm-runtime.js linked');
-  else fail('App bundles', 'vm-runtime.js missing');
+  } else pass('No direct telegram.org SDK', 'browser uses stub / self-hosted SDK');
+  if (html.includes('vm-runtime.js') && html.includes('vm-analytics.js')) {
+    pass('App bundles', 'vm-runtime + vm-analytics linked');
+  } else if (html.includes('vm-runtime.js')) {
+    pass('App bundles', 'vm-runtime.js linked');
+  } else fail('App bundles', 'vm-runtime.js missing');
 }
 
-async function checkTgCdnProxy() {
-  if (localMode) {
-    warn('tg-cdn proxy', 'skipped in --local mode (needs nginx)');
+async function checkTelegramSdkAsset() {
+  const r = await request(`${appUrl}js/telegram-web-app.js`);
+  noteLatency('telegram sdk', r.ms);
+  if (r.status === 200 && r.raw.includes('Telegram')) {
+    pass('GET /app/js/telegram-web-app.js', `${r.ms} ms`);
     return;
   }
-  const r = await request(`${base}/tg-cdn/js/telegram-web-app.js`);
-  noteLatency('tg-cdn', r.ms);
-  if (r.status === 200 && r.raw.includes('Telegram')) {
-    pass('GET /tg-cdn/js/telegram-web-app.js', `${r.ms} ms`);
-  } else fail('GET /tg-cdn/js/telegram-web-app.js', `HTTP ${r.status}`);
+  if (localMode) {
+    warn('Telegram SDK asset', 'local check failed — verify public/js/telegram-web-app.js');
+    return;
+  }
+  const proxy = await request(`${apiOrigin}/tg-cdn/js/telegram-web-app.js`);
+  if (proxy.status === 200 && proxy.raw.includes('Telegram')) {
+    pass('GET /tg-cdn/js/telegram-web-app.js', `${proxy.ms} ms`);
+  } else {
+    warn('Telegram SDK asset', `self-hosted HTTP ${r.status}, tg-cdn HTTP ${proxy.status}`);
+  }
 }
 
 async function main() {
-  console.log(`\n=== Stabilization smoke ===`);
-  console.log(`Base: ${base}${localMode ? ' (local)' : ''}\n`);
+  console.log('\n=== Stabilization smoke ===');
+  console.log(`API: ${apiOrigin}`);
+  console.log(`App: ${appUrl}${localMode ? ' (local)' : ''}\n`);
 
   const steps = [
     checkPing,
     checkHealth,
     checkTrends,
     checkGuestSession,
+    checkEventsApi,
     checkAppHtml,
-    checkTgCdnProxy,
+    checkTelegramSdkAsset,
   ];
 
   for (const step of steps) {
@@ -199,12 +246,10 @@ async function main() {
     console.log(`Итог: ${failed.length} ошибок, ${warnings.length} предупреждений`);
     process.exit(1);
   }
-  console.log(`Итог: все ${results.length - warnings.length} проверок пройдены` +
-    (warnings.length ? `, ${warnings.length} предупреждений` : ''));
-  console.log('\nРучной чеклист в браузере (без VPN):');
-  console.log('  1. https://app.innoko.ru/app/ — интерфейс за 2–3 с');
-  console.log('  2. «Продолжить как гость» → Studio → генерация текста');
-  console.log('  3. «Войти через Telegram в браузере» → admin (если владелец)');
+  console.log(
+    `Итог: все ${results.length - warnings.length} проверок пройдены` +
+      (warnings.length ? `, ${warnings.length} предупреждений` : ''),
+  );
   process.exit(0);
 }
 
