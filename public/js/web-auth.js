@@ -207,6 +207,9 @@
   }
 
   async function ensureSession() {
+    const startParam = readStartParamFromUrl();
+    if (startParam) persistStartParam(startParam);
+
     if (global.VMRuntime?.isTelegram) return true;
 
     const hashUser = parseTgAuthResultFromHash();
@@ -220,8 +223,6 @@
 
     if (consumeQueryFlag('guest_merged')) showMergeNotice();
 
-    const startParam = readStartParamFromUrl();
-    if (startParam) persistStartParam(startParam);
     const sessionPath = startParam
       ? `/api/auth/session?startapp=${encodeURIComponent(startParam)}`
       : '/api/auth/session';

@@ -61,11 +61,7 @@ module.exports = async (req, res) => {
         message: 'На сервере не настроен SESSION_SECRET (или DEBUG_ADMIN_SECRET).',
       });
     }
-  } else if (
-    queryStartParam
-    && payload.authKind === 'guest'
-    && !payload.startParam
-  ) {
+  } else if (queryStartParam && !payload.startParam) {
     try {
       payload = refreshSession(res, payload, queryStartParam);
     } catch (e) {

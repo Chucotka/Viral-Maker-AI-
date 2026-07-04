@@ -1332,6 +1332,39 @@ function applyOwnerOnlySections(isOwnerFromServer) {
     });
 }
 
+function readReferralStartParam() {
+    try {
+        const stored = sessionStorage.getItem('vm_start_param');
+        if (stored && /^ref_\d+$/.test(String(stored).trim())) return String(stored).trim();
+    } catch {
+        /* ignore */
+    }
+    const fromRuntime = window.VMRuntime?.readStartParamFromUrl?.();
+    if (fromRuntime && /^ref_\d+$/.test(String(fromRuntime).trim())) return String(fromRuntime).trim();
+    const fromRef = window.ReferralSystem?.readStartParam?.();
+    if (fromRef && /^ref_\d+$/.test(String(fromRef).trim())) return String(fromRef).trim();
+    return '';
+}
+
+function showReferralSignupFeedback(signup, silent) {
+    if (!signup || silent) return;
+    if (signup.bound) {
+        showAppPopup({
+            title: 'Реферальная ссылка активна',
+            message:
+                'Вы перешли по приглашению. После вашей первой генерации друг получит +10 бонусных генераций.',
+        });
+        return;
+    }
+    if (signup.reason === 'self_referral') {
+        showAppAlert('Нельзя использовать свою реферальную ссылку.', 'Рефералка');
+        return;
+    }
+    if (signup.reason === 'already_referred' && signup.referrerId) {
+        showAppAlert('Вы уже перешли по реферальной ссылке ранее.', 'Рефералка');
+    }
+}
+
 function updateReferralInviteBanner(referral) {
     const invited = referral?.referrerId && !referral?.referralConfirmed;
     let el = document.getElementById('referral-invite-banner');
@@ -1354,8 +1387,12 @@ function updateReferralInviteBanner(referral) {
 
 async function loadUserData(options = {}) {
     const { silent = false } = options;
+    const startParam = readReferralStartParam();
+    const userPath = startParam
+        ? `/api/user?startapp=${encodeURIComponent(startParam)}`
+        : '/api/user';
     try {
-        const response = await fetch('/api/user', { headers: miniAppHeaders(false) });
+        const response = await fetch(userPath, { headers: miniAppHeaders(false) });
         const data = await response.json().catch(() => ({}));
         if (response.status === 401 || response.status === 503) {
             const msg = data.message || data.error || 'Проверьте настройки сервера (KV, Telegram).';
@@ -1363,7 +1400,7 @@ async function loadUserData(options = {}) {
             if (response.status === 401) {
                 if (window.VMRuntime?.isWeb && window.VMWebAuth) {
                     await window.VMWebAuth.ensureSession();
-                    if (!silent) await loadUserData({ silent: true });
+                    await loadUserData({ silent: startParam ? false : true });
                 } else if (!silent) {
                     (window.VMRuntime?.alert || tg.showAlert)?.(
                         'Откройте приложение из Telegram, чтобы загрузить профиль.',
@@ -1406,13 +1443,7 @@ async function loadUserData(options = {}) {
                 await loadUserData({ silent: true });
             }
         }
-        if (data?.referralSignup?.bound && !silent) {
-            showAppPopup({
-                title: 'Реферальная ссылка активна',
-                message:
-                    'Вы перешли по приглашению. После вашей первой генерации друг получит +10 бонусных генераций.',
-            });
-        }
+        showReferralSignupFeedback(data?.referralSignup, silent);
         updateReferralInviteBanner(data?.referral);
         if (data?.supportChatLink) {
             supportChatLink = data.supportChatLink;

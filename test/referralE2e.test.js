@@ -62,6 +62,36 @@ describe('auth-session startapp', () => {
     const req = { query: { startapp: 'not_a_ref' } };
     assert.equal(readStartParamFromQuery(req), null);
   });
+
+  it('adds startapp to existing telegram session', async () => {
+    const { signSession } = require('../lib/webSession');
+    const handler = require('../api/auth-session');
+    const token = signSession({
+      userId: '555',
+      user: { id: 555, first_name: 'T' },
+      authKind: 'telegram',
+    });
+    let body;
+    const res = {
+      json(data) {
+        body = data;
+      },
+      setHeader() {},
+      status() {
+        return this;
+      },
+    };
+    await handler(
+      {
+        method: 'GET',
+        headers: { cookie: `vm_session=${encodeURIComponent(token)}` },
+        query: { startapp: 'ref_999' },
+      },
+      res,
+    );
+    assert.equal(body.startParam, 'ref_999');
+    assert.equal(body.isGuest, false);
+  });
 });
 
 describe('referral E2E flow', () => {
@@ -170,5 +200,15 @@ describe('referral E2E flow', () => {
     assert.equal(links.requiresLogin, true);
     assert.equal(links.telegramLink, null);
     assert.equal(links.webLink, null);
+  });
+});
+
+describe('user readReferralParam', () => {
+  it('reads startapp from query when auth has no startParam', () => {
+    const { readReferralParam } = require('../api/user');
+    const req = { query: { startapp: 'ref_12345' } };
+    assert.equal(readReferralParam(req, null), 'ref_12345');
+    assert.equal(readReferralParam(req, 'ref_99'), 'ref_99');
+    assert.equal(readReferralParam({ query: { startapp: 'bad' } }, null), null);
   });
 });
