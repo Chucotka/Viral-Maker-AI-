@@ -909,6 +909,67 @@ function revealResultContainer() {
     } catch (e) { /* ignore */ }
 }
 
+const PRO_TEASER_STORAGE_KEY = 'vm_pro_teaser_v1_shown';
+
+function hideProTeaserCard() {
+    document.getElementById('pro-teaser-card')?.classList.add('hidden');
+}
+
+function markProTeaserShown() {
+    try {
+        localStorage.setItem(PRO_TEASER_STORAGE_KEY, '1');
+    } catch {
+        /* ignore */
+    }
+}
+
+function shouldShowProTeaser() {
+    if (userPlan === 'pro' || userPlan === 'premium') return false;
+    try {
+        return localStorage.getItem(PRO_TEASER_STORAGE_KEY) !== '1';
+    } catch {
+        return false;
+    }
+}
+
+function maybeShowProTeaserAfterGeneration(options = {}) {
+    if (!shouldShowProTeaser()) {
+        hideProTeaserCard();
+        return;
+    }
+    const el = document.getElementById('pro-teaser-card');
+    const bodyEl = document.getElementById('pro-teaser-body');
+    if (!el) return;
+
+    const score = Number(options.score);
+    const kind = options.kind === 'image' ? 'image' : 'text';
+    if (bodyEl) {
+        if (kind === 'text' && Number.isFinite(score) && score > 0) {
+            bodyEl.textContent =
+                `Viral Score ${score}/100 — на Pro сравнивайте 2 AI-варианта, смотрите динамику за 7 дней и генерируйте без лимита.`;
+        } else if (kind === 'image') {
+            bodyEl.textContent =
+                'Картинка готова — на Pro публикуйте в канал (Premium), генерируйте без лимита и открывайте аналитику.';
+        } else {
+            bodyEl.textContent =
+                'Сравнивайте 2 AI-варианта текста, смотрите аналитику Viral Score за 7 дней и генерируйте без лимита.';
+        }
+    }
+
+    el.classList.remove('hidden');
+    markProTeaserShown();
+}
+
+function mountProTeaserActions() {
+    document.getElementById('btn-pro-teaser-upgrade')?.addEventListener('click', () => {
+        hideProTeaserCard();
+        openSettingsPanel('subscription');
+    });
+    document.getElementById('btn-pro-teaser-dismiss')?.addEventListener('click', () => {
+        hideProTeaserCard();
+    });
+}
+
 async function tryRecoverGenerationResult(kind) {
     if (!generationStartedAt) return false;
     try {
@@ -1004,6 +1065,7 @@ function applyTextGenerateData(data, topic) {
     });
     syncCurrentHistoryFromItem(historyEntry || { ts: Date.now(), type: 'text' });
     if (document.getElementById('tab-dashboard').classList.contains('active')) loadDashboardData();
+    maybeShowProTeaserAfterGeneration({ kind: 'text', score: currentGeneratedScore });
     return data;
 }
 
@@ -1135,6 +1197,7 @@ function renderDashboardFromList(list) {
 
 function openHistoryItem(item) {
     if (!item || typeof item !== 'object') return;
+    hideProTeaserCard();
     if (window.VMHistory) item = window.VMHistory.hydrateHistoryItem(item);
     switchTab('studio');
     const resultContainer = document.getElementById('result-container');
@@ -1683,6 +1746,7 @@ function updatePlanUI(plan, planUntil, bonusGenerations = 0, quotaRemaining = nu
     const heroPlan = document.getElementById('settings-hero-plan-badge');
 
     if (plan === 'pro' || plan === 'premium') {
+        hideProTeaserCard();
         badge.className = 'plan-badge plan-pro';
         let untilLine = '';
         let untilShort = '';
@@ -2262,6 +2326,7 @@ async function runImageGeneration() {
 
         revealResultContainer();
         document.getElementById('publish-status').classList.add('hidden');
+        maybeShowProTeaserAfterGeneration({ kind: 'image' });
 
         const imageTs = Number(data.historyTs) || Date.now();
         const historyEntry = appendHistoryEntry({
@@ -2462,6 +2527,7 @@ document.getElementById('trend-search').addEventListener('input', (e) => {
 if (window.VMOnboarding) VMOnboarding.mount();
 if (window.ReferralSystem) ReferralSystem.mount();
 if (window.AdminSubs) AdminSubs.mount();
+mountProTeaserActions();
 document.getElementById('btn-analytics-upgrade')?.addEventListener('click', () => buyPlan('pro'));
 updatePlanUI('free', null);
 recoverActiveGenerationOnLoad();
