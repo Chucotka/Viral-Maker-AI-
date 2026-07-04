@@ -38,7 +38,7 @@ describe('auth-config', () => {
     };
     await handler({ method: 'GET' }, res);
     assert.equal(body.webAppUrl, 'https://app.innoko.ru/app/');
+    assert.equal(body.telegramMiniAppUrl, 'https://t.me/viral_maker_ai_bot?startapp=open');
     assert.equal(body.callbackUrl, 'https://app.innoko.ru/api/auth/telegram-callback');
-    assert.match(body.proxiedLoginUrl, /^https:\/\/app\.innoko\.ru\/tg-oauth\/auth\?/);
   });
 });

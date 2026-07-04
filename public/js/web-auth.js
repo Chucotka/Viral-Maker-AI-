@@ -1,5 +1,5 @@
 /**
- * Веб: гостевая сессия + «Войти» для привязки Telegram (без блокировки приложения).
+ * Веб: гостевая сессия + «Открыть в Telegram» (без OAuth в браузере).
  */
 (function initWebAuth(global) {
   const overlay = () => document.getElementById('web-auth-overlay');
@@ -107,10 +107,30 @@
     });
   }
 
+  function resolveTelegramOpenUrl(cfg) {
+    const startParam = readStartParamFromUrl();
+    const bot = String(cfg?.botUsername || '').replace(/^@+/, '');
+    if (!bot) return cfg?.telegramMiniAppUrl || cfg?.telegramBotUrl || '#';
+
+    if (startParam) {
+      return `https://t.me/${bot}?startapp=${encodeURIComponent(startParam)}`;
+    }
+    return cfg.telegramMiniAppUrl || `https://t.me/${bot}?startapp=open`;
+  }
+
+  function openTelegramApp(url) {
+    if (!url || url === '#') return;
+    try {
+      global.open(url, '_blank', 'noopener,noreferrer');
+    } catch {
+      global.location.href = url;
+    }
+  }
+
   async function fetchAuthConfig() {
     const res = await apiFetch('/api/auth/config');
     const data = await res.json().catch(() => ({}));
-    if (!res.ok || !data.callbackUrl) {
+    if (!res.ok || !data.botUsername) {
       throw new Error(data.message || 'Не удалось загрузить настройки входа');
     }
     return data;
@@ -123,24 +143,28 @@
 
     try {
       const cfg = await fetchAuthConfig();
+      const openUrl = resolveTelegramOpenUrl(cfg);
       host.innerHTML = '';
 
       const btn = document.createElement('a');
       btn.className = 'web-auth-login-btn web-auth-login-btn-primary web-auth-login-btn-telegram';
-      btn.href = cfg.proxiedLoginUrl || cfg.loginUrl;
-      btn.innerHTML = '<span class="web-auth-tg-icon" aria-hidden="true"></span>Войти через Telegram';
+      btn.href = openUrl;
+      btn.target = '_blank';
+      btn.rel = 'noopener noreferrer';
+      btn.innerHTML = '<span class="web-auth-tg-icon" aria-hidden="true"></span>Открыть в приложении Telegram';
       host.appendChild(btn);
 
       const skip = document.createElement('button');
       skip.type = 'button';
       skip.className = 'web-auth-login-btn web-auth-login-btn-secondary';
-      skip.textContent = 'Продолжить без входа';
+      skip.textContent = 'Продолжить в браузере как гость';
       skip.addEventListener('click', hideOverlay);
       host.appendChild(skip);
 
       const hint = document.createElement('p');
       hint.className = 'web-auth-alt';
-      hint.textContent = 'Генерации и настройки сохранятся в вашем Telegram-аккаунте.';
+      hint.textContent =
+        'Вход и сохранение прогресса — в Mini App Telegram. На телефоне откроется приложение, на компьютере — Telegram Desktop или web.telegram.org.';
       host.appendChild(hint);
     } catch (e) {
       host.innerHTML = `<p class="web-auth-alt">${e.message || 'Ошибка'}</p>`;
@@ -245,7 +269,7 @@
     const session = await sessionRes.json().catch(() => ({}));
     if (!sessionRes.ok && (session.error === 'guest_ip_limit' || session.requiresLogin)) {
       global.__vmGuestIpBlocked = session.error === 'guest_ip_limit';
-      global.VMRuntime?.alert?.(session.message || 'Войдите через Telegram', 'Нужен вход');
+      global.VMRuntime?.alert?.(session.message || 'Откройте приложение в Telegram', 'Нужен вход');
       showOverlay();
       global.__vmWebGuest = false;
       return false;
@@ -255,6 +279,16 @@
     applyUserToUi(session.user, session.isGuest);
     hideOverlay();
     return true;
+  }
+
+  /** Открыть Mini App в Telegram (онбординг, рефералка). */
+  async function openInTelegramApp() {
+    try {
+      const cfg = await fetchAuthConfig();
+      openTelegramApp(resolveTelegramOpenUrl(cfg));
+    } catch (e) {
+      global.VMRuntime?.alert?.(e.message || 'Не удалось открыть Telegram');
+    }
   }
 
   global.onTelegramWebLogin = async function onTelegramWebLogin(user) {
@@ -270,6 +304,7 @@
     ensureSession,
     showOverlay,
     hideOverlay,
+    openInTelegramApp,
     applyUserToUi,
     isGuest: () => Boolean(global.__vmWebGuest),
   };
