@@ -1489,6 +1489,22 @@ document.getElementById('btn-save-profile').addEventListener('click', async () =
     }
 });
 
+async function syncQuotaAfterGeneration(data) {
+    if (data?.remainingToday !== undefined) {
+        const limitMsg = document.getElementById('limit-msg');
+        const remaining = Number(data.remainingToday);
+        if (limitMsg && Number.isFinite(remaining) && remaining <= 2) {
+            limitMsg.innerHTML = remaining > 0
+                ? `⚡️ Осталось бесплатных генераций: <b>${remaining}</b>.`
+                : '⚡️ Бесплатные генерации закончились. Пригласите друзей или перейдите на Pro.';
+            limitMsg.classList.remove('hidden');
+            limitMsg.classList.toggle('error', remaining <= 0);
+            limitMsg.classList.toggle('warning', remaining > 0);
+        }
+    }
+    await loadUserData({ silent: true });
+}
+
 function updatePlanUI(plan, planUntil, bonusGenerations = 0, quotaRemaining = null) {
     const badge = document.getElementById('current-plan-badge');
     const upgradeBtn = document.getElementById('btn-upgrade-pro');
@@ -1953,15 +1969,7 @@ async function runTextGeneration(opts = {}) {
         }
 
         applyTextGenerateData(data, topic);
-
-        if (data.remainingToday !== undefined) {
-            const remaining = data.remainingToday;
-            if (remaining <= 2) {
-                limitMsg.innerHTML = `⚡️ Осталось бесплатных генераций: <b>${remaining}</b>.`;
-                limitMsg.classList.remove('hidden', 'error');
-                limitMsg.classList.add('warning');
-            }
-        }
+        await syncQuotaAfterGeneration(data);
     } catch (error) {
         console.error(error);
         const recovered = await tryRecoverGenerationResult('text');
@@ -1999,7 +2007,7 @@ async function runImageGeneration() {
     limitMsg.classList.add('hidden');
 
     if (!prompt) {
-        tg.showAlert('Введите описание изображения.');
+        showAppAlert('Введите описание изображения.');
         return;
     }
 
@@ -2091,14 +2099,7 @@ async function runImageGeneration() {
         );
         if (document.getElementById('tab-dashboard').classList.contains('active')) loadDashboardData();
 
-        if (data.remainingToday !== undefined) {
-            const remaining = data.remainingToday;
-            if (remaining <= 2) {
-                limitMsg.innerHTML = `⚡️ Осталось бесплатных генераций: <b>${remaining}</b>.`;
-                limitMsg.classList.remove('hidden', 'error');
-                limitMsg.classList.add('warning');
-            }
-        }
+        await syncQuotaAfterGeneration(data);
     } catch (error) {
         console.error(error);
         const recovered = await tryRecoverGenerationResult('image');
