@@ -1,5 +1,5 @@
 const { resolveTelegramUser } = require('../lib/miniAppAuth');
-const { hasAdminApiAccess } = require('../lib/adminAccess');
+const { getAdminAccessStatus, adminDenialMessage } = require('../lib/adminAccess');
 const { sendSafeError } = require('../lib/httpErrors');
 const { readDebugSecret, normalizeDebugPlan } = require('../lib/debugPlan');
 const {
@@ -34,15 +34,21 @@ function parseAction(value) {
 function requireAdmin(req, res) {
   const auth = resolveTelegramUser(req, res);
   if (!auth) return null;
-    if (!hasAdminApiAccess(req, auth.userId)) {
-      console.warn('Manual plan ignored: forbidden', { userId: auth.userId });
-      res.status(403).json({
-        error: 'forbidden',
-        message:
-          'Доступ только владельцу. Войдите через Telegram (не как гость) и проверьте DEBUG_ADMIN_SECRET.',
-      });
-      return null;
-    }
+  const access = getAdminAccessStatus(req, auth.userId);
+  if (!access.ok) {
+    console.warn('Manual plan ignored: forbidden', {
+      userId: auth.userId,
+      reason: access.reason,
+      hasSecret: !!readDebugSecret(req),
+    });
+    res.status(403).json({
+      error: 'forbidden',
+      reason: access.reason,
+      userId: auth.userId,
+      message: adminDenialMessage(access.reason),
+    });
+    return null;
+  }
   return auth;
 }
 

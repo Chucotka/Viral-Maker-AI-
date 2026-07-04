@@ -209,6 +209,22 @@
     });
     host.appendChild(copyBtn);
 
+    const browserLoginBtn = global.document.createElement('button');
+    browserLoginBtn.type = 'button';
+    browserLoginBtn.className = 'web-auth-login-btn web-auth-login-btn-secondary';
+    browserLoginBtn.textContent = 'Войти через Telegram в браузере';
+    browserLoginBtn.addEventListener('click', async () => {
+      try {
+        const cfg = await fetchAuthConfig();
+        const url = cfg.proxiedLoginUrl || cfg.loginUrl;
+        if (!url) throw new Error('Не удалось получить ссылку входа');
+        global.location.href = url;
+      } catch (e) {
+        global.VMRuntime?.alert?.(e.message || 'Не удалось открыть вход через Telegram');
+      }
+    });
+    host.appendChild(browserLoginBtn);
+
     const skip = global.document.createElement('button');
     skip.type = 'button';
     skip.className = 'web-auth-login-btn web-auth-login-btn-secondary';

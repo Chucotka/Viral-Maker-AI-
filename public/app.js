@@ -1340,6 +1340,50 @@ function applyOwnerOnlySections(isOwnerFromServer) {
     });
 }
 
+function updateAdminAccessStatus(data) {
+    const el = document.getElementById('admin-access-status');
+    if (!el) return;
+    if (!data?.isOwner) {
+        el.textContent = '';
+        return;
+    }
+    const userId = data.userId ? String(data.userId) : '—';
+    const guestNote = data.isGuest
+        ? ' Сейчас сессия гостевая — admin API не сработает.'
+        : '';
+    el.textContent =
+        `Владелец · Telegram ID: ${userId}.${guestNote} Секрет — DEBUG_ADMIN_SECRET из .env на VPS (точное совпадение).`;
+}
+
+const ADMIN_SECRET_STORAGE_KEY = 'vm_admin_secret';
+
+function rememberAdminSecret(secret) {
+    const value = String(secret || '').trim();
+    if (!value) return;
+    try {
+        sessionStorage.setItem(ADMIN_SECRET_STORAGE_KEY, value);
+    } catch {
+        /* ignore */
+    }
+}
+
+function readStoredAdminSecret() {
+    try {
+        return sessionStorage.getItem(ADMIN_SECRET_STORAGE_KEY) || '';
+    } catch {
+        return '';
+    }
+}
+
+function hydrateAdminSecretInputs() {
+    const stored = readStoredAdminSecret();
+    if (!stored) return;
+    ['manual-secret', 'cleanup-secret'].forEach((id) => {
+        const input = document.getElementById(id);
+        if (input && !input.value.trim()) input.value = stored;
+    });
+}
+
 function readReferralStartParam() {
     try {
         const stored = sessionStorage.getItem('vm_start_param');
@@ -1441,6 +1485,8 @@ async function loadUserData(options = {}) {
             );
         }
         applyOwnerOnlySections(Boolean(data?.isOwner));
+        updateAdminAccessStatus(data);
+        if (data?.isOwner) hydrateAdminSecretInputs();
         if (data?.user && window.VMWebAuth) {
             window.VMWebAuth.applyUserToUi(data.user, data.isGuest);
         }
@@ -1649,6 +1695,7 @@ async function activateManualPlan(plan) {
         showAppAlert('Введите DEBUG_ADMIN_SECRET в поле ниже @username/userId.');
         return;
     }
+    rememberAdminSecret(secret);
 
     if (statusEl) statusEl.textContent = 'Активирую тариф...';
 
@@ -1706,21 +1753,28 @@ async function loadCleanupPlans() {
         showAppAlert('Введите DEBUG_ADMIN_SECRET в поле выше.');
         return;
     }
+    rememberAdminSecret(secret);
 
     if (statusEl) statusEl.textContent = 'Загружаю подписки...';
 
     try {
-        const response = await fetch('/api/manual-plan?action=list', {
-            method: 'GET',
+        const response = await fetch('/api/manual-plan', {
+            method: 'POST',
             headers: {
-                ...miniAppHeaders(false),
+                ...miniAppHeaders(true),
                 'X-Debug-Secret': secret,
             },
+            body: JSON.stringify({ action: 'list', secret }),
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
             const message = data.message || data.error || `Не удалось получить список (HTTP ${response.status}).`;
-            if (statusEl) statusEl.textContent = message;
+            if (statusEl) {
+                statusEl.textContent =
+                    data.reason === 'guest_session'
+                        ? `${message} Нажмите «Войти» в шапке → «Войти через Telegram в браузере».`
+                        : message;
+            }
             showAppAlert(message);
             return;
         }
@@ -1763,6 +1817,7 @@ async function resetCleanupPlan(userId, username = '') {
         showAppAlert('Введите DEBUG_ADMIN_SECRET в поле выше.');
         return;
     }
+    rememberAdminSecret(secret);
 
     const label = username ? `@${username}` : userId;
     const confirmed = window.confirm(`Сбросить подписку пользователя ${label} в Free?`);
