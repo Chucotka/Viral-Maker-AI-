@@ -14,7 +14,8 @@
     {
       title: 'Заполни профиль автора',
       body: 'В настройках укажи нишу и стиль — генерации станут точнее и «ваши».',
-      cta: 'Понятно',
+      cta: 'Открыть профиль',
+      action: 'profile',
     },
     {
       title: '5 бесплатных генераций',
@@ -30,11 +31,12 @@
       cta: 'Дальше',
     },
     {
-      title: 'Откройте в Telegram',
-      body: 'Вход и сохранение прогресса — в приложении Telegram. Можно продолжить в браузере как гость.',
-      cta: 'Открыть в Telegram',
-      action: 'telegram',
-      skipLabel: 'Продолжить как гость',
+      title: 'Войдите через Telegram',
+      body: 'В браузере на компьютере — «Войти через Telegram в браузере». Так будет 5 генераций и сохранение истории.',
+      cta: 'Войти через Telegram',
+      action: 'browser-login',
+      skipLabel: 'Продолжить как гость (3 генерации)',
+      skipAction: 'next',
     },
     {
       title: '3 бесплатных генерации',
@@ -114,12 +116,43 @@
     tg?.HapticFeedback?.impactOccurred?.('light');
   }
 
+  function openProfilePanel() {
+    markDone();
+    hide();
+    global.switchTab?.('settings');
+    global.SettingsHub?.openPanel?.('profile');
+  }
+
+  async function openBrowserLogin() {
+    try {
+      const res = await global.fetch('/api/auth/config');
+      const cfg = await res.json().catch(() => ({}));
+      const url = cfg.proxiedLoginUrl || cfg.loginUrl;
+      if (url) {
+        global.location.href = url;
+        return;
+      }
+    } catch {
+      /* fallback */
+    }
+    global.VMWebAuth?.showOverlay?.();
+  }
+
   function next() {
     const steps = getSteps();
     const step = steps[stepIndex];
     if (step?.action === 'telegram') {
       global.VMWebAuth?.openInTelegramApp?.();
       tg?.HapticFeedback?.impactOccurred?.('light');
+      return;
+    }
+    if (step?.action === 'browser-login') {
+      openBrowserLogin();
+      tg?.HapticFeedback?.impactOccurred?.('light');
+      return;
+    }
+    if (step?.action === 'profile') {
+      openProfilePanel();
       return;
     }
     if (stepIndex >= steps.length - 1) {
@@ -131,8 +164,14 @@
   }
 
   function skip() {
-    markDone();
-    hide();
+    const steps = getSteps();
+    const step = steps[stepIndex];
+    if (step?.skipAction === 'next' && stepIndex < steps.length - 1) {
+      stepIndex += 1;
+      renderStep();
+      return;
+    }
+    finish();
   }
 
   function mount() {
