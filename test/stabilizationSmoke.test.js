@@ -21,9 +21,9 @@ describe('stabilization (no-VPN load)', () => {
     assert.ok(fs.existsSync(path.join(__dirname, '../public/js/telegram-web-app.js')));
   });
 
-  it('deploy script defaults to stabilization branch', () => {
+  it('deploy script defaults to product growth branch', () => {
     const sh = fs.readFileSync(path.join(__dirname, '../scripts/deploy-vps-update.sh'), 'utf8');
-    assert.match(sh, /cursor\/stabilization-e202/);
+    assert.match(sh, /cursor\/product-growth-b-e202/);
     assert.match(sh, /stabilization-smoke\.js/);
   });
 });
