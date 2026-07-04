@@ -1641,6 +1641,63 @@ input[type="text"]:focus, textarea:focus, select:focus {
     margin: 10px 0 18px;
 }
 
+/* ── Referral share chooser (web) ── */
+.referral-share-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10001;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 20px;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+}
+
+.referral-share-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+}
+
+.referral-share-card {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    background: var(--surface);
+    border-radius: 20px 20px 16px 16px;
+    padding: 24px 20px 16px;
+    border: 1px solid var(--border);
+    animation: refModalIn 0.35s ease-out;
+}
+
+.referral-share-card h3 {
+    margin: 0 0 8px;
+    font-size: 18px;
+}
+
+.referral-share-hint {
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.45;
+    margin: 0 0 16px;
+}
+
+.referral-share-card .btn + .btn {
+    margin-top: 10px;
+}
+
+.referral-share-cancel {
+    display: block;
+    width: 100%;
+    margin-top: 12px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 14px;
+    padding: 8px;
+    cursor: pointer;
+}
+
 .onboarding-skip {
     display: block;
     width: 100%;
