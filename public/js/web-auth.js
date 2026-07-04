@@ -29,6 +29,20 @@
     );
   }
 
+  function readStartParamFromUrl() {
+    if (global.ReferralSystem?.readStartParam) {
+      return global.ReferralSystem.readStartParam();
+    }
+    try {
+      const u = new URL(global.location.href);
+      const raw = u.searchParams.get('startapp') || u.searchParams.get('start_param');
+      if (raw && String(raw).trim()) return String(raw).trim();
+    } catch {
+      /* ignore */
+    }
+    return null;
+  }
+
   function consumeQueryFlag(name) {
     try {
       const u = new URL(global.location.href);
@@ -103,9 +117,12 @@
   }
 
   async function loginWithTelegram(user) {
+    const startParam = readStartParamFromUrl();
+    const body = { telegramUser: user };
+    if (startParam) body.startParam = startParam;
     const res = await global.VMRuntime.apiFetch('/api/auth/telegram-login', {
       method: 'POST',
-      body: JSON.stringify({ telegramUser: user }),
+      body: JSON.stringify(body),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.message || data.error || 'Ошибка входа');
@@ -187,7 +204,11 @@
 
     if (consumeQueryFlag('guest_merged')) showMergeNotice();
 
-    const sessionRes = await global.VMRuntime.apiFetch('/api/auth/session');
+    const startParam = readStartParamFromUrl();
+    const sessionPath = startParam
+      ? `/api/auth/session?startapp=${encodeURIComponent(startParam)}`
+      : '/api/auth/session';
+    const sessionRes = await global.VMRuntime.apiFetch(sessionPath);
     const session = await sessionRes.json().catch(() => ({}));
     global.__vmWebGuest = Boolean(session.isGuest);
     applyUserToUi(session.user, session.isGuest);

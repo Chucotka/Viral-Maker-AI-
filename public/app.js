@@ -1387,7 +1387,7 @@ async function loadUserData(options = {}) {
             }
         }
         if (data?.referralSignup?.bound && !silent) {
-            tg.showPopup({
+            showAppPopup({
                 title: 'Реферальная ссылка активна',
                 message:
                     'Вы перешли по приглашению. После вашей первой генерации друг получит +10 бонусных генераций.',
