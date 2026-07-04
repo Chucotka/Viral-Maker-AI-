@@ -126,6 +126,21 @@ npm run dev
 
 Откройте `http://127.0.0.1:3001/#/dashboard` — hash-роутинг работает локально.
 
-## Отвязка от Vercel
+## Деплой (только VPS)
 
-После проверки на `innoko.ru/app` удалите проект на Vercel (Settings → Danger Zone → Delete Project).
+Продакшен — **Timeweb VPS** (`app.innoko.ru`), не Vercel.
+
+```bash
+cd /var/www/viral-maker
+git pull
+npm ci
+pm2 restart viral-maker
+```
+
+Или с локальной машины через SSH:
+
+```bash
+ssh root@72.56.84.201 'cd /var/www/viral-maker && bash scripts/deploy-vps-update.sh'
+```
+
+Vercel больше не используется — удалите проект в [vercel.com](https://vercel.com) (Settings → Delete Project) и отзовите доступ в GitHub → Integrations.

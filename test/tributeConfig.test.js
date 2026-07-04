@@ -30,6 +30,7 @@ describe('tributeConfig', () => {
     delete process.env.TRIBUTE_PREMIUM_PRODUCT_ID;
 
     assert.equal(getTributePlanConfig('pro').productId, 121282);
+    assert.match(getTributePlanConfig('pro').telegramLink, /^https:\/\/t\.me\/tribute\/app\?startapp=p/);
     assert.equal(getTributePlanConfig('premium').productId, 121292);
     assert.equal(resolveTributePlanByProductId(121282), 'pro');
     assert.equal(resolveTributePlanByProductId(121292), 'premium');

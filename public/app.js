@@ -21,6 +21,26 @@ function miniAppHeaders(jsonBody = false) {
     return h;
 }
 
+function showAppAlert(message, title) {
+    if (window.VMRuntime?.alert) {
+        window.VMRuntime.alert(message, title);
+        return;
+    }
+    if (typeof tg.showAlert === 'function') {
+        tg.showAlert(String(message || ''));
+        return;
+    }
+    window.alert(String(message || ''));
+}
+
+function showAppPopup(opts) {
+    if (typeof tg.showPopup === 'function') {
+        tg.showPopup(opts);
+        return;
+    }
+    showAppAlert(opts?.message || '', opts?.title);
+}
+
 function escapeHtml(s) {
     return String(s)
         .replace(/&/g, '&amp;')
@@ -508,16 +528,29 @@ function handlePremiumBotAction() {
 }
 
 async function buyPlanViaTribute(plan) {
+    if (window.VMWebAuth?.isGuest?.()) {
+        showAppAlert(
+            'Войдите через Telegram — подписка активируется на ваш Telegram ID после оплаты.',
+            'Нужен вход',
+        );
+        window.VMWebAuth.showOverlay?.();
+        return;
+    }
     try {
-        const response = await fetch(`/api/tribute-link?plan=${encodeURIComponent(plan)}`);
+        const channel = window.VMRuntime?.isTelegram ? 'telegram' : 'web';
+        const response = await fetch(
+            `/api/tribute-link?plan=${encodeURIComponent(plan)}&channel=${encodeURIComponent(channel)}`,
+        );
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-            tg.showAlert(data.message || data.error || 'Не удалось открыть Tribute.');
+            showAppAlert(data.message || data.error || 'Не удалось открыть Tribute.');
             return;
         }
         if (data.link) {
-            startPlanRefreshPolling();
-            if (typeof tg.openLink === 'function') {
+            startPlanRefreshPolling(plan);
+            if (window.VMRuntime?.isTelegram && typeof tg.openTelegramLink === 'function' && data.telegramLink) {
+                tg.openTelegramLink(data.telegramLink);
+            } else if (typeof tg.openLink === 'function') {
                 tg.openLink(data.link);
             } else {
                 window.open(data.link, '_blank', 'noopener');
@@ -525,7 +558,7 @@ async function buyPlanViaTribute(plan) {
         }
     } catch (error) {
         console.error('Tribute payment error:', error);
-        tg.showAlert('Произошла ошибка при открытии Tribute.');
+        showAppAlert('Произошла ошибка при открытии Tribute.');
     }
 }
 
@@ -536,24 +569,35 @@ function stopPlanRefreshPolling() {
     }
 }
 
-function startPlanRefreshPolling() {
+function startPlanRefreshPolling(expectedPlan) {
     stopPlanRefreshPolling();
     let attempts = 0;
     planRefreshTimer = setInterval(async () => {
         attempts += 1;
         const previousPlan = userPlan;
         await loadUserData({ silent: true });
-        if (userPlan !== previousPlan && (userPlan === 'pro' || userPlan === 'premium')) {
+        const activated =
+            userPlan !== previousPlan &&
+            (userPlan === 'pro' || userPlan === 'premium') &&
+            (!expectedPlan || userPlan === expectedPlan || expectedPlan === 'pro');
+        if (activated) {
             stopPlanRefreshPolling();
-            tg.showPopup({
+            showAppPopup({
                 title: 'Подписка активирована',
-                message: userPlan === 'premium' ? 'Premium уже доступен в приложении.' : 'Pro уже доступен в приложении.',
+                message:
+                    userPlan === 'premium'
+                        ? 'Premium уже доступен в приложении.'
+                        : 'Pro уже доступен в приложении.',
                 buttons: [{ type: 'ok' }],
             });
             return;
         }
-        if (attempts >= 20) {
+        if (attempts >= 30) {
             stopPlanRefreshPolling();
+            showAppAlert(
+                'Если оплата прошла, но тариф не обновился — подождите минуту и обновите страницу. При проблеме напишите в поддержку с чеком.',
+                'Проверка оплаты',
+            );
         }
     }, 4000);
 }
@@ -704,7 +748,7 @@ function alertFromGenerateError(message) {
         }
         text = 'Откройте мини-приложение из Telegram (кнопка в боте), чтобы подпись сессии передалась на сервер.';
     } else if (/kv_required|Redis/i.test(m)) {
-        text = 'На сервере не настроено хранилище Redis. Добавьте Upstash Redis в Vercel и переменные окружения.';
+        text = 'На сервере не настроено хранилище Redis. Добавьте UPSTASH_REDIS_REST_URL и TOKEN в .env на VPS.';
     } else if (/rate_limit|429|Слишком много запросов/i.test(m)) {
         text = 'Слишком много запросов за короткое время. Подождите около минуты и попробуйте снова.';
     } else if (/504|FUNCTION_INVOCATION_TIMEOUT|timeout|timed out|aborted/i.test(m)) {
@@ -729,11 +773,11 @@ async function parseJsonResponse(response) {
         if (/^\s*<!DOCTYPE|^\s*<html/i.test(body)) {
             if (status >= 500) {
                 throw new Error(
-                    `Сбой сервера (HTTP ${status}): пришла страница ошибки, а не JSON. Это обычно не ключ Gemini — смотрите логи Vercel → Functions → /api/generate.`,
+                    `Сбой сервера (HTTP ${status}): пришла страница ошибки, а не JSON. Смотрите pm2 logs viral-maker на VPS.`,
                 );
             }
             throw new Error(
-                `Сервер вернул HTML (HTTP ${status}), а не JSON. Проверьте URL мини-приложения в BotFather (должен совпадать с Vercel, не старый ngrok).`,
+                `Сервер вернул HTML (HTTP ${status}), а не JSON. Проверьте URL в BotFather (https://app.innoko.ru/app).`,
             );
         }
         throw new Error(`Сервер вернул неверный ответ (HTTP ${status}). Попробуйте ещё раз.`);
