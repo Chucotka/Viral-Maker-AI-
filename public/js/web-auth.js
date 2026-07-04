@@ -228,6 +228,14 @@
       : '/api/auth/session';
     const sessionRes = await global.VMRuntime.apiFetch(sessionPath);
     const session = await sessionRes.json().catch(() => ({}));
+    if (!sessionRes.ok && (session.error === 'guest_ip_limit' || session.requiresLogin)) {
+      global.__vmGuestIpBlocked = session.error === 'guest_ip_limit';
+      global.VMRuntime?.alert?.(session.message || 'Войдите через Telegram', 'Нужен вход');
+      showOverlay();
+      global.__vmWebGuest = false;
+      return false;
+    }
+    global.__vmGuestIpBlocked = false;
     global.__vmWebGuest = Boolean(session.isGuest);
     applyUserToUi(session.user, session.isGuest);
     hideOverlay();

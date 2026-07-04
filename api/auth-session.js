@@ -1,6 +1,7 @@
 const { createGuestUser } = require('../lib/webGuest');
 const { readSessionToken, verifySession, signSession, setSessionCookie } = require('../lib/webSession');
 const { parseReferrerId } = require('../lib/referralService');
+const { registerNewGuestSession } = require('../lib/guestSessionLimit');
 
 function sessionResponse(payload) {
   const user = payload?.user && typeof payload.user === 'object' ? payload.user : null;
@@ -53,6 +54,15 @@ module.exports = async (req, res) => {
   let payload = token ? verifySession(token) : null;
 
   if (!payload?.sub) {
+    const ipCheck = await registerNewGuestSession(req);
+    if (!ipCheck.ok) {
+      return res.status(429).json({
+        authenticated: false,
+        error: ipCheck.error,
+        message: ipCheck.message,
+        requiresLogin: true,
+      });
+    }
     try {
       payload = createGuestSession(res, queryStartParam);
     } catch (e) {

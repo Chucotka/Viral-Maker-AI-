@@ -1406,7 +1406,7 @@ async function loadUserData(options = {}) {
             const msg = data.message || data.error || 'Проверьте настройки сервера (KV, Telegram).';
             console.warn('loadUserData:', response.status, msg);
             if (response.status === 401) {
-                if (window.VMRuntime?.isWeb && window.VMWebAuth) {
+                if (window.VMRuntime?.isWeb && window.VMWebAuth && !global.__vmGuestIpBlocked) {
                     await window.VMWebAuth.ensureSession();
                     await loadUserData({ silent: startParam ? false : true });
                 } else if (!silent) {
@@ -1432,7 +1432,13 @@ async function loadUserData(options = {}) {
                 }
                 sessionStorage.setItem('vm_last_bonus_gen', String(nextBonus));
             }
-            updatePlanUI(data.plan, data.planUntil || null, data.bonusGenerations || 0, data.quotaRemaining);
+            updatePlanUI(
+                data.plan,
+                data.planUntil || null,
+                data.bonusGenerations || 0,
+                data.quotaRemaining,
+                data.freeGenerationLimit,
+            );
         }
         applyOwnerOnlySections(Boolean(data?.isOwner));
         if (data?.user && window.VMWebAuth) {
@@ -1513,7 +1519,7 @@ async function syncQuotaAfterGeneration(data) {
     await loadUserData({ silent: true });
 }
 
-function updatePlanUI(plan, planUntil, bonusGenerations = 0, quotaRemaining = null) {
+function updatePlanUI(plan, planUntil, bonusGenerations = 0, quotaRemaining = null, freeGenerationLimit = null) {
     const badge = document.getElementById('current-plan-badge');
     const upgradeBtn = document.getElementById('btn-upgrade-pro');
     const quotaValue = document.getElementById('settings-quota-value');
@@ -1546,19 +1552,20 @@ function updatePlanUI(plan, planUntil, bonusGenerations = 0, quotaRemaining = nu
         }
     } else {
         badge.className = 'plan-badge plan-free';
+        const pool = freeGenerationLimit != null && Number.isFinite(freeGenerationLimit) ? freeGenerationLimit : 5;
         const bonusLine = bonusGenerations > 0 ? ` · +${bonusGenerations} бонус` : '';
         const remainLine =
             quotaRemaining != null && Number.isFinite(quotaRemaining)
                 ? ` · осталось ${quotaRemaining}`
                 : '';
-        badge.innerHTML = `Free · 5 бесплатных${bonusLine}${remainLine}`;
+        badge.innerHTML = `Free · ${pool} бесплатных${bonusLine}${remainLine}`;
         if (upgradeBtn) upgradeBtn.classList.remove('hidden');
-        const remaining = quotaRemaining != null && Number.isFinite(quotaRemaining) ? quotaRemaining : 5;
+        const remaining = quotaRemaining != null && Number.isFinite(quotaRemaining) ? quotaRemaining : pool;
         if (quotaValue) quotaValue.textContent = String(remaining);
         if (quotaLabel) {
             quotaLabel.textContent = bonusGenerations > 0
-                ? `из 5 · +${bonusGenerations} бонус`
-                : 'из 5 ⚡';
+                ? `из ${pool} · +${bonusGenerations} бонус`
+                : `из ${pool} ⚡`;
         }
         if (heroPlan) {
             heroPlan.textContent = 'FREE';
