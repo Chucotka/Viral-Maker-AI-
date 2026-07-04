@@ -50,5 +50,5 @@ Health: `curl http://127.0.0.1:3001/api/ping` → `pong`.
 - Default port is **3001** (`PORT` in `.env`), not 3000.
 - `nodemon` reloads on file changes; after `npm ci`, restart dev server if routes behave oddly.
 - Opening `http://127.0.0.1:3001/` in a desktop browser loads UI and trends; **AI generation** still requires Telegram `initData` and backend keys.
-- Production deploy: `npm run deploy` (Vercel); local dev does not need Vercel CLI for day-to-day work.
+- Production deploy: `npm run deploy` (VPS via `scripts/deploy-vps-update.sh`); see `DEPLOY-INNOKO.md`.
 - Optional integration smoke: `node scripts/payment-smoke.js` (needs deployed/tunneled `WEBAPP_URL`).

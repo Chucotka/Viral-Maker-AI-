@@ -38,6 +38,123 @@ h3 { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
 .text-hint { color: var(--text-muted); font-size: 12px; margin-top: 4px; }
 .hidden { display: none !important; }
 
+/* Web login (innoko.ru/app) */
+.web-auth-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.82);
+    backdrop-filter: blur(8px);
+}
+.web-auth-overlay.hidden { display: none !important; }
+.web-auth-card {
+    width: 100%;
+    max-width: 400px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px 24px;
+    text-align: center;
+}
+.web-auth-brand {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+.web-auth-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+.web-auth-hint {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.45;
+    margin-bottom: 20px;
+}
+.web-auth-widget {
+    min-height: 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+.web-auth-widget-embed {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.web-auth-widget-embed iframe {
+    border: none;
+}
+.web-auth-login-btn {
+    display: block;
+    width: 100%;
+    max-width: 280px;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    box-sizing: border-box;
+}
+.web-auth-login-btn-primary {
+    background: #2AABEE;
+    color: #fff;
+}
+.web-auth-login-btn-telegram {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+.web-auth-tg-icon {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M9.78 15.28l-.28 3.92c.4 0 .57-.17.78-.38l1.87-1.78 3.88 2.85c.71.39 1.21.19 1.4-.65l2.55-12c.23-1.05-.38-1.46-1.07-1.2L2.6 9.77c-1.04.4-1.03.97-.19 1.23l4.6 1.44L18.9 6.5c.56-.37 1.08-.17.66.2'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+.user-name-login {
+    color: var(--accent);
+    font-weight: 600;
+}
+.web-auth-login-btn-secondary {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+.web-auth-loading {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin: 0;
+}
+.web-auth-alt {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin: 0;
+}
+.web-auth-alt a {
+    color: var(--accent);
+}
+.web-auth-footnote {
+    margin-top: 16px;
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+
 /* Tabs */
 .tab-content {
     flex: 1;
@@ -813,6 +930,17 @@ input[type="text"]:focus, textarea:focus, select:focus {
     --neon-pink: #ff2d55;
     --neon-purple: #bf5af2;
     --referral-glow: rgba(255, 149, 0, 0.35);
+}
+
+.referral-invite-banner {
+    margin: 12px 0 16px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(255, 149, 0, 0.12);
+    border: 1px solid rgba(255, 149, 0, 0.35);
+    color: #fff;
+    font-size: 14px;
+    line-height: 1.45;
 }
 
 .referral-card {
