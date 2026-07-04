@@ -66,7 +66,7 @@ if [[ ${#missing[@]} -gt 0 ]]; then
 fi
 
 if [[ -z "${WEBAPP_URL:-}" ]]; then
-  echo "WEBAPP_URL=https://app.innoko.ru" >> .env
+  echo "WEBAPP_URL=https://app.innoko.ru/app" >> .env
 fi
 if [[ -z "${SESSION_SECRET:-}" && -n "${DEBUG_ADMIN_SECRET:-}" ]]; then
   echo "SESSION_SECRET=${DEBUG_ADMIN_SECRET}" >> .env

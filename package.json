@@ -9,7 +9,8 @@
     "setup:vps": "bash scripts/setup-vps-innoko.sh",
     "test": "node --test test/*.test.js",
     "deploy": "bash scripts/deploy-vps-update.sh",
-    "deploy:vps": "bash scripts/deploy-vps-update.sh"
+    "deploy:vps": "bash scripts/deploy-vps-update.sh",
+    "health:monitor": "node scripts/health-monitor.js"
   },
   "repository": {
     "type": "git",

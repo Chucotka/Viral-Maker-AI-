@@ -6,7 +6,7 @@
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/var/www/viral-maker}"
-BRANCH="${BRANCH:-cursor/guest-telegram-link-e202}"
+BRANCH="${BRANCH:-cursor/production-hardening-e202}"
 REPO_URL="${REPO_URL:-https://github.com/Chucotka/Viral-Maker-AI-.git}"
 PM2_NAME="${PM2_NAME:-viral-maker}"
 
@@ -61,9 +61,16 @@ PORT="${PORT:-3001}"
 if curl -sf "http://127.0.0.1:${PORT}/api/ping" | grep -q pong; then
   echo ""
   echo "OK: http://127.0.0.1:${PORT}/api/ping → pong"
-  echo "Проверка снаружи: curl -s https://app.innoko.ru/api/ping"
+  curl -sf "http://127.0.0.1:${PORT}/api/health" | head -c 200 || true
+  echo ""
+  echo "Проверка снаружи: curl -s https://app.innoko.ru/api/health"
 else
   echo "!!! Приложение не отвечает на :${PORT}/api/ping"
   pm2 logs "$PM2_NAME" --lines 40 --nostream || true
   exit 1
 fi
+
+echo "==> health monitor (pm2 cron каждые 5 мин)"
+pm2 delete vm-health 2>/dev/null || true
+pm2 start scripts/health-monitor.js --name vm-health --no-autorestart --cron-restart="*/5 * * * *" || true
+pm2 save 2>/dev/null || true
