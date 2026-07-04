@@ -64,9 +64,24 @@ describe('adminAccess', () => {
     process.env.OWNER_TELEGRAM_ID = '123';
     process.env.DEBUG_ADMIN_SECRET = 'sekret';
     delete process.env.OWNER_TELEGRAM_IDS;
-    const status = getAdminAccessStatus(mockReq(''), '123', { source: 'telegram_mini_app' });
+    const status = getAdminAccessStatus(mockReq(''), '123', {
+      source: 'telegram_mini_app',
+      authKind: 'telegram',
+    });
     assert.equal(status.ok, true);
     assert.equal(status.via, 'telegram_mini_app');
+  });
+
+  it('allows owner in browser after Telegram OAuth without secret', () => {
+    process.env.OWNER_TELEGRAM_ID = '123';
+    process.env.DEBUG_ADMIN_SECRET = 'sekret';
+    delete process.env.OWNER_TELEGRAM_IDS;
+    const status = getAdminAccessStatus(mockReq(''), '123', {
+      source: 'web_session',
+      authKind: 'telegram',
+    });
+    assert.equal(status.ok, true);
+    assert.equal(status.via, 'web_session');
   });
 
   it('allows owner with correct secret on web session', () => {

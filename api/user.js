@@ -58,6 +58,10 @@ module.exports = async (req, res) => {
         user: auth.user || null,
         isGuest: auth.authKind === 'guest',
         isOwner: isAppOwner(auth.userId),
+        adminSecretRequired: !(
+          auth.source === 'telegram_mini_app' ||
+          (auth.source === 'web_session' && auth.authKind === 'telegram')
+        ),
         planUntil: rec.planUntil || null,
         bonusGenerations: rec.bonusGenerations || 0,
         quotaRemaining: quota.totalRemaining === Infinity ? null : quota.totalRemaining,

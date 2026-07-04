@@ -1354,17 +1354,22 @@ function updateAdminAccessStatus(data) {
         : data.isGuest
           ? 'браузер · гость'
           : 'браузер · Telegram';
-    const secretHint = inTelegram
-        ? 'Секрет не нужен — вы уже в Mini App.'
-        : 'В браузере нужен DEBUG_ADMIN_SECRET из .env на VPS.';
+    let secretHint = 'Секрет не нужен — вход через Telegram подтверждён.';
+    if (data.isGuest) {
+        secretHint =
+            'Сейчас гостевая сессия. Нажмите «Войти» в шапке → «Войти через Telegram в браузере».';
+    } else if (data.adminSecretRequired) {
+        secretHint = 'Нужен DEBUG_ADMIN_SECRET из .env на VPS.';
+    }
     el.textContent = `Владелец · ID ${userId} · ${sessionLabel}. ${secretHint}`;
+    const hideSecret = !data.adminSecretRequired;
     document.querySelectorAll('.admin-secret-field').forEach((field) => {
-        field.classList.toggle('hidden', inTelegram);
+        field.classList.toggle('hidden', hideSecret);
     });
 }
 
-function isAdminViaTelegramApp() {
-    return Boolean(window.VMRuntime?.isTelegram);
+function isAdminSecretRequired() {
+    return Boolean(window.__vmAdminSecretRequired);
 }
 
 function buildAdminPlanHeaders(secret) {
@@ -1504,6 +1509,7 @@ async function loadUserData(options = {}) {
             );
         }
         applyOwnerOnlySections(Boolean(data?.isOwner));
+        window.__vmAdminSecretRequired = Boolean(data?.adminSecretRequired);
         updateAdminAccessStatus(data);
         if (data?.isOwner) hydrateAdminSecretInputs();
         if (data?.user && window.VMWebAuth) {
@@ -1671,7 +1677,7 @@ async function buyPlan(plan) {
 
 async function activateDebugPlan(plan) {
     let secret = '';
-    if (!isAdminViaTelegramApp()) {
+    if (isAdminSecretRequired()) {
         secret = window.prompt('Введите DEBUG_ADMIN_SECRET');
         if (!secret) return;
         rememberAdminSecret(secret);
@@ -1710,7 +1716,7 @@ async function activateManualPlan(plan) {
     }
 
     const secret = secretInput ? secretInput.value.trim() : '';
-    if (!secret && !isAdminViaTelegramApp()) {
+    if (!secret && isAdminSecretRequired()) {
         if (statusEl) statusEl.textContent = 'Введите DEBUG_ADMIN_SECRET в поле ниже @username/userId.';
         showAppAlert('Введите DEBUG_ADMIN_SECRET в поле ниже @username/userId.');
         return;
@@ -1765,7 +1771,7 @@ function renderCleanupList(items) {
 async function loadCleanupPlans() {
     const statusEl = document.getElementById('cleanup-status');
     const secret = getCleanupSecret();
-    if (!secret && !isAdminViaTelegramApp()) {
+    if (!secret && isAdminSecretRequired()) {
         if (statusEl) statusEl.textContent = 'Введите DEBUG_ADMIN_SECRET в поле выше.';
         showAppAlert('Введите DEBUG_ADMIN_SECRET в поле выше.');
         return;
@@ -1826,7 +1832,7 @@ async function loadCleanupPlans() {
 async function resetCleanupPlan(userId, username = '') {
     const statusEl = document.getElementById('cleanup-status');
     const secret = getCleanupSecret();
-    if (!secret && !isAdminViaTelegramApp()) {
+    if (!secret && isAdminSecretRequired()) {
         if (statusEl) statusEl.textContent = 'Введите DEBUG_ADMIN_SECRET в поле выше.';
         showAppAlert('Введите DEBUG_ADMIN_SECRET в поле выше.');
         return;

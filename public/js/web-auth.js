@@ -189,12 +189,35 @@
   function renderLoginButtons(host, openUrl, startParam) {
     host.innerHTML = '';
 
+    const browserLoginBtn = global.document.createElement('button');
+    browserLoginBtn.type = 'button';
+    browserLoginBtn.className = 'web-auth-login-btn web-auth-login-btn-primary web-auth-login-btn-telegram';
+    browserLoginBtn.innerHTML =
+      '<span class="web-auth-tg-icon" aria-hidden="true"></span>Войти через Telegram в браузере';
+    browserLoginBtn.addEventListener('click', async () => {
+      try {
+        const cfg = await fetchAuthConfig();
+        const url = cfg.proxiedLoginUrl || cfg.loginUrl;
+        if (!url) throw new Error('Не удалось получить ссылку входа');
+        global.location.href = url;
+      } catch (e) {
+        global.VMRuntime?.alert?.(e.message || 'Не удалось открыть вход через Telegram');
+      }
+    });
+
     const btn = global.document.createElement('button');
     btn.type = 'button';
-    btn.className = 'web-auth-login-btn web-auth-login-btn-primary web-auth-login-btn-telegram';
-    btn.innerHTML = '<span class="web-auth-tg-icon" aria-hidden="true"></span>Открыть в приложении Telegram';
+    btn.className = 'web-auth-login-btn web-auth-login-btn-secondary';
+    btn.textContent = 'Открыть в приложении Telegram';
     btn.addEventListener('click', () => navigateToTelegram(startParam));
-    host.appendChild(btn);
+
+    if (isMobileDevice()) {
+      host.appendChild(btn);
+      host.appendChild(browserLoginBtn);
+    } else {
+      host.appendChild(browserLoginBtn);
+      host.appendChild(btn);
+    }
 
     const copyBtn = global.document.createElement('button');
     copyBtn.type = 'button';
@@ -209,22 +232,6 @@
     });
     host.appendChild(copyBtn);
 
-    const browserLoginBtn = global.document.createElement('button');
-    browserLoginBtn.type = 'button';
-    browserLoginBtn.className = 'web-auth-login-btn web-auth-login-btn-secondary';
-    browserLoginBtn.textContent = 'Войти через Telegram в браузере';
-    browserLoginBtn.addEventListener('click', async () => {
-      try {
-        const cfg = await fetchAuthConfig();
-        const url = cfg.proxiedLoginUrl || cfg.loginUrl;
-        if (!url) throw new Error('Не удалось получить ссылку входа');
-        global.location.href = url;
-      } catch (e) {
-        global.VMRuntime?.alert?.(e.message || 'Не удалось открыть вход через Telegram');
-      }
-    });
-    host.appendChild(browserLoginBtn);
-
     const skip = global.document.createElement('button');
     skip.type = 'button';
     skip.className = 'web-auth-login-btn web-auth-login-btn-secondary';
@@ -234,8 +241,9 @@
 
     const hint = global.document.createElement('p');
     hint.className = 'web-auth-alt';
-    hint.textContent =
-      'На следующем экране нажмите LAUNCH / ЗАПУСТИТЬ. Если Telegram не открылся — вставьте скопированную ссылку в браузер телефона.';
+    hint.textContent = isMobileDevice()
+      ? 'На следующем экране нажмите LAUNCH / ЗАПУСТИТЬ. Если Telegram не открылся — вставьте скопированную ссылку в браузер телефона.'
+      : 'На компьютере для admin-панели нажмите «Войти через Telegram в браузере». Кнопка «Открыть в приложении» не логинит этот браузер.';
     host.appendChild(hint);
 
     const link = global.document.createElement('a');
@@ -340,9 +348,31 @@
     }
   }
 
+  function readAuthErrorFromUrl() {
+    try {
+      const u = new URL(global.location.href);
+      const err = u.searchParams.get('auth_error');
+      if (!err) return null;
+      u.searchParams.delete('auth_error');
+      const qs = u.searchParams.toString();
+      global.history.replaceState({}, '', u.pathname + (qs ? `?${qs}` : '') + u.hash);
+      const messages = {
+        invalid: 'Telegram не подтвердил вход. Попробуйте «Войти через Telegram в браузере» ещё раз.',
+        server: 'Ошибка настройки сервера (TELEGRAM_BOT_TOKEN).',
+        session: 'Не удалось создать сессию. Проверьте SESSION_SECRET на VPS.',
+      };
+      return messages[err] || 'Не удалось войти через Telegram.';
+    } catch {
+      return null;
+    }
+  }
+
   async function ensureSession() {
     const startParam = readStartParamFromUrl();
     if (startParam) persistStartParam(startParam);
+
+    const authError = readAuthErrorFromUrl();
+    if (authError) global.VMRuntime?.alert?.(authError, 'Вход через Telegram');
 
     if (global.VMRuntime?.isTelegram) return true;
 
