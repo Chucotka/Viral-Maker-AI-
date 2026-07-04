@@ -868,17 +868,25 @@ function startRecoveryPolling(kind, seq, sinceAt) {
     }, RECOVERY_POLL_INTERVAL_MS);
 }
 
+function generationStayOpenHint() {
+    if (window.VMRuntime?.isTelegram) {
+        return 'Не сворачивайте Telegram.';
+    }
+    return 'Не закрывайте вкладку браузера.';
+}
+
 function beginGenerationSession(kind, opts = {}) {
     generationSeq += 1;
     const seq = generationSeq;
     activeGenerationSeq = seq;
     generationStartedAt = Date.now();
     saveActiveGenerationSession(kind, generationStartedAt, seq);
-    let label = 'Генерируем текст… Обычно 30–90 секунд (несколько шагов AI). Не сворачивайте Telegram.';
+    const stayOpen = generationStayOpenHint();
+    let label = `Генерируем текст… Обычно 30–90 секунд (несколько шагов AI). ${stayOpen}`;
     if (kind === 'image') {
-        label = 'Создаём изображение… Обычно 20–90 секунд. Не сворачивайте Telegram.';
+        label = `Создаём изображение… Обычно 20–90 секунд. ${stayOpen}`;
     } else if (opts.script) {
-        label = 'Собираем сценарий… Хук, кадры и CTA. Обычно 30–90 секунд. Не сворачивайте Telegram.';
+        label = `Собираем сценарий… Хук, кадры и CTA. Обычно 30–90 секунд. ${stayOpen}`;
     }
     setStudioGenerating(true, label);
     startRecoveryPolling(kind, seq, generationStartedAt);
