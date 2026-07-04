@@ -92,8 +92,23 @@
     }
   }
 
+  function apiFetch(path, options = {}) {
+    if (global.VMRuntime?.apiFetch) {
+      return global.VMRuntime.apiFetch(path, options);
+    }
+    const headers = {
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(options.headers || {}),
+    };
+    return global.fetch(path, {
+      credentials: 'include',
+      ...options,
+      headers,
+    });
+  }
+
   async function fetchAuthConfig() {
-    const res = await global.VMRuntime.apiFetch('/api/auth/config');
+    const res = await apiFetch('/api/auth/config');
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.callbackUrl) {
       throw new Error(data.message || 'Не удалось загрузить настройки входа');
@@ -136,7 +151,7 @@
     const startParam = readStartParamFromUrl();
     const body = { telegramUser: user };
     if (startParam) body.startParam = startParam;
-    const res = await global.VMRuntime.apiFetch('/api/auth/telegram-login', {
+    const res = await apiFetch('/api/auth/telegram-login', {
       method: 'POST',
       body: JSON.stringify(body),
     });
@@ -226,7 +241,7 @@
     const sessionPath = startParam
       ? `/api/auth/session?startapp=${encodeURIComponent(startParam)}`
       : '/api/auth/session';
-    const sessionRes = await global.VMRuntime.apiFetch(sessionPath);
+    const sessionRes = await apiFetch(sessionPath);
     const session = await sessionRes.json().catch(() => ({}));
     if (!sessionRes.ok && (session.error === 'guest_ip_limit' || session.requiresLogin)) {
       global.__vmGuestIpBlocked = session.error === 'guest_ip_limit';
