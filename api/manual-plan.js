@@ -100,7 +100,16 @@ module.exports = async (req, res) => {
         return res.status(405).end();
       }
       if (!requireAdmin(req, res)) return;
-      const overview = await listSubscriptionOverview({ scanCount: 150, freeLimit: 50 });
+      let overview;
+      try {
+        overview = await listSubscriptionOverview({ scanCount: 150, freeLimit: 50 });
+      } catch (scanErr) {
+        console.error('Manual plan list scan failed', scanErr);
+        return res.status(503).json({
+          error: 'list_failed',
+          message: 'Не удалось прочитать базу пользователей (Redis). Попробуйте через минуту.',
+        });
+      }
       console.info('Manual plan list returned', overview.totals);
       return res.json({
         ok: true,

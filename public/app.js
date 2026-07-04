@@ -1358,18 +1358,23 @@ function updateAdminAccessStatus(data) {
     if (data.isGuest) {
         secretHint =
             'Сейчас гостевая сессия. Нажмите «Войти» в шапке → «Войти через Telegram в браузере».';
-    } else if (data.adminSecretRequired) {
+    } else if (data.adminSecretRequired === true) {
         secretHint = 'Нужен DEBUG_ADMIN_SECRET из .env на VPS.';
+    } else if (data.adminSecretRequired === false) {
+        secretHint = 'Секрет не нужен — вход через Telegram подтверждён.';
+    } else {
+        secretHint =
+            'Если список не грузится — введите DEBUG_ADMIN_SECRET из .env или обновите сервер.';
     }
     el.textContent = `Владелец · ID ${userId} · ${sessionLabel}. ${secretHint}`;
-    const hideSecret = !data.adminSecretRequired;
+    const hideSecret = data.adminSecretRequired === false;
     document.querySelectorAll('.admin-secret-field').forEach((field) => {
         field.classList.toggle('hidden', hideSecret);
     });
 }
 
 function isAdminSecretRequired() {
-    return Boolean(window.__vmAdminSecretRequired);
+    return window.__vmAdminSecretRequired === true;
 }
 
 function buildAdminPlanHeaders(secret) {
@@ -1509,7 +1514,13 @@ async function loadUserData(options = {}) {
             );
         }
         applyOwnerOnlySections(Boolean(data?.isOwner));
-        window.__vmAdminSecretRequired = Boolean(data?.adminSecretRequired);
+        window.__vmIsOwner = Boolean(data?.isOwner);
+        window.__vmAdminSecretRequired =
+            data?.adminSecretRequired === false
+                ? false
+                : data?.adminSecretRequired === true
+                  ? true
+                  : undefined;
         updateAdminAccessStatus(data);
         if (data?.isOwner) hydrateAdminSecretInputs();
         if (data?.user && window.VMWebAuth) {
@@ -1781,11 +1792,15 @@ async function loadCleanupPlans() {
     if (statusEl) statusEl.textContent = 'Загружаю подписки...';
 
     try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 45000);
         const response = await fetch('/api/manual-plan', {
             method: 'POST',
             headers: buildAdminPlanHeaders(secret),
             body: JSON.stringify({ action: 'list', ...(secret ? { secret } : {}) }),
+            signal: controller.signal,
         });
+        clearTimeout(timeoutId);
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
             const message = data.message || data.error || `Не удалось получить список (HTTP ${response.status}).`;
@@ -1823,7 +1838,10 @@ async function loadCleanupPlans() {
         }
     } catch (error) {
         console.error('Cleanup list error:', error);
-        const message = error?.message || 'Ошибка при загрузке списка.';
+        const message =
+            error?.name === 'AbortError'
+                ? 'Таймаут загрузки списка (>45 с). Попробуйте ещё раз или проверьте Redis на VPS.'
+                : error?.message || 'Ошибка при загрузке списка.';
         if (statusEl) statusEl.textContent = message;
         showAppAlert(message);
     }
@@ -2418,6 +2436,9 @@ const SettingsHub = (function initSettingsHub() {
         setTileActive(panelId);
         const panelEl = document.getElementById(`settings-panel-${panelId}`);
         if (panelEl) panelEl.scrollTop = 0;
+        if (panelId === 'subscription' && window.__vmIsOwner) {
+            loadCleanupPlans();
+        }
         const tab = document.getElementById('tab-settings');
         if (tab) {
             tab.scrollTop = 0;
