@@ -30,10 +30,10 @@
       cta: 'Дальше',
     },
     {
-      title: 'Войди через Telegram',
-      body: 'Привяжи аккаунт — сохраним генерации, настройки и реферальные бонусы. Можно продолжить и как гость.',
-      cta: 'Войти через Telegram',
-      action: 'login',
+      title: 'Откройте в Telegram',
+      body: 'Вход и сохранение прогресса — в приложении Telegram. Можно продолжить в браузере как гость.',
+      cta: 'Открыть в Telegram',
+      action: 'telegram',
       skipLabel: 'Продолжить как гость',
     },
     {
@@ -117,8 +117,8 @@
   function next() {
     const steps = getSteps();
     const step = steps[stepIndex];
-    if (step?.action === 'login') {
-      global.VMWebAuth?.showOverlay?.();
+    if (step?.action === 'telegram') {
+      global.VMWebAuth?.openInTelegramApp?.();
       tg?.HapticFeedback?.impactOccurred?.('light');
       return;
     }

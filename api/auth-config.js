@@ -1,4 +1,5 @@
 const { resolveWebAuthOrigin, resolveWebAppUrl } = require('../lib/webOrigin');
+const { buildTelegramMiniAppOpenUrl, normalizeBotUsername } = require('../lib/telegramAppLink');
 
 const DEFAULT_OAUTH_BASE = 'https://oauth.telegram.org';
 
@@ -27,7 +28,7 @@ module.exports = async (req, res) => {
   const botId =
     String(process.env.TELEGRAM_BOT_ID || '').trim() ||
     (token.includes(':') ? token.split(':')[0] : '');
-  const botUsername = String(process.env.TELEGRAM_BOT_USERNAME || 'viral_maker_ai_bot').replace(/^@+/, '');
+  const botUsername = normalizeBotUsername(process.env.TELEGRAM_BOT_USERNAME);
 
   if (!botId) {
     return res.status(503).json({ error: 'server_misconfigured', message: 'Нет TELEGRAM_BOT_TOKEN.' });
@@ -50,6 +51,7 @@ module.exports = async (req, res) => {
     returnTo: callbackUrl,
   });
   const telegramBotUrl = `https://t.me/${botUsername}`;
+  const telegramMiniAppUrl = buildTelegramMiniAppOpenUrl(null, { botUsername });
 
   return res.json({
     botId: String(botId),
@@ -57,6 +59,7 @@ module.exports = async (req, res) => {
     loginUrl,
     proxiedLoginUrl,
     telegramBotUrl,
+    telegramMiniAppUrl,
     webAppUrl,
     oauthOrigin: origin,
     oauthProxyBase,

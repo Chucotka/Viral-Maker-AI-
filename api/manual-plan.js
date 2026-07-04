@@ -34,11 +34,15 @@ function parseAction(value) {
 function requireAdmin(req, res) {
   const auth = resolveTelegramUser(req, res);
   if (!auth) return null;
-  if (!hasAdminApiAccess(req, auth.userId)) {
-    console.warn('Manual plan ignored: forbidden', { userId: auth.userId });
-    res.status(403).json({ error: 'forbidden' });
-    return null;
-  }
+    if (!hasAdminApiAccess(req, auth.userId)) {
+      console.warn('Manual plan ignored: forbidden', { userId: auth.userId });
+      res.status(403).json({
+        error: 'forbidden',
+        message:
+          'Доступ только владельцу. Войдите через Telegram (не как гость) и проверьте DEBUG_ADMIN_SECRET.',
+      });
+      return null;
+    }
   return auth;
 }
 
