@@ -332,6 +332,10 @@
 
   function requireReferralLogin() {
     const msg = 'Реферальная ссылка привязана к Telegram. Войдите через Telegram в браузере или откройте Mini App.';
+    if (global.VMRuntime?.isTelegram) {
+      tg?.showAlert?.(msg);
+      return;
+    }
     if (global.VMWebAuth?.showOverlay) {
       global.VMRuntime?.alert?.(msg, 'Нужен вход');
       global.VMWebAuth.showOverlay();

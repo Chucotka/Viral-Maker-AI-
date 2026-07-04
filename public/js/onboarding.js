@@ -46,6 +46,7 @@
   ];
 
   function isWebGuestFlow() {
+    if (global.Telegram?.WebApp?.initData || global.VMRuntime?.isTelegram) return false;
     return Boolean(global.VMRuntime?.isWeb && global.VMWebAuth?.isGuest?.());
   }
 

@@ -1,5 +1,19 @@
 // Telegram Web App или веб (innoko.ru/app)
-const tg = window.VMRuntime?.tg || window.Telegram?.WebApp || {};
+function getTg() {
+    return window.VMRuntime?.tg || window.Telegram?.WebApp || null;
+}
+
+const tg = new Proxy(
+    {},
+    {
+        get(_target, prop) {
+            const api = getTg();
+            if (!api || !(prop in api)) return undefined;
+            const value = api[prop];
+            return typeof value === 'function' ? value.bind(api) : value;
+        },
+    },
+);
 
 const PREMIUM_BOT_URL = 'https://t.me/PremiumBot';
 const PREMIUM_BOT_HANDLE = '@PremiumBot';
@@ -17,7 +31,8 @@ function miniAppHeaders(jsonBody = false) {
     if (window.VMRuntime?.headers) return window.VMRuntime.headers(jsonBody);
     const h = {};
     if (jsonBody) h['Content-Type'] = 'application/json';
-    if (tg.initData) h['X-Telegram-Init-Data'] = tg.initData;
+    const initData = getTg()?.initData;
+    if (initData) h['X-Telegram-Init-Data'] = initData;
     return h;
 }
 
@@ -81,7 +96,7 @@ async function saveCurrentImageToDevice() {
                 downloadUrl: currentImageDownloadUrl,
                 downloadToken: currentImageDownloadToken,
                 downloadFileName: currentImageDownloadFileName,
-                tg,
+                tg: getTg(),
                 getHeaders: () => miniAppHeaders(true),
                 onError: (msg) => tg.showAlert(msg),
             });
@@ -407,16 +422,29 @@ function loadSavedSettings() {
 }
 
 // Set user name if available (отображение; userId на сервере только из initData)
-if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-    const firstName = tg.initDataUnsafe.user.first_name;
-    document.getElementById('user-name').textContent = firstName;
+function applyTelegramUserFromSdk() {
+    const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
+    if (!user) return;
+    const firstName = user.first_name || user.username || 'Пользователь';
+    const nameEl = document.getElementById('user-name');
+    if (nameEl) {
+        nameEl.textContent = firstName;
+        nameEl.classList.remove('user-name-login');
+        nameEl.style.cursor = '';
+        delete nameEl.dataset.loginBound;
+    }
     const settingsHeroName = document.getElementById('settings-hero-name');
     if (settingsHeroName) settingsHeroName.textContent = firstName;
     const settingsHeroAvatar = document.getElementById('settings-hero-avatar');
-    if (settingsHeroAvatar && tg.initDataUnsafe.user.photo_url) {
-        settingsHeroAvatar.innerHTML = `<img src="${tg.initDataUnsafe.user.photo_url}" alt="" class="settings-hero-avatar-img">`;
+    if (settingsHeroAvatar && user.photo_url) {
+        settingsHeroAvatar.innerHTML = `<img src="${user.photo_url}" alt="" class="settings-hero-avatar-img">`;
+    }
+    const avatar = document.getElementById('user-avatar');
+    if (avatar && user.photo_url) {
+        avatar.innerHTML = `<img src="${user.photo_url}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`;
     }
 }
+applyTelegramUserFromSdk();
 
 /** Текущий тариф с сервера (для проверки Premium перед постингом картинки). */
 let userPlan = 'free';
@@ -1606,7 +1634,8 @@ async function loadUserData(options = {}) {
         updateAdminAccessStatus(data);
         if (data?.isOwner) hydrateAdminSecretInputs();
         if (data?.user && window.VMWebAuth) {
-            window.VMWebAuth.applyUserToUi(data.user, data.isGuest);
+            const treatAsGuest = Boolean(data.isGuest) && !window.Telegram?.WebApp?.initData;
+            window.VMWebAuth.applyUserToUi(data.user, treatAsGuest);
         }
         if (data && data.profile) {
             document.getElementById('profile-niche').value = data.profile.niche || '';
@@ -2571,6 +2600,12 @@ document.getElementById('btn-analytics-upgrade')?.addEventListener('click', () =
 updatePlanUI('free', null);
 recoverActiveGenerationOnLoad();
 async function bootApp() {
+    if (window.VMTelegramBoot?.isInsideTelegramClient?.() || window.Telegram?.WebApp) {
+        await window.VMTelegramBoot?.waitForInitData?.(8000);
+    }
+    window.VMRuntime?.syncTelegramChrome?.();
+    applyTelegramUserFromSdk();
+
     loadTrends();
     loadDashboardData();
 
@@ -2587,13 +2622,13 @@ async function bootApp() {
 
     await userReady;
 
-    if (window.VMOnboarding && !VMOnboarding.isDone()) {
+    if (window.VMOnboarding && !VMOnboarding.isDone() && window.VMRuntime?.isWeb) {
         setTimeout(() => VMOnboarding.show(), 400);
     }
     if (window.VMImageDownload?.readPendingSaveToken?.()) {
         setTimeout(() => {
             VMImageDownload.retryPendingSaveIfAny({
-                tg,
+                tg: getTg(),
                 getHeaders: () => miniAppHeaders(true),
             });
         }, 800);

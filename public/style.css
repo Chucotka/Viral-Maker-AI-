@@ -51,6 +51,7 @@ h3 { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
     backdrop-filter: blur(8px);
 }
 .web-auth-overlay.hidden { display: none !important; }
+html.vm-telegram-mini-app #web-auth-overlay { display: none !important; }
 .web-auth-card {
     width: 100%;
     max-width: 400px;

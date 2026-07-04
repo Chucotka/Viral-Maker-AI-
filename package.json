@@ -8,6 +8,8 @@
     "start": "node dev.js",
     "setup:vps": "bash scripts/setup-vps-innoko.sh",
     "test": "node --test test/*.test.js",
+    "smoke": "node scripts/stabilization-smoke.js",
+    "smoke:local": "node scripts/stabilization-smoke.js --local",
     "deploy": "bash scripts/deploy-vps-update.sh",
     "deploy:vps": "bash scripts/deploy-vps-update.sh",
     "health:monitor": "node scripts/health-monitor.js"
