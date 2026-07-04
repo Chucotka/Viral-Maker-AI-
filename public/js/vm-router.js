@@ -20,15 +20,17 @@
 
   function syncHash(tabId, replace = true) {
     if (global.VMRuntime?.isTelegram) return;
-    const next = hashForTab(tabId);
+    const nextHash = hashForTab(tabId);
     const path = global.location.pathname || '/';
     const onApp = path.startsWith('/app');
     if (!onApp && !global.location.hash) return;
-    if (global.location.hash === next) return;
+    if (global.location.hash === nextHash) return;
+    const u = new URL(global.location.href);
+    const nextUrl = `${u.pathname}${u.search}${nextHash}`;
     if (replace) {
-      global.history.replaceState(null, '', next);
+      global.history.replaceState(null, '', nextUrl);
     } else {
-      global.location.hash = next;
+      global.location.hash = nextHash;
     }
   }
 

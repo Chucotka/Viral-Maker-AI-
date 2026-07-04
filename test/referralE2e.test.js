@@ -164,4 +164,11 @@ describe('referral E2E flow', () => {
       'https://app.innoko.ru/app/?startapp=ref_42',
     );
   });
+
+  it('buildReferralLink requires login for guest web_* ids', () => {
+    const links = referralService.buildReferralLink('web_abc-123');
+    assert.equal(links.requiresLogin, true);
+    assert.equal(links.telegramLink, null);
+    assert.equal(links.webLink, null);
+  });
 });

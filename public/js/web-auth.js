@@ -30,8 +30,15 @@
   }
 
   function readStartParamFromUrl() {
+    try {
+      const stored = global.sessionStorage?.getItem('vm_start_param');
+      if (stored && String(stored).trim()) return String(stored).trim();
+    } catch {
+      /* ignore */
+    }
     if (global.ReferralSystem?.readStartParam) {
-      return global.ReferralSystem.readStartParam();
+      const fromRef = global.ReferralSystem.readStartParam();
+      if (fromRef) return fromRef;
     }
     try {
       const u = new URL(global.location.href);
@@ -41,6 +48,15 @@
       /* ignore */
     }
     return null;
+  }
+
+  function persistStartParam(startParam) {
+    if (!startParam) return;
+    try {
+      global.sessionStorage?.setItem('vm_start_param', String(startParam));
+    } catch {
+      /* ignore */
+    }
   }
 
   function consumeQueryFlag(name) {
@@ -205,6 +221,7 @@
     if (consumeQueryFlag('guest_merged')) showMergeNotice();
 
     const startParam = readStartParamFromUrl();
+    if (startParam) persistStartParam(startParam);
     const sessionPath = startParam
       ? `/api/auth/session?startapp=${encodeURIComponent(startParam)}`
       : '/api/auth/session';

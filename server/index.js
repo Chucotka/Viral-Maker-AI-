@@ -20,6 +20,16 @@ app.use(
 
 const publicDir = path.join(__dirname, '../public');
 
+/** Корень — реферальные ссылки с ?startapp= уходят в /app/ */
+app.get('/', (req, res, next) => {
+  const startapp = req.query?.startapp || req.query?.start_param;
+  if (startapp && String(startapp).trim()) {
+    const qs = new URLSearchParams(req.query);
+    return res.redirect(302, `/app/?${qs.toString()}`);
+  }
+  return next();
+});
+
 /** Корень — для локальной разработки и Telegram Mini App */
 app.use(express.static(publicDir));
 
