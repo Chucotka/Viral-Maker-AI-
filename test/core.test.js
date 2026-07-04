@@ -15,10 +15,14 @@ describe('referralService', () => {
     assert.equal(parseReferrerId('ref_abc'), null);
   });
 
-  it('buildReferralLink includes startapp param', () => {
-    const links = buildReferralLink('999', { botUsername: 'test_bot', webAppUrl: 'https://example.com' });
+  it('buildReferralLink includes startapp param on /app path', () => {
+    const links = buildReferralLink('999', {
+      botUsername: 'test_bot',
+      webAppUrl: 'https://app.innoko.ru/app/',
+    });
     assert.match(links.telegramLink, /startapp=ref_999/);
     assert.match(links.webLink, /startapp=ref_999/);
+    assert.match(links.webLink, /\/app\/\?startapp=ref_999/);
   });
 
   it('constants match product rules', () => {

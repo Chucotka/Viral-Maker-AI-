@@ -1,14 +1,17 @@
 # Viral Maker AI на innoko.ru (полная веб-версия)
 
-Приложение работает в **Telegram** и в **браузере** на `https://innoko.ru/app` с тем же аккаунтом (Telegram Login Widget + cookie-сессия).
+Приложение работает в **Telegram** и в **браузере** на `https://innoko.ru/#/dashboard` (как levsha.studio — hash-роутинг на том же домене).
 
 ## Архитектура
 
 | URL | Назначение |
 |-----|------------|
-| `innoko.ru` | Лендинг Innoko (Manus) |
-| `innoko.ru/app` | Полное приложение (UI + API на VPS) |
+| `innoko.ru/#/dashboard` | Главная (дашборд) |
+| `innoko.ru/#/studio` | Студия генерации |
+| `innoko.ru/#/settings` | Настройки |
+| `innoko.ru/landing` | Маркетинговый лендинг (Manus), опционально |
 | `innoko.ru/api/*` | Backend (генерация, пользователь, оплата) |
+| `innoko.ru/app` | Редirect → `/#/dashboard` (legacy) |
 
 Manus **не** запускает API — нужен VPS с nginx.
 
@@ -34,7 +37,7 @@ cp .env.example .env
 Обязательные переменные:
 
 ```env
-WEBAPP_URL=https://innoko.ru/app
+WEBAPP_URL=https://innoko.ru
 TELEGRAM_BOT_TOKEN=...
 TELEGRAM_BOT_USERNAME=ваш_бот
 GEMINI_API_KEY=...
@@ -93,7 +96,7 @@ server {
 
 ## 4. Telegram
 
-- **Menu Button:** `https://innoko.ru/app`
+- **Menu Button:** `https://innoko.ru/`
 - **Webhook:** `https://innoko.ru/api/webhook`
 
 ```bash
@@ -102,7 +105,7 @@ curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://innoko.ru/api/w
 
 ## 5. Manus
 
-На лендинге добавьте в меню пункт **Viral Maker AI** → `https://innoko.ru/app` (не iframe — прямая ссылка).
+На лендинге Manus (`innoko.ru/landing`) добавьте ссылку **Viral Maker AI** → `https://innoko.ru/#/dashboard`
 
 ## 6. Проверка
 
@@ -111,7 +114,7 @@ curl https://innoko.ru/api/ping
 curl https://innoko.ru/api/trends
 ```
 
-В браузере: `https://innoko.ru/app` → вход через Telegram → генерация поста.
+В браузере: `https://innoko.ru/#/dashboard` → приложение открывается сразу на сайте.
 
 ## Локальная разработка веб-режима
 
@@ -121,8 +124,23 @@ cp .env.example .env
 npm run dev
 ```
 
-Откройте `http://127.0.0.1:3001/app/` — появится виджет входа (домен localhost не пройдёт BotFather; для теста используйте ngrok с innoko.ru или тестируйте в Telegram).
+Откройте `http://127.0.0.1:3001/#/dashboard` — hash-роутинг работает локально.
 
-## Отвязка от Vercel
+## Деплой (только VPS)
 
-После проверки на `innoko.ru/app` удалите проект на Vercel (Settings → Danger Zone → Delete Project).
+Продакшен — **Timeweb VPS** (`app.innoko.ru`), не Vercel.
+
+```bash
+cd /var/www/viral-maker
+git pull
+npm ci
+pm2 restart viral-maker
+```
+
+Или с локальной машины через SSH:
+
+```bash
+ssh root@72.56.84.201 'cd /var/www/viral-maker && bash scripts/deploy-vps-update.sh'
+```
+
+Vercel больше не используется — удалите проект в [vercel.com](https://vercel.com) (Settings → Delete Project) и отзовите доступ в GitHub → Integrations.

@@ -51,7 +51,7 @@ npm run dev
 
 The server should now be running on `http://localhost:3001` and is accessible via your ngrok URL.
 
-**Note:** Local dev uses the same `api/*.js` handlers as Vercel production (via `server/mountApi.js`). Redis is required for generation, user profile, and payments.
+**Note:** Local dev uses the same `api/*.js` handlers as production VPS (via `server/mountApi.js`). Redis is required for generation, user profile, and payments.
 
 ### 5. Set the Bot WebApp URL
 You need to tell Telegram what URL to load when users open your Mini App.

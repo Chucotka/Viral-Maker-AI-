@@ -21,6 +21,26 @@ function miniAppHeaders(jsonBody = false) {
     return h;
 }
 
+function showAppAlert(message, title) {
+    if (window.VMRuntime?.alert) {
+        window.VMRuntime.alert(message, title);
+        return;
+    }
+    if (typeof tg.showAlert === 'function') {
+        tg.showAlert(String(message || ''));
+        return;
+    }
+    window.alert(String(message || ''));
+}
+
+function showAppPopup(opts) {
+    if (typeof tg.showPopup === 'function') {
+        tg.showPopup(opts);
+        return;
+    }
+    showAppAlert(opts?.message || '', opts?.title);
+}
+
 function escapeHtml(s) {
     return String(s)
         .replace(/&/g, '&amp;')
@@ -508,16 +528,29 @@ function handlePremiumBotAction() {
 }
 
 async function buyPlanViaTribute(plan) {
+    if (window.VMWebAuth?.isGuest?.()) {
+        showAppAlert(
+            'Войдите через Telegram — подписка активируется на ваш Telegram ID после оплаты.',
+            'Нужен вход',
+        );
+        window.VMWebAuth.showOverlay?.();
+        return;
+    }
     try {
-        const response = await fetch(`/api/tribute-link?plan=${encodeURIComponent(plan)}`);
+        const channel = window.VMRuntime?.isTelegram ? 'telegram' : 'web';
+        const response = await fetch(
+            `/api/tribute-link?plan=${encodeURIComponent(plan)}&channel=${encodeURIComponent(channel)}`,
+        );
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-            tg.showAlert(data.message || data.error || 'Не удалось открыть Tribute.');
+            showAppAlert(data.message || data.error || 'Не удалось открыть Tribute.');
             return;
         }
         if (data.link) {
-            startPlanRefreshPolling();
-            if (typeof tg.openLink === 'function') {
+            startPlanRefreshPolling(plan);
+            if (window.VMRuntime?.isTelegram && typeof tg.openTelegramLink === 'function' && data.telegramLink) {
+                tg.openTelegramLink(data.telegramLink);
+            } else if (typeof tg.openLink === 'function') {
                 tg.openLink(data.link);
             } else {
                 window.open(data.link, '_blank', 'noopener');
@@ -525,7 +558,7 @@ async function buyPlanViaTribute(plan) {
         }
     } catch (error) {
         console.error('Tribute payment error:', error);
-        tg.showAlert('Произошла ошибка при открытии Tribute.');
+        showAppAlert('Произошла ошибка при открытии Tribute.');
     }
 }
 
@@ -536,24 +569,35 @@ function stopPlanRefreshPolling() {
     }
 }
 
-function startPlanRefreshPolling() {
+function startPlanRefreshPolling(expectedPlan) {
     stopPlanRefreshPolling();
     let attempts = 0;
     planRefreshTimer = setInterval(async () => {
         attempts += 1;
         const previousPlan = userPlan;
         await loadUserData({ silent: true });
-        if (userPlan !== previousPlan && (userPlan === 'pro' || userPlan === 'premium')) {
+        const activated =
+            userPlan !== previousPlan &&
+            (userPlan === 'pro' || userPlan === 'premium') &&
+            (!expectedPlan || userPlan === expectedPlan || expectedPlan === 'pro');
+        if (activated) {
             stopPlanRefreshPolling();
-            tg.showPopup({
+            showAppPopup({
                 title: 'Подписка активирована',
-                message: userPlan === 'premium' ? 'Premium уже доступен в приложении.' : 'Pro уже доступен в приложении.',
+                message:
+                    userPlan === 'premium'
+                        ? 'Premium уже доступен в приложении.'
+                        : 'Pro уже доступен в приложении.',
                 buttons: [{ type: 'ok' }],
             });
             return;
         }
-        if (attempts >= 20) {
+        if (attempts >= 30) {
             stopPlanRefreshPolling();
+            showAppAlert(
+                'Если оплата прошла, но тариф не обновился — подождите минуту и обновите страницу. При проблеме напишите в поддержку с чеком.',
+                'Проверка оплаты',
+            );
         }
     }, 4000);
 }
@@ -704,7 +748,7 @@ function alertFromGenerateError(message) {
         }
         text = 'Откройте мини-приложение из Telegram (кнопка в боте), чтобы подпись сессии передалась на сервер.';
     } else if (/kv_required|Redis/i.test(m)) {
-        text = 'На сервере не настроено хранилище Redis. Добавьте Upstash Redis в Vercel и переменные окружения.';
+        text = 'На сервере не настроено хранилище Redis. Добавьте UPSTASH_REDIS_REST_URL и TOKEN в .env на VPS.';
     } else if (/rate_limit|429|Слишком много запросов/i.test(m)) {
         text = 'Слишком много запросов за короткое время. Подождите около минуты и попробуйте снова.';
     } else if (/504|FUNCTION_INVOCATION_TIMEOUT|timeout|timed out|aborted/i.test(m)) {
@@ -729,11 +773,11 @@ async function parseJsonResponse(response) {
         if (/^\s*<!DOCTYPE|^\s*<html/i.test(body)) {
             if (status >= 500) {
                 throw new Error(
-                    `Сбой сервера (HTTP ${status}): пришла страница ошибки, а не JSON. Это обычно не ключ Gemini — смотрите логи Vercel → Functions → /api/generate.`,
+                    `Сбой сервера (HTTP ${status}): пришла страница ошибки, а не JSON. Смотрите pm2 logs viral-maker на VPS.`,
                 );
             }
             throw new Error(
-                `Сервер вернул HTML (HTTP ${status}), а не JSON. Проверьте URL мини-приложения в BotFather (должен совпадать с Vercel, не старый ngrok).`,
+                `Сервер вернул HTML (HTTP ${status}), а не JSON. Проверьте URL в BotFather (https://app.innoko.ru/app).`,
             );
         }
         throw new Error(`Сервер вернул неверный ответ (HTTP ${status}). Попробуйте ещё раз.`);
@@ -824,17 +868,25 @@ function startRecoveryPolling(kind, seq, sinceAt) {
     }, RECOVERY_POLL_INTERVAL_MS);
 }
 
+function generationStayOpenHint() {
+    if (window.VMRuntime?.isTelegram) {
+        return 'Не сворачивайте Telegram.';
+    }
+    return 'Не закрывайте вкладку браузера.';
+}
+
 function beginGenerationSession(kind, opts = {}) {
     generationSeq += 1;
     const seq = generationSeq;
     activeGenerationSeq = seq;
     generationStartedAt = Date.now();
     saveActiveGenerationSession(kind, generationStartedAt, seq);
-    let label = 'Генерируем текст… Обычно 30–90 секунд (несколько шагов AI). Не сворачивайте Telegram.';
+    const stayOpen = generationStayOpenHint();
+    let label = `Генерируем текст… Обычно 30–90 секунд (несколько шагов AI). ${stayOpen}`;
     if (kind === 'image') {
-        label = 'Создаём изображение… Обычно 20–90 секунд. Не сворачивайте Telegram.';
+        label = `Создаём изображение… Обычно 20–90 секунд. ${stayOpen}`;
     } else if (opts.script) {
-        label = 'Собираем сценарий… Хук, кадры и CTA. Обычно 30–90 секунд. Не сворачивайте Telegram.';
+        label = `Собираем сценарий… Хук, кадры и CTA. Обычно 30–90 секунд. ${stayOpen}`;
     }
     setStudioGenerating(true, label);
     startRecoveryPolling(kind, seq, generationStartedAt);
@@ -1288,17 +1340,75 @@ function applyOwnerOnlySections(isOwnerFromServer) {
     });
 }
 
+function readReferralStartParam() {
+    try {
+        const stored = sessionStorage.getItem('vm_start_param');
+        if (stored && /^ref_\d+$/.test(String(stored).trim())) return String(stored).trim();
+    } catch {
+        /* ignore */
+    }
+    const fromRuntime = window.VMRuntime?.readStartParamFromUrl?.();
+    if (fromRuntime && /^ref_\d+$/.test(String(fromRuntime).trim())) return String(fromRuntime).trim();
+    const fromRef = window.ReferralSystem?.readStartParam?.();
+    if (fromRef && /^ref_\d+$/.test(String(fromRef).trim())) return String(fromRef).trim();
+    return '';
+}
+
+function showReferralSignupFeedback(signup, silent) {
+    if (!signup || silent) return;
+    if (signup.bound) {
+        showAppPopup({
+            title: 'Реферальная ссылка активна',
+            message:
+                'Вы перешли по приглашению. После вашей первой генерации друг получит +10 бонусных генераций.',
+        });
+        return;
+    }
+    if (signup.reason === 'self_referral') {
+        showAppAlert('Нельзя использовать свою реферальную ссылку.', 'Рефералка');
+        return;
+    }
+    if (signup.reason === 'already_referred' && signup.referrerId) {
+        showAppAlert('Вы уже перешли по реферальной ссылке ранее.', 'Рефералка');
+    }
+}
+
+function updateReferralInviteBanner(referral) {
+    const invited = referral?.referrerId && !referral?.referralConfirmed;
+    let el = document.getElementById('referral-invite-banner');
+    if (!invited) {
+        el?.classList.add('hidden');
+        return;
+    }
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'referral-invite-banner';
+        el.className = 'referral-invite-banner';
+        const host = document.querySelector('#tab-dashboard .main-cta-container');
+        if (host) host.before(el);
+        else document.querySelector('#tab-dashboard')?.prepend(el);
+    }
+    el.classList.remove('hidden');
+    el.innerHTML =
+        '🎁 <strong>Вы по приглашению.</strong> Сделайте первую генерацию в Studio — друг получит +10 бонусных генераций.';
+}
+
 async function loadUserData(options = {}) {
     const { silent = false } = options;
+    const startParam = readReferralStartParam();
+    const userPath = startParam
+        ? `/api/user?startapp=${encodeURIComponent(startParam)}`
+        : '/api/user';
     try {
-        const response = await fetch('/api/user', { headers: miniAppHeaders(false) });
+        const response = await fetch(userPath, { headers: miniAppHeaders(false) });
         const data = await response.json().catch(() => ({}));
         if (response.status === 401 || response.status === 503) {
             const msg = data.message || data.error || 'Проверьте настройки сервера (KV, Telegram).';
             console.warn('loadUserData:', response.status, msg);
             if (response.status === 401) {
                 if (window.VMRuntime?.isWeb && window.VMWebAuth) {
-                    window.VMWebAuth.showOverlay();
+                    await window.VMWebAuth.ensureSession();
+                    await loadUserData({ silent: startParam ? false : true });
                 } else if (!silent) {
                     (window.VMRuntime?.alert || tg.showAlert)?.(
                         'Откройте приложение из Telegram, чтобы загрузить профиль.',
@@ -1325,6 +1435,9 @@ async function loadUserData(options = {}) {
             updatePlanUI(data.plan, data.planUntil || null, data.bonusGenerations || 0, data.quotaRemaining);
         }
         applyOwnerOnlySections(Boolean(data?.isOwner));
+        if (data?.user && window.VMWebAuth) {
+            window.VMWebAuth.applyUserToUi(data.user, data.isGuest);
+        }
         if (data && data.profile) {
             document.getElementById('profile-niche').value = data.profile.niche || '';
             document.getElementById('profile-language').value = data.profile.language || '';
@@ -1338,13 +1451,8 @@ async function loadUserData(options = {}) {
                 await loadUserData({ silent: true });
             }
         }
-        if (data?.referralSignup?.bound && !silent) {
-            tg.showPopup({
-                title: 'Реферальная ссылка активна',
-                message:
-                    'Вы перешли по приглашению. После вашей первой генерации друг получит +10 бонусных генераций.',
-            });
-        }
+        showReferralSignupFeedback(data?.referralSignup, silent);
+        updateReferralInviteBanner(data?.referral);
         if (data?.supportChatLink) {
             supportChatLink = data.supportChatLink;
         }
@@ -1388,6 +1496,22 @@ document.getElementById('btn-save-profile').addEventListener('click', async () =
         tg.showAlert('Ошибка сети при сохранении профиля.');
     }
 });
+
+async function syncQuotaAfterGeneration(data) {
+    if (data?.remainingToday !== undefined) {
+        const limitMsg = document.getElementById('limit-msg');
+        const remaining = Number(data.remainingToday);
+        if (limitMsg && Number.isFinite(remaining) && remaining <= 2) {
+            limitMsg.innerHTML = remaining > 0
+                ? `⚡️ Осталось бесплатных генераций: <b>${remaining}</b>.`
+                : '⚡️ Бесплатные генерации закончились. Пригласите друзей или перейдите на Pro.';
+            limitMsg.classList.remove('hidden');
+            limitMsg.classList.toggle('error', remaining <= 0);
+            limitMsg.classList.toggle('warning', remaining > 0);
+        }
+    }
+    await loadUserData({ silent: true });
+}
 
 function updatePlanUI(plan, planUntil, bonusGenerations = 0, quotaRemaining = null) {
     const badge = document.getElementById('current-plan-badge');
@@ -1813,7 +1937,7 @@ async function runTextGeneration(opts = {}) {
     limitMsg.classList.add('hidden');
 
     if (!topic) {
-        tg.showAlert(opts.emptyTopicMessage || 'Пожалуйста, введите тему или идею.');
+        showAppAlert(opts.emptyTopicMessage || 'Пожалуйста, введите тему или идею.');
         return;
     }
 
@@ -1853,15 +1977,7 @@ async function runTextGeneration(opts = {}) {
         }
 
         applyTextGenerateData(data, topic);
-
-        if (data.remainingToday !== undefined) {
-            const remaining = data.remainingToday;
-            if (remaining <= 2) {
-                limitMsg.innerHTML = `⚡️ Осталось бесплатных генераций: <b>${remaining}</b>.`;
-                limitMsg.classList.remove('hidden', 'error');
-                limitMsg.classList.add('warning');
-            }
-        }
+        await syncQuotaAfterGeneration(data);
     } catch (error) {
         console.error(error);
         const recovered = await tryRecoverGenerationResult('text');
@@ -1899,7 +2015,7 @@ async function runImageGeneration() {
     limitMsg.classList.add('hidden');
 
     if (!prompt) {
-        tg.showAlert('Введите описание изображения.');
+        showAppAlert('Введите описание изображения.');
         return;
     }
 
@@ -1991,14 +2107,7 @@ async function runImageGeneration() {
         );
         if (document.getElementById('tab-dashboard').classList.contains('active')) loadDashboardData();
 
-        if (data.remainingToday !== undefined) {
-            const remaining = data.remainingToday;
-            if (remaining <= 2) {
-                limitMsg.innerHTML = `⚡️ Осталось бесплатных генераций: <b>${remaining}</b>.`;
-                limitMsg.classList.remove('hidden', 'error');
-                limitMsg.classList.add('warning');
-            }
-        }
+        await syncQuotaAfterGeneration(data);
     } catch (error) {
         console.error(error);
         const recovered = await tryRecoverGenerationResult('image');
@@ -2184,7 +2293,6 @@ async function bootApp() {
             await window.VMWebAuth.ensureSession();
         } catch (e) {
             console.warn('web auth:', e);
-            return;
         }
     }
     await loadUserData();

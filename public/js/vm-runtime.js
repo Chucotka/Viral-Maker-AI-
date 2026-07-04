@@ -1,5 +1,5 @@
 /**
- * Среда выполнения: Telegram Mini App или веб (innoko.ru/app).
+ * Среда выполнения: Telegram Mini App или веб (innoko.ru/#/dashboard).
  */
 (function initVmRuntime(global) {
   const tg = global.Telegram?.WebApp;

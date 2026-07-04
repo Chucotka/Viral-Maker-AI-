@@ -27,7 +27,7 @@ describe('auth-telegram-callback', () => {
     };
     process.env.TELEGRAM_BOT_TOKEN = '123456:ABC-DEF';
     process.env.SESSION_SECRET = 'test-session-secret';
-    process.env.WEBAPP_URL = 'https://app.innoko.ru';
+    process.env.WEBAPP_URL = 'https://app.innoko.ru/app';
   });
 
   afterEach(() => {

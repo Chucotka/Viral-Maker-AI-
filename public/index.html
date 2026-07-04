@@ -5,17 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <meta name="vm-bot-username" content="viral_maker_ai_bot" />
     <title>Viral Maker AI | Innoko</title>
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="style.css?v=20260704b" />
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
     <div id="web-auth-overlay" class="web-auth-overlay hidden" aria-hidden="true">
         <div class="web-auth-card">
             <p class="web-auth-brand">Innoko · Viral Maker AI</p>
-            <h1 class="web-auth-title">Войдите через Telegram</h1>
-            <p class="web-auth-hint">Тот же аккаунт, что в мини-приложении: генерации, подписка и история сохраняются.</p>
+            <h1 class="web-auth-title">Войти через Telegram</h1>
+            <p class="web-auth-hint">Генерации и настройки сохранятся в вашем Telegram-аккаунте.</p>
             <div id="web-auth-widget" class="web-auth-widget"></div>
-            <p class="web-auth-footnote">BotFather → /setdomain → app.innoko.ru</p>
         </div>
     </div>
     <div class="app-container">
@@ -664,7 +663,7 @@
                     </details>
                     <details class="faq-item">
                         <summary class="faq-question">Генерация долго идёт или пропала</summary>
-                        <p class="faq-answer">Текст и сценарии обычно занимают <b>30–90 секунд</b>, картинки — <b>20–90 секунд</b>. Не сворачивайте Telegram во время генерации. Если кажется, что зависло — откройте <b>Дашборд</b>: готовый результат часто уже в истории.</p>
+                        <p class="faq-answer">Текст и сценарии обычно занимают <b>30–90 секунд</b>, картинки — <b>20–90 секунд</b>. В Telegram не сворачивайте приложение, в браузере — не закрывайте вкладку. Если кажется, что зависло — откройте <b>Дашборд</b>: готовый результат часто уже в истории.</p>
                     </details>
                     <details class="faq-item">
                         <summary class="faq-question">Зачем заполнять профиль автора?</summary>
@@ -687,6 +686,11 @@
                             </p>
                             <button type="button" class="btn btn-secondary btn-full" id="btn-contact-support">Написать в поддержку</button>
                             <p class="text-hint contact-card-hint" id="contact-support-hint">Откроется чат в Telegram. Если бот просит — нажмите Start и отправьте сообщение.</p>
+                            <p class="text-hint legal-links" style="margin-top:16px">
+                                <a href="legal/privacy.html" target="_blank" rel="noopener">Политика конфиденциальности</a>
+                                ·
+                                <a href="legal/terms.html" target="_blank" rel="noopener">Пользовательское соглашение</a>
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -742,14 +746,15 @@
         </div>
     </div>
 
-    <script src="js/vm-runtime.js"></script>
-    <script src="js/web-auth.js"></script>
+    <script src="js/vm-runtime.js?v=20260703"></script>
+    <script src="js/web-auth.js?v=20260704c"></script>
     <script src="js/vm-core.js"></script>
     <script src="js/history-store.js"></script>
     <script src="js/image-download.js"></script>
     <script src="js/onboarding.js"></script>
     <script src="js/admin-subs.js"></script>
     <script src="referral.js"></script>
-    <script src="app.js"></script>
+    <script src="app.js?v=20260704d"></script>
+    <script src="js/vm-router.js"></script>
 </body>
 </html>

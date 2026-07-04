@@ -1,5 +1,6 @@
 node_modules/
 .env
+.vercel
 posts.json
 users.json
 ._*

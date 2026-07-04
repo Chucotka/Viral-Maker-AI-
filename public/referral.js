@@ -323,6 +323,16 @@
 
   function shareReferralLink(stats) {
     const links = stats?.links;
+    if (links?.requiresLogin) {
+      const msg = 'Войдите через Telegram — реферальная ссылка привязана к вашему Telegram ID.';
+      if (global.VMWebAuth?.showOverlay) {
+        global.VMRuntime?.alert?.(msg, 'Нужен вход');
+        global.VMWebAuth.showOverlay();
+      } else {
+        tg?.showAlert?.(msg);
+      }
+      return;
+    }
     if (!links?.telegramLink) {
       tg?.showAlert?.('Ссылка пока недоступна. Попробуйте позже.');
       return;

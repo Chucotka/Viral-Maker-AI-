@@ -19,9 +19,13 @@ function sanitizeProfileBody(body) {
   return { niche, language, styleNote, brandMemory };
 }
 
-/** Только подписанный start_param из initData — защита от подмены referrer. */
-function readReferralParam(_req, authStartParam) {
-  return authStartParam || null;
+/** start_param из initData / cookie-сессии; для web-ссылок — ?startapp=ref_* в query. */
+function readReferralParam(req, authStartParam) {
+  if (authStartParam && parseReferrerId(authStartParam)) return authStartParam;
+  const raw = req.query?.startapp || req.query?.start_param || '';
+  const q = String(raw || '').trim();
+  if (q && parseReferrerId(q)) return q;
+  return null;
 }
 
 module.exports = async (req, res) => {
@@ -51,6 +55,8 @@ module.exports = async (req, res) => {
         plan: rec.plan,
         dailyCount: rec.dailyCount,
         userId: auth.userId,
+        user: auth.user || null,
+        isGuest: auth.authKind === 'guest',
         isOwner: isAppOwner(auth.userId),
         planUntil: rec.planUntil || null,
         bonusGenerations: rec.bonusGenerations || 0,
@@ -102,3 +108,5 @@ module.exports = async (req, res) => {
     sendSafeError(res, e, 'user');
   }
 };
+
+module.exports.readReferralParam = readReferralParam;
