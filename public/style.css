@@ -38,6 +38,23 @@ h3 { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
 .text-hint { color: var(--text-muted); font-size: 12px; margin-top: 4px; }
 .hidden { display: none !important; }
 
+.site-home-link {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 1200;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: rgba(15, 15, 20, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    text-decoration: none;
+    backdrop-filter: blur(8px);
+}
+.site-home-link:hover { color: var(--text); }
+
 /* Web login (innoko.ru/app) */
 .web-auth-overlay {
     position: fixed;

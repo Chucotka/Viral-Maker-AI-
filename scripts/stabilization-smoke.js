@@ -170,6 +170,30 @@ async function checkEventsApi() {
   }
 }
 
+async function checkMainSite() {
+  if (localMode) {
+    warn('Main site (innoko.ru/)', 'skipped in --local mode');
+    return;
+  }
+  const mainUrl = process.env.MAIN_SITE_URL || 'https://innoko.ru/';
+  const r = await request(mainUrl);
+  noteLatency('main site', r.ms);
+  if (r.status !== 200) {
+    fail('Main site innoko.ru/', `HTTP ${r.status}`);
+    return;
+  }
+  const html = r.raw || '';
+  if (html.includes('telegram-boot.js') || html.includes('<base href="/app/"')) {
+    fail('Main site innoko.ru/', 'корень отдаёт приложение вместо корпоративного сайта');
+    return;
+  }
+  if (html.includes('Creative Lab') || html.includes('Михаил Малахов') || html.includes('manus')) {
+    pass('Main site innoko.ru/', 'корпоративный сайт на месте');
+  } else {
+    warn('Main site innoko.ru/', 'не узнали контент — проверьте вручную');
+  }
+}
+
 async function checkAppHtml() {
   const r = await request(appUrl);
   noteLatency('app html', r.ms);
@@ -221,6 +245,7 @@ async function main() {
     checkTrends,
     checkGuestSession,
     checkEventsApi,
+    checkMainSite,
     checkAppHtml,
     checkTelegramSdkAsset,
   ];

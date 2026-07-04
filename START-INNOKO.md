@@ -1,7 +1,6 @@
 # Запуск innoko.ru без VPN (3 действия от вас)
 
-Автоматическая настройка VPS — скрипт `scripts/setup-vps-innoko.sh`.  
-Агент **не может** войти в 1gb.ru, Timeweb и BotFather — это только вы.
+Автоматическая настройка VPS — `scripts/setup-vps-innoko.sh`.
 
 ---
 
@@ -25,30 +24,22 @@
 
 ```bash
 ssh root@72.56.84.201
-```
-
-```bash
 git clone https://github.com/Chucotka/Viral-Maker-AI-.git /var/www/viral-maker
 cd /var/www/viral-maker
-git checkout cursor/web-auth-innoko-site-e202 2>/dev/null || git checkout main
 cp .env.example .env
-nano .env   # ключи (см. .env.example)
+nano .env
 bash scripts/setup-vps-innoko.sh
 ```
 
-Скрипт сам: nginx, pm2, certbot (SSL).
-
 ### 4. BotFather
 
-- `/setdomain` → `innoko.ru`
-- Menu Button → `https://innoko.ru/`
+- `/setdomain` → `app.innoko.ru`
+- Menu Button → `https://app.innoko.ru/app/`
 
 **`.env` на VPS:**
 
 ```env
-WEBAPP_URL=https://innoko.ru
-TELEGRAM_BOT_ID=8520170966
-TELEGRAM_BOT_TOKEN="8520170966:полный_токен_из_BotFather"
+WEBAPP_URL=https://app.innoko.ru/app
 ```
 
 ```bash
@@ -59,17 +50,11 @@ curl "https://api.telegram.org/bot<ТОКЕН>/setWebhook?url=https://innoko.ru/
 
 ## Проверка без VPN
 
-- `https://innoko.ru/#/dashboard` — приложение на сайте
-- `https://innoko.ru/#/studio` — студия
-- `https://innoko.ru/landing` — маркетинговый лендинг (Manus)
+| URL | Ожидание |
+|-----|----------|
+| `https://innoko.ru/` | Основной сайт компании (Manus) |
+| `https://innoko.ru/app/` | Viral Maker AI |
+| `https://app.innoko.ru/api/ping` | `pong` |
+| `https://innoko.ru/go` | Редirect в студию |
 
-Телефон, VPN выключен:
-
-- `https://innoko.ru`
-- `https://app.innoko.ru/api/ping` → `pong`
-
----
-
-## Если нужна помощь агента с сервером
-
-Добавьте SSH-ключ на VPS (Timeweb → SSH keys) и пришлите **только** публичный ключ агента — без пароля root в чат.
+См. [INNOKO-SITE.md](./INNOKO-SITE.md) — что **не** ломать при правках Manus.

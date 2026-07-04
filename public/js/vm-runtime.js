@@ -1,5 +1,5 @@
 /**
- * Среда выполнения: Telegram Mini App или веб (innoko.ru/#/dashboard).
+ * Среда выполнения: Telegram Mini App или веб (innoko.ru/app, app.innoko.ru/app).
  */
 (function initVmRuntime(global) {
   const nativeFetch =
@@ -98,6 +98,11 @@
   }
 
   syncTelegramChrome();
+
+  const siteHomeLink = global.document?.getElementById('site-home-link');
+  if (siteHomeLink && !hasInitData()) {
+    siteHomeLink.classList.remove('hidden');
+  }
 
   const host = String(global.location?.hostname || '');
   if (host.includes('vercel.app') || host.includes('vercel.sh')) {
