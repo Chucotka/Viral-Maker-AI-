@@ -20,10 +20,16 @@
 
 ## Ссылки на продукт с основного сайта (Manus)
 
-В блоке «Viral Maker AI» и в CTA используйте:
+**Канонический URL приложения:** `https://app.innoko.ru/app/`
 
-- Веб: `https://innoko.ru/app/` или `https://innoko.ru/go`
-- Telegram: ссылка на бота / Mini App (`https://app.innoko.ru/app/` в BotFather)
+| Кнопка | URL |
+|--------|-----|
+| Открыть приложение / Подробнее | `https://app.innoko.ru/app/` |
+| Запустить Viral Maker (hero) | `https://app.innoko.ru/app/#/studio` или `https://innoko.ru/go` |
+| Открыть в Telegram | `https://t.me/viral_maker_ai_bot/app` |
+
+`innoko.ru/go` — короткая ссылка с основного домена (редirect в студию с UTM).  
+`innoko.ru/app/` — тоже работает, но для Manus и BotFather используйте **`app.innoko.ru/app/`**.
 
 ## BotFather
 
