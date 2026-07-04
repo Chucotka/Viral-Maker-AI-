@@ -5,7 +5,8 @@
   const tg = global.Telegram?.WebApp;
   const hasInitData = Boolean(tg?.initData);
 
-  const nativeFetch = global.fetch.bind(global);
+  const nativeFetch =
+    typeof global.fetch === 'function' ? global.fetch.bind(global) : null;
 
   function apiPath(path) {
     const p = String(path || '');
@@ -22,6 +23,9 @@
   }
 
   async function apiFetch(path, options = {}) {
+    if (!nativeFetch) {
+      throw new Error('Браузер не поддерживает fetch');
+    }
     const url = apiPath(path);
     const opts = {
       credentials: 'include',
@@ -36,11 +40,13 @@
     return s.startsWith('/api') || /^https?:\/\/[^/]+\/api\//.test(s);
   }
 
-  global.fetch = function patchedFetch(input, init) {
-    const url = typeof input === 'string' ? input : input?.url || '';
-    if (shouldPatchApi(url)) return apiFetch(url, init || {});
-    return nativeFetch(input, init);
-  };
+  if (nativeFetch) {
+    global.fetch = function patchedFetch(input, init) {
+      const url = typeof input === 'string' ? input : input?.url || '';
+      if (shouldPatchApi(url)) return apiFetch(url, init || {});
+      return nativeFetch(input, init);
+    };
+  }
 
   function alert(message, title) {
     const text = String(message || '');

@@ -48,7 +48,7 @@ module.exports = async (req, res) => {
         referralSignup = await bindReferrerOnFirstVisit(auth.userId, referralParam);
       }
 
-      const { rec, quota } = await getQuotaState(auth.userId);
+      const { rec, quota, limit } = await getQuotaState(auth.userId);
       const referral = buildReferralStats(rec, auth.userId);
 
       return res.json({
@@ -61,6 +61,7 @@ module.exports = async (req, res) => {
         planUntil: rec.planUntil || null,
         bonusGenerations: rec.bonusGenerations || 0,
         quotaRemaining: quota.totalRemaining === Infinity ? null : quota.totalRemaining,
+        freeGenerationLimit: limit === Infinity ? null : limit,
         profile: {
           niche: rec.niche || '',
           language: rec.language || '',
