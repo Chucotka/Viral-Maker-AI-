@@ -6,7 +6,7 @@
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/var/www/viral-maker}"
-BRANCH="${BRANCH:-cursor/guest-onboarding-p1-e202}"
+BRANCH="${BRANCH:-cursor/stabilization-e202}"
 REPO_URL="${REPO_URL:-https://github.com/Chucotka/Viral-Maker-AI-.git}"
 PM2_NAME="${PM2_NAME:-viral-maker}"
 
@@ -63,7 +63,15 @@ if curl -sf "http://127.0.0.1:${PORT}/api/ping" | grep -q pong; then
   echo "OK: http://127.0.0.1:${PORT}/api/ping → pong"
   curl -sf "http://127.0.0.1:${PORT}/api/health" | head -c 200 || true
   echo ""
-  echo "Проверка снаружи: curl -s https://app.innoko.ru/api/health"
+  echo "==> stabilization smoke (local)"
+  if node scripts/stabilization-smoke.js --local; then
+    echo ""
+    echo "Проверка снаружи: node scripts/stabilization-smoke.js"
+    echo "              или: curl -s https://app.innoko.ru/api/health"
+  else
+    echo "!!! Smoke-check не прошёл — см. вывод выше"
+    exit 1
+  fi
 else
   echo "!!! Приложение не отвечает на :${PORT}/api/ping"
   pm2 logs "$PM2_NAME" --lines 40 --nostream || true
