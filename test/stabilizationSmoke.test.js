@@ -11,16 +11,14 @@ describe('stabilization (no-VPN load)', () => {
       /src="https:\/\/telegram\.org\/js\/telegram-web-app\.js"/,
       'direct telegram.org blocks browsers without VPN',
     );
-    assert.match(html, /tg-cdn\/js\/telegram-web-app\.js|inTelegramClient|vm-telegram-mini-app/);
+    assert.match(html, /telegram-boot\.js|tg-cdn\/js\/telegram-web-app\.js|js\/telegram-web-app\.js/);
   });
 
-  it('index.html never replaces injected Telegram Mini App session', () => {
+  it('loads telegram-boot.js and self-hosted SDK path', () => {
     const html = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
-    assert.match(html, /tg\.initData/);
-    assert.doesNotMatch(
-      html,
-      /if \(!inTelegram\) \{\s*window\.Telegram = \{/,
-    );
+    assert.match(html, /telegram-boot\.js/);
+    assert.match(fs.readFileSync(path.join(__dirname, '../public/js/telegram-boot.js'), 'utf8'), /js\/telegram-web-app\.js/);
+    assert.ok(fs.existsSync(path.join(__dirname, '../public/js/telegram-web-app.js')));
   });
 
   it('deploy script defaults to stabilization branch', () => {

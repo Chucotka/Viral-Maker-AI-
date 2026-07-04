@@ -36,6 +36,12 @@ echo "==> git fetch + checkout $BRANCH"
 git fetch origin
 git checkout "$BRANCH"
 git pull --ff-only origin "$BRANCH"
+export APP_BUILD="$(git rev-parse --short HEAD)"
+if grep -q '^APP_BUILD=' .env 2>/dev/null; then
+  sed -i "s/^APP_BUILD=.*/APP_BUILD=${APP_BUILD}/" .env
+else
+  echo "APP_BUILD=${APP_BUILD}" >> .env
+fi
 
 echo "==> npm ci"
 npm ci --silent
@@ -48,7 +54,7 @@ fi
 
 echo "==> pm2"
 if pm2 describe "$PM2_NAME" >/dev/null 2>&1; then
-  pm2 restart "$PM2_NAME"
+  pm2 restart "$PM2_NAME" --update-env
 else
   pm2 start dev.js --name "$PM2_NAME"
   pm2 save

@@ -436,9 +436,14 @@
     const authError = readAuthErrorFromUrl();
     if (authError) global.VMRuntime?.alert?.(authError, 'Вход через Telegram');
 
+    if (global.VMTelegramBoot?.isInsideTelegramClient?.()) {
+      await global.VMTelegramBoot.waitForInitData(8000);
+    }
+
     if (isTelegramMiniApp()) {
       hideOverlay();
       global.__vmWebGuest = false;
+      applyUserToUi(global.Telegram?.WebApp?.initDataUnsafe?.user || {}, false);
       return true;
     }
 
