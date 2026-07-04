@@ -14,7 +14,8 @@ const {
   isSurpriseRequest,
 } = require('../lib/buildTextPrompt');
 const { assertGenerateRateLimit } = require('../lib/rateLimitKv');
-const { sendSafeError } = require('../lib/httpErrors');
+const { sendMappedError } = require('../lib/httpErrors');
+const { trackFunnelStage } = require('../lib/funnelMetrics');
 const {
   putImageDownload,
   buildDownloadFileName,
@@ -98,6 +99,7 @@ module.exports = async (req, res) => {
     });
 
     const { remainingToday } = await incrementGenerationCount(auth.userId, rec);
+    void trackFunnelStage('generation_completed', { kind: 'image' }).catch(() => {});
     await confirmReferralAfterFirstGeneration(auth.userId);
 
     const historyTs = Date.now();
@@ -136,6 +138,6 @@ module.exports = async (req, res) => {
     });
   } catch (e) {
     console.error('IMAGE GENERATION ERROR:', e.message);
-    sendSafeError(res, e, 'generate-image');
+    sendMappedError(res, e, 'generate-image');
   }
 };
