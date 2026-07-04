@@ -2571,17 +2571,21 @@ document.getElementById('btn-analytics-upgrade')?.addEventListener('click', () =
 updatePlanUI('free', null);
 recoverActiveGenerationOnLoad();
 async function bootApp() {
-    const trendsPromise = loadTrends();
+    loadTrends();
+    loadDashboardData();
 
-    if (window.VMRuntime?.isWeb && window.VMWebAuth) {
-        try {
-            await window.VMWebAuth.ensureSession();
-        } catch (e) {
-            console.warn('web auth:', e);
+    const userReady = (async () => {
+        if (window.VMRuntime?.isWeb && window.VMWebAuth) {
+            try {
+                await window.VMWebAuth.ensureSession();
+            } catch (e) {
+                console.warn('web auth:', e);
+            }
         }
-    }
+        await loadUserData();
+    })();
 
-    await Promise.all([trendsPromise, loadUserData(), loadDashboardData()]);
+    await userReady;
 
     if (window.VMOnboarding && !VMOnboarding.isDone()) {
         setTimeout(() => VMOnboarding.show(), 400);
