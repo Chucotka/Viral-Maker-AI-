@@ -741,6 +741,15 @@ function alertFromGenerateError(message) {
         text = 'Проблема с ключом или доступом к API. Проверьте GEMINI_API_KEY на сервере.';
     } else if (/404|not found for API version|no longer available|ListModels/i.test(m)) {
         text = 'Модель недоступна для вашего ключа. Обновите приложение или проверьте доступ в Google AI Studio.';
+    } else if (/auth_required|Войдите через Telegram/i.test(m)) {
+        if (window.VMRuntime?.isWeb && window.VMWebAuth) {
+            showAppAlert(
+                'Сессия не активна. Нажмите «Войти» в шапке → «Войти через Telegram в браузере».',
+                'Нужен вход',
+            );
+            return;
+        }
+        text = 'Откройте мини-приложение из Telegram (кнопка в боте), чтобы подпись сессии передалась на сервер.';
     } else if (/missing_init_data|invalid_init_data|Откройте приложение из Telegram/i.test(m)) {
         if (window.VMRuntime?.isWeb && window.VMWebAuth) {
             window.VMWebAuth.showOverlay();
@@ -1676,16 +1685,39 @@ async function syncQuotaAfterGeneration(data) {
     await loadUserData({ silent: true });
 }
 
+async function ensureWebSessionForGeneration() {
+    if (window.VMRuntime?.isTelegram) return true;
+    if (!window.VMWebAuth?.ensureSession) {
+        showAppAlert('Сессия не активна. Обновите страницу (Ctrl+F5).', 'Нужен вход');
+        return false;
+    }
+    try {
+        const ok = await window.VMWebAuth.ensureSession();
+        if (!ok) {
+            showAppAlert(
+                'Сессия не активна. Нажмите «Войти» в шапке → «Войти через Telegram в браузере» или «Продолжить как гость».',
+                'Нужен вход',
+            );
+            return false;
+        }
+        return true;
+    } catch (e) {
+        console.warn('ensureWebSessionForGeneration:', e);
+        showAppAlert('Не удалось проверить сессию. Обновите страницу.', 'Ошибка');
+        return false;
+    }
+}
+
 function showLimitReachedPaywall(options = {}) {
     const { silent = false } = options;
     const limitMsg = document.getElementById('limit-msg');
     const guest = Boolean(window.VMWebAuth?.isGuest?.());
-    const guestHint = guest
-        ? ' Войдите через Telegram — 5 генераций и сохранение истории.'
+    const guestLoginLink = guest
+        ? ' <a href="javascript:void(0)" data-guest-login>Войти через Telegram</a> или'
         : '';
     if (limitMsg) {
         limitMsg.innerHTML =
-            `⚡️ Бесплатные генерации закончились.${guestHint} <a href="javascript:void(0)" onclick="openSettingsPanel('subscription')">Pro или рефералка →</a>`;
+            `⚡️ Бесплатные генерации закончились.${guestLoginLink} <a href="javascript:void(0)" onclick="openSettingsPanel('subscription')">Pro или рефералка →</a>`;
         limitMsg.classList.remove('hidden');
         limitMsg.classList.add('error');
         limitMsg.classList.remove('warning');
@@ -1698,7 +1730,6 @@ function showLimitReachedPaywall(options = {}) {
                 : 'Оформите Pro для безлимита или пригласите друзей за бонусные генерации.',
             buttons: [{ type: 'ok' }],
         });
-        openSettingsPanel('subscription');
     }
 }
 
@@ -1710,13 +1741,15 @@ function maybeNudgeGuestAfterGeneration() {
     } catch {
         /* ignore */
     }
-    showAppPopup({
-        title: 'Сохраните прогресс',
-        message:
-            'Войдите через Telegram — 5 генераций, история на сервере и реферальная ссылка. Гостевые 3 генерации не переносятся между браузерами.',
-        buttons: [{ type: 'ok' }],
-    });
-    window.VMWebAuth?.showOverlay?.();
+    setTimeout(() => {
+        const limitMsg = document.getElementById('limit-msg');
+        if (!limitMsg || limitMsg.classList.contains('error')) return;
+        limitMsg.innerHTML =
+            '💡 Гостевые генерации не переносятся между браузерами. ' +
+            '<a href="javascript:void(0)" data-guest-login>Войти через Telegram</a> — 5 генераций и история на сервере.';
+        limitMsg.classList.remove('hidden', 'error');
+        limitMsg.classList.add('warning');
+    }, 1800);
 }
 
 function updateGuestStudioBanner(quotaRemaining, freeGenerationLimit, isGuest) {
@@ -1732,10 +1765,7 @@ function updateGuestStudioBanner(quotaRemaining, freeGenerationLimit, isGuest) {
     el.classList.remove('hidden');
     el.innerHTML =
         `<span>Гость · осталось <b>${remaining}/${pool}</b> генераций.</span>` +
-        `<button type="button" class="guest-studio-banner-btn" id="guest-studio-login-btn">Войти через Telegram</button>`;
-    document.getElementById('guest-studio-login-btn')?.addEventListener('click', () => {
-        window.VMWebAuth?.showOverlay?.();
-    });
+        `<button type="button" class="guest-studio-banner-btn" data-guest-login>Войти через Telegram</button>`;
 }
 
 function updatePlanUI(plan, planUntil, bonusGenerations = 0, quotaRemaining = null, freeGenerationLimit = null, isGuest = false) {
@@ -2185,6 +2215,8 @@ async function runTextGeneration(opts = {}) {
         return;
     }
 
+    if (!(await ensureWebSessionForGeneration())) return;
+
     const btnId = opts.buttonId || 'btn-generate';
     const btn = document.getElementById(btnId);
     const originalText = btn ? btn.textContent : '';
@@ -2261,6 +2293,8 @@ async function runImageGeneration() {
         showAppAlert('Введите описание изображения.');
         return;
     }
+
+    if (!(await ensureWebSessionForGeneration())) return;
 
     const btn = document.getElementById('btn-generate-image');
     const originalText = btn.textContent;
@@ -2528,6 +2562,11 @@ if (window.VMOnboarding) VMOnboarding.mount();
 if (window.ReferralSystem) ReferralSystem.mount();
 if (window.AdminSubs) AdminSubs.mount();
 mountProTeaserActions();
+document.getElementById('tab-studio')?.addEventListener('click', (e) => {
+    if (e.target.closest('[data-guest-login]')) {
+        window.VMWebAuth?.showOverlay?.();
+    }
+});
 document.getElementById('btn-analytics-upgrade')?.addEventListener('click', () => buyPlan('pro'));
 updatePlanUI('free', null);
 recoverActiveGenerationOnLoad();
