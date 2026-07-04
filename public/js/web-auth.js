@@ -107,24 +107,74 @@
     });
   }
 
-  function resolveTelegramOpenUrl(cfg) {
-    const startParam = readStartParamFromUrl();
-    const bot = String(cfg?.botUsername || '').replace(/^@+/, '');
-    if (!bot) return cfg?.telegramMiniAppUrl || cfg?.telegramBotUrl || '#';
-
-    if (startParam) {
-      return `https://t.me/${bot}?startapp=${encodeURIComponent(startParam)}`;
-    }
-    return cfg.telegramMiniAppUrl || `https://t.me/${bot}?startapp=open`;
+  function readBotUsername() {
+    const fromMeta = global.document?.querySelector('meta[name="vm-bot-username"]')?.getAttribute('content');
+    return String(fromMeta || 'viral_maker_ai_bot').replace(/^@+/, '');
   }
 
-  function openTelegramApp(url) {
-    if (!url || url === '#') return;
-    try {
-      global.open(url, '_blank', 'noopener,noreferrer');
-    } catch {
-      global.location.href = url;
+  function buildTelegramOpenUrl(startParam, botUsername) {
+    const bot = String(botUsername || readBotUsername()).replace(/^@+/, '');
+    const base = `https://t.me/${bot}/app`;
+    if (startParam && String(startParam).trim()) {
+      return `${base}?startapp=${encodeURIComponent(String(startParam).trim())}`;
     }
+    return base;
+  }
+
+  function buildTgSchemeUrl(startParam, botUsername) {
+    const bot = String(botUsername || readBotUsername()).replace(/^@+/, '');
+    const sp = startParam && String(startParam).trim() ? String(startParam).trim() : 'open';
+    return `tg://resolve?domain=${bot}&startapp=${encodeURIComponent(sp)}`;
+  }
+
+  function isMobileDevice() {
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(String(global.navigator?.userAgent || ''));
+  }
+
+  async function copyText(text) {
+    const value = String(text || '');
+    if (!value) return false;
+    try {
+      await global.navigator.clipboard.writeText(value);
+      return true;
+    } catch {
+      /* fallback */
+    }
+    try {
+      const ta = global.document.createElement('textarea');
+      ta.value = value;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      global.document.body.appendChild(ta);
+      ta.select();
+      const ok = global.document.execCommand('copy');
+      global.document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+
+  function resolveTelegramOpenUrl(cfg) {
+    const startParam = readStartParamFromUrl();
+    const bot = String(cfg?.botUsername || readBotUsername()).replace(/^@+/, '');
+    if (cfg?.telegramMiniAppUrl && !startParam) return cfg.telegramMiniAppUrl;
+    return buildTelegramOpenUrl(startParam, bot);
+  }
+
+  function navigateToTelegram(startParam, botUsername) {
+    const httpsUrl = buildTelegramOpenUrl(startParam, botUsername);
+    if (isMobileDevice()) {
+      global.location.href = buildTgSchemeUrl(startParam, botUsername);
+      global.setTimeout(() => {
+        if (global.document?.visibilityState !== 'hidden') {
+          global.location.href = httpsUrl;
+        }
+      }, 900);
+      return;
+    }
+    global.location.href = httpsUrl;
   }
 
   async function fetchAuthConfig() {
@@ -136,39 +186,68 @@
     return data;
   }
 
-  async function mountLoginUi() {
+  function renderLoginButtons(host, openUrl, startParam) {
+    host.innerHTML = '';
+
+    const btn = global.document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'web-auth-login-btn web-auth-login-btn-primary web-auth-login-btn-telegram';
+    btn.innerHTML = '<span class="web-auth-tg-icon" aria-hidden="true"></span>Открыть в приложении Telegram';
+    btn.addEventListener('click', () => navigateToTelegram(startParam));
+    host.appendChild(btn);
+
+    const copyBtn = global.document.createElement('button');
+    copyBtn.type = 'button';
+    copyBtn.className = 'web-auth-login-btn web-auth-login-btn-secondary';
+    copyBtn.textContent = 'Скопировать ссылку для Telegram';
+    copyBtn.addEventListener('click', async () => {
+      const ok = await copyText(openUrl);
+      global.VMRuntime?.alert?.(
+        ok ? openUrl : 'Не удалось скопировать',
+        ok ? 'Ссылка скопирована' : 'Ошибка',
+      );
+    });
+    host.appendChild(copyBtn);
+
+    const skip = global.document.createElement('button');
+    skip.type = 'button';
+    skip.className = 'web-auth-login-btn web-auth-login-btn-secondary';
+    skip.textContent = 'Продолжить в браузере как гость';
+    skip.addEventListener('click', hideOverlay);
+    host.appendChild(skip);
+
+    const hint = global.document.createElement('p');
+    hint.className = 'web-auth-alt';
+    hint.textContent =
+      'На следующем экране нажмите LAUNCH / ЗАПУСТИТЬ. Если Telegram не открылся — вставьте скопированную ссылку в браузер телефона.';
+    host.appendChild(hint);
+
+    const link = global.document.createElement('a');
+    link.className = 'web-auth-alt web-auth-open-link';
+    link.href = openUrl;
+    link.textContent = openUrl;
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      navigateToTelegram(startParam);
+    });
+    host.appendChild(link);
+  }
+
+  function mountLoginUi() {
     const host = widgetHost();
     if (!host) return;
-    host.innerHTML = '<p class="web-auth-loading">Загрузка…</p>';
+    const startParam = readStartParamFromUrl();
+    const openUrl = buildTelegramOpenUrl(startParam);
+    renderLoginButtons(host, openUrl, startParam);
 
-    try {
-      const cfg = await fetchAuthConfig();
-      const openUrl = resolveTelegramOpenUrl(cfg);
-      host.innerHTML = '';
-
-      const btn = document.createElement('a');
-      btn.className = 'web-auth-login-btn web-auth-login-btn-primary web-auth-login-btn-telegram';
-      btn.href = openUrl;
-      btn.target = '_blank';
-      btn.rel = 'noopener noreferrer';
-      btn.innerHTML = '<span class="web-auth-tg-icon" aria-hidden="true"></span>Открыть в приложении Telegram';
-      host.appendChild(btn);
-
-      const skip = document.createElement('button');
-      skip.type = 'button';
-      skip.className = 'web-auth-login-btn web-auth-login-btn-secondary';
-      skip.textContent = 'Продолжить в браузере как гость';
-      skip.addEventListener('click', hideOverlay);
-      host.appendChild(skip);
-
-      const hint = document.createElement('p');
-      hint.className = 'web-auth-alt';
-      hint.textContent =
-        'Вход и сохранение прогресса — в Mini App Telegram. На телефоне откроется приложение, на компьютере — Telegram Desktop или web.telegram.org.';
-      host.appendChild(hint);
-    } catch (e) {
-      host.innerHTML = `<p class="web-auth-alt">${e.message || 'Ошибка'}</p>`;
-    }
+    fetchAuthConfig()
+      .then((cfg) => {
+        const nextUrl = resolveTelegramOpenUrl(cfg);
+        if (nextUrl && nextUrl !== openUrl) renderLoginButtons(host, nextUrl, startParam);
+      })
+      .catch(() => {
+        /* meta-based url already shown */
+      });
   }
 
   async function loginWithTelegram(user) {
@@ -282,13 +361,8 @@
   }
 
   /** Открыть Mini App в Telegram (онбординг, рефералка). */
-  async function openInTelegramApp() {
-    try {
-      const cfg = await fetchAuthConfig();
-      openTelegramApp(resolveTelegramOpenUrl(cfg));
-    } catch (e) {
-      global.VMRuntime?.alert?.(e.message || 'Не удалось открыть Telegram');
-    }
+  function openInTelegramApp() {
+    navigateToTelegram(readStartParamFromUrl());
   }
 
   global.onTelegramWebLogin = async function onTelegramWebLogin(user) {

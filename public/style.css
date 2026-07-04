@@ -144,6 +144,14 @@ h3 { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
     color: var(--text-muted);
     margin: 0;
 }
+.web-auth-open-link {
+    display: block;
+    margin-top: 10px;
+    word-break: break-all;
+    font-size: 12px;
+    opacity: 0.85;
+    color: var(--accent);
+}
 .web-auth-alt a {
     color: var(--accent);
 }
