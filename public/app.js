@@ -407,16 +407,29 @@ function loadSavedSettings() {
 }
 
 // Set user name if available (отображение; userId на сервере только из initData)
-if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-    const firstName = tg.initDataUnsafe.user.first_name;
-    document.getElementById('user-name').textContent = firstName;
+function applyTelegramUserFromSdk() {
+    const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
+    if (!user) return;
+    const firstName = user.first_name || user.username || 'Пользователь';
+    const nameEl = document.getElementById('user-name');
+    if (nameEl) {
+        nameEl.textContent = firstName;
+        nameEl.classList.remove('user-name-login');
+        nameEl.style.cursor = '';
+        delete nameEl.dataset.loginBound;
+    }
     const settingsHeroName = document.getElementById('settings-hero-name');
     if (settingsHeroName) settingsHeroName.textContent = firstName;
     const settingsHeroAvatar = document.getElementById('settings-hero-avatar');
-    if (settingsHeroAvatar && tg.initDataUnsafe.user.photo_url) {
-        settingsHeroAvatar.innerHTML = `<img src="${tg.initDataUnsafe.user.photo_url}" alt="" class="settings-hero-avatar-img">`;
+    if (settingsHeroAvatar && user.photo_url) {
+        settingsHeroAvatar.innerHTML = `<img src="${user.photo_url}" alt="" class="settings-hero-avatar-img">`;
+    }
+    const avatar = document.getElementById('user-avatar');
+    if (avatar && user.photo_url) {
+        avatar.innerHTML = `<img src="${user.photo_url}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`;
     }
 }
+applyTelegramUserFromSdk();
 
 /** Текущий тариф с сервера (для проверки Premium перед постингом картинки). */
 let userPlan = 'free';
@@ -2571,6 +2584,9 @@ document.getElementById('btn-analytics-upgrade')?.addEventListener('click', () =
 updatePlanUI('free', null);
 recoverActiveGenerationOnLoad();
 async function bootApp() {
+    window.VMRuntime?.syncTelegramChrome?.();
+    applyTelegramUserFromSdk();
+
     loadTrends();
     loadDashboardData();
 
@@ -2587,7 +2603,7 @@ async function bootApp() {
 
     await userReady;
 
-    if (window.VMOnboarding && !VMOnboarding.isDone()) {
+    if (window.VMOnboarding && !VMOnboarding.isDone() && window.VMRuntime?.isWeb) {
         setTimeout(() => VMOnboarding.show(), 400);
     }
     if (window.VMImageDownload?.readPendingSaveToken?.()) {

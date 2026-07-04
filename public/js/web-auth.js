@@ -169,7 +169,7 @@
   }
 
   function isTelegramMiniApp() {
-    return Boolean(global.VMRuntime?.isTelegram);
+    return Boolean(global.Telegram?.WebApp?.initData || global.VMRuntime?.isTelegram);
   }
 
   function openTelegramMiniAppSafely(startParam, botUsername) {
@@ -436,7 +436,11 @@
     const authError = readAuthErrorFromUrl();
     if (authError) global.VMRuntime?.alert?.(authError, 'Вход через Telegram');
 
-    if (global.VMRuntime?.isTelegram) return true;
+    if (isTelegramMiniApp()) {
+      hideOverlay();
+      global.__vmWebGuest = false;
+      return true;
+    }
 
     const hashUser = parseTgAuthResultFromHash();
     if (hashUser) {

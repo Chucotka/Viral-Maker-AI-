@@ -6,13 +6,19 @@
     <meta name="vm-bot-username" content="viral_maker_ai_bot" />
     <title>Viral Maker AI | Innoko</title>
     <base href="/app/" />
-    <link rel="stylesheet" href="style.css?v=20260704h" />
+    <link rel="stylesheet" href="style.css?v=20260704p" />
     <script>
     (function () {
+        var tg = window.Telegram && window.Telegram.WebApp;
+        if (tg && tg.initData) {
+            document.documentElement.className += ' vm-telegram-mini-app';
+            return;
+        }
         var ua = navigator.userAgent || '';
         var qs = location.search || '';
-        var inTelegram = /Telegram/i.test(ua) || /tgWebApp/i.test(qs);
-        if (!inTelegram) {
+        var hash = location.hash || '';
+        var inTelegramClient = /Telegram/i.test(ua) || /tgWebApp/i.test(qs + hash);
+        if (!inTelegramClient && !tg) {
             window.Telegram = {
                 WebApp: {
                     initData: '',
@@ -22,7 +28,8 @@
             };
             return;
         }
-        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
+        if (tg && tg.initData) {
+            document.documentElement.className += ' vm-telegram-mini-app';
             return;
         }
         document.write('<script src="/tg-cdn/js/telegram-web-app.js"><\/script>');
@@ -801,15 +808,15 @@
         </div>
     </div>
 
-    <script defer src="js/vm-runtime.js?v=20260704f"></script>
+    <script defer src="js/vm-runtime.js?v=20260704p"></script>
     <script defer src="js/web-auth.js?v=20260704p"></script>
     <script defer src="js/vm-core.js"></script>
     <script defer src="js/history-store.js"></script>
     <script defer src="js/image-download.js"></script>
-    <script defer src="js/onboarding.js?v=20260704k"></script>
+    <script defer src="js/onboarding.js?v=20260704p"></script>
     <script defer src="js/admin-subs.js"></script>
     <script defer src="referral.js?v=20260704p"></script>
-    <script defer src="app.js?v=20260704o"></script>
+    <script defer src="app.js?v=20260704p"></script>
     <script defer src="js/vm-router.js"></script>
 </body>
 </html>
