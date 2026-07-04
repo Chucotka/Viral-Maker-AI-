@@ -1,8 +1,6 @@
 #!/usr/bin/env node
-/**
- * Мониторинг /api/health → алерт владельцам в Telegram.
- * Cron на VPS: */5 * * * * cd /var/www/viral-maker && node scripts/health-monitor.js
- */
+// Мониторинг /api/health → алерт владельцам в Telegram.
+// Cron на VPS (pm2): каждые 5 мин — см. deploy-vps-update.sh
 require('dotenv').config();
 
 const { buildHealthStatus, formatHealthAlertMessage } = require('../lib/healthStatus');
