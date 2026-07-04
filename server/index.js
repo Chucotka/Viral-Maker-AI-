@@ -4,11 +4,15 @@
  */
 const express = require('express');
 const path = require('path');
+const compression = require('compression');
 const { mountApiRoutes } = require('./mountApi');
+const { setStaticCacheHeaders } = require('../lib/staticCache');
 
 const app = express();
 
 app.set('trust proxy', 1);
+
+app.use(compression());
 
 app.use(
   express.json({
@@ -31,14 +35,14 @@ app.get('/', (req, res, next) => {
 });
 
 /** Корень — для локальной разработки и Telegram Mini App */
-app.use(express.static(publicDir));
+app.use(express.static(publicDir, { setHeaders: setStaticCacheHeaders }));
 
 /** Веб-приложение: app.innoko.ru/app */
 app.get('/app', (req, res, next) => {
   if (req.path !== '/app') return next();
   return res.redirect(301, '/app/');
 });
-app.use('/app', express.static(publicDir, { index: 'index.html' }));
+app.use('/app', express.static(publicDir, { index: 'index.html', setHeaders: setStaticCacheHeaders }));
 
 mountApiRoutes(app);
 

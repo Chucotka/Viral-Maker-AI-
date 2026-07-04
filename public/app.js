@@ -2295,6 +2295,8 @@ document.getElementById('btn-analytics-upgrade')?.addEventListener('click', () =
 updatePlanUI('free', null);
 recoverActiveGenerationOnLoad();
 async function bootApp() {
+    const trendsPromise = loadTrends();
+
     if (window.VMRuntime?.isWeb && window.VMWebAuth) {
         try {
             await window.VMWebAuth.ensureSession();
@@ -2302,7 +2304,9 @@ async function bootApp() {
             console.warn('web auth:', e);
         }
     }
-    await loadUserData();
+
+    await Promise.all([trendsPromise, loadUserData(), loadDashboardData()]);
+
     if (window.VMOnboarding && !VMOnboarding.isDone()) {
         setTimeout(() => VMOnboarding.show(), 400);
     }
@@ -2389,6 +2393,3 @@ function openSettingsPanel(panelId) {
 }
 
 window.openSettingsPanel = openSettingsPanel;
-
-loadTrends();
-loadDashboardData();
