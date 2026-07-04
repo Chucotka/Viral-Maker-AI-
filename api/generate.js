@@ -8,6 +8,7 @@ const { buildStudioTextPrompt, inferPostGoal } = require('../lib/buildTextPrompt
 const { generateStudioTextContent } = require('../lib/textGeneration');
 const { assertGenerateRateLimit } = require('../lib/rateLimitKv');
 const { sendMappedError } = require('../lib/httpErrors');
+const { trackFunnelStage } = require('../lib/funnelMetrics');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).end();
@@ -116,6 +117,7 @@ module.exports = async (req, res) => {
       },
     );
     const { remainingToday } = await incrementGenerationCount(auth.userId, rec);
+    void trackFunnelStage('generation_completed', { kind: 'text' }).catch(() => {});
     await confirmReferralAfterFirstGeneration(auth.userId);
 
     const historyTs = Date.now();

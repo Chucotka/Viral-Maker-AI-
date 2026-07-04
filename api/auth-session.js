@@ -2,6 +2,7 @@ const { createGuestUser } = require('../lib/webGuest');
 const { readSessionToken, verifySession, signSession, setSessionCookie } = require('../lib/webSession');
 const { parseReferrerId } = require('../lib/referralService');
 const { registerNewGuestSession } = require('../lib/guestSessionLimit');
+const { trackFunnelStage } = require('../lib/funnelMetrics');
 
 function sessionResponse(payload) {
   const user = payload?.user && typeof payload.user === 'object' ? payload.user : null;
@@ -65,6 +66,7 @@ module.exports = async (req, res) => {
     }
     try {
       payload = createGuestSession(res, queryStartParam);
+      void trackFunnelStage('guest_session').catch(() => {});
     } catch (e) {
       return res.status(500).json({
         error: 'session_misconfigured',

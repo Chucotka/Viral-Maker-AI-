@@ -2,6 +2,7 @@ const { validateTelegramLoginWidget } = require('../lib/telegramLoginWidget');
 const { signSession, setSessionCookie } = require('../lib/webSession');
 const { sendSafeError } = require('../lib/httpErrors');
 const { mergeGuestIntoTelegram, readGuestUserIdFromRequest } = require('../lib/guestAccountMerge');
+const { trackFunnelStage } = require('../lib/funnelMetrics');
 
 function parseStartParam(body) {
   const raw = body?.startParam || body?.startapp || '';
@@ -46,6 +47,7 @@ module.exports = async (req, res) => {
     }
 
     setSessionCookie(res, sessionToken);
+    void trackFunnelStage('telegram_session').catch(() => {});
     return res.json({
       ok: true,
       userId,

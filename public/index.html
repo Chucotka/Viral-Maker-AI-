@@ -6,8 +6,8 @@
     <meta name="vm-bot-username" content="viral_maker_ai_bot" />
     <title>Viral Maker AI | Innoko</title>
     <base href="/app/" />
-    <link rel="stylesheet" href="style.css?v=20260704q" />
-    <script src="js/telegram-boot.js?v=20260704q"></script>
+    <link rel="stylesheet" href="style.css?v=20260704r" />
+    <script src="js/telegram-boot.js?v=20260704r"></script>
 </head>
 <body>
     <div id="web-auth-overlay" class="web-auth-overlay hidden" aria-hidden="true">
@@ -530,6 +530,10 @@
                                     </div>
                                 </div>
                                 <p class="text-hint subs-analytics-hint">Считаем по lastSeen в Redis (открытие app). Старые пользователи без lastSeen попадут в счёт после следующего визита.</p>
+                                <div id="subs-funnel-row" class="subs-funnel-row hidden">
+                                    <p class="subs-funnel-title">Воронка · 7 дней</p>
+                                    <div class="subs-funnel-grid" id="subs-funnel-grid"></div>
+                                </div>
                                 <div class="subs-stats-row">
                                     <div class="subs-stat subs-stat-active">
                                         <span class="subs-stat-value" id="subs-count-active">0</span>
@@ -781,15 +785,16 @@
         </div>
     </div>
 
-    <script defer src="js/vm-runtime.js?v=20260704q"></script>
-    <script defer src="js/web-auth.js?v=20260704q"></script>
+    <script defer src="js/vm-runtime.js?v=20260704r"></script>
+    <script defer src="js/web-auth.js?v=20260704r"></script>
     <script defer src="js/vm-core.js"></script>
     <script defer src="js/history-store.js"></script>
     <script defer src="js/image-download.js"></script>
-    <script defer src="js/onboarding.js?v=20260704q"></script>
-    <script defer src="js/admin-subs.js"></script>
-    <script defer src="referral.js?v=20260704q"></script>
-    <script defer src="app.js?v=20260704q"></script>
+    <script defer src="js/vm-analytics.js?v=20260704r"></script>
+    <script defer src="js/onboarding.js?v=20260704r"></script>
+    <script defer src="js/admin-subs.js?v=20260704r"></script>
+    <script defer src="referral.js?v=20260704r"></script>
+    <script defer src="app.js?v=20260704r"></script>
     <script defer src="js/vm-router.js"></script>
 </body>
 </html>

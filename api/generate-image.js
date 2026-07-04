@@ -15,6 +15,7 @@ const {
 } = require('../lib/buildTextPrompt');
 const { assertGenerateRateLimit } = require('../lib/rateLimitKv');
 const { sendMappedError } = require('../lib/httpErrors');
+const { trackFunnelStage } = require('../lib/funnelMetrics');
 const {
   putImageDownload,
   buildDownloadFileName,
@@ -98,6 +99,7 @@ module.exports = async (req, res) => {
     });
 
     const { remainingToday } = await incrementGenerationCount(auth.userId, rec);
+    void trackFunnelStage('generation_completed', { kind: 'image' }).catch(() => {});
     await confirmReferralAfterFirstGeneration(auth.userId);
 
     const historyTs = Date.now();
