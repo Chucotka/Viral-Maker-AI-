@@ -6,6 +6,7 @@
   const widgetHost = () => document.getElementById('web-auth-widget');
 
   function showOverlay() {
+    if (isTelegramMiniApp()) return;
     const el = overlay();
     if (el) {
       el.classList.remove('hidden');
@@ -163,18 +164,57 @@
     return buildTelegramOpenUrl(startParam, bot);
   }
 
+  function isInsideTelegramClient() {
+    return /Telegram/i.test(String(global.navigator?.userAgent || ''));
+  }
+
+  function isTelegramMiniApp() {
+    return Boolean(global.VMRuntime?.isTelegram);
+  }
+
+  function openTelegramMiniAppSafely(startParam, botUsername) {
+    const httpsUrl = buildTelegramOpenUrl(startParam, botUsername);
+    const tg = global.Telegram?.WebApp;
+
+    if (isTelegramMiniApp()) {
+      hideOverlay();
+      tg?.HapticFeedback?.impactOccurred?.('light');
+      return true;
+    }
+
+    if (!isInsideTelegramClient()) return false;
+
+    hideOverlay();
+    if (typeof tg?.openTelegramLink === 'function') {
+      tg.openTelegramLink(httpsUrl);
+      return true;
+    }
+
+    void copyText(httpsUrl).then((ok) => {
+      global.VMRuntime?.alert?.(
+        ok
+          ? 'Ссылка скопирована. В чате с ботом нажмите кнопку меню (☰) внизу → «Открыть приложение» / LAUNCH.'
+          : httpsUrl,
+        'Уже в Telegram',
+      );
+    });
+    return true;
+  }
+
   function navigateToTelegram(startParam, botUsername) {
+    if (openTelegramMiniAppSafely(startParam, botUsername)) return;
+
     const httpsUrl = buildTelegramOpenUrl(startParam, botUsername);
     if (isMobileDevice()) {
       global.location.href = buildTgSchemeUrl(startParam, botUsername);
       global.setTimeout(() => {
         if (global.document?.visibilityState !== 'hidden') {
-          global.location.href = httpsUrl;
+          global.open(httpsUrl, '_blank', 'noopener,noreferrer');
         }
       }, 900);
       return;
     }
-    global.location.href = httpsUrl;
+    global.open(httpsUrl, '_blank', 'noopener,noreferrer');
   }
 
   async function fetchAuthConfig() {
@@ -189,6 +229,21 @@
   function renderLoginButtons(host, openUrl, startParam) {
     host.innerHTML = '';
 
+    if (isTelegramMiniApp()) {
+      const note = global.document.createElement('p');
+      note.className = 'web-auth-alt';
+      note.textContent = 'Вы уже в Mini App Telegram. Закройте это окно и продолжайте работу.';
+      host.appendChild(note);
+      const closeBtn = global.document.createElement('button');
+      closeBtn.type = 'button';
+      closeBtn.className = 'web-auth-login-btn web-auth-login-btn-primary';
+      closeBtn.textContent = 'Продолжить';
+      closeBtn.addEventListener('click', hideOverlay);
+      host.appendChild(closeBtn);
+      return;
+    }
+
+    const inTelegramBrowser = isInsideTelegramClient();
     const browserLoginBtn = global.document.createElement('button');
     browserLoginBtn.type = 'button';
     browserLoginBtn.className = 'web-auth-login-btn web-auth-login-btn-primary web-auth-login-btn-telegram';
@@ -208,12 +263,17 @@
     const btn = global.document.createElement('button');
     btn.type = 'button';
     btn.className = 'web-auth-login-btn web-auth-login-btn-secondary';
-    btn.textContent = 'Открыть в приложении Telegram';
-    btn.addEventListener('click', () => navigateToTelegram(startParam));
+    btn.textContent = inTelegramBrowser
+      ? 'Как открыть Mini App'
+      : 'Открыть в приложении Telegram';
+    btn.addEventListener('click', () => openTelegramMiniAppSafely(startParam));
 
-    if (isMobileDevice()) {
+    if (isMobileDevice() && !inTelegramBrowser) {
       host.appendChild(btn);
       host.appendChild(browserLoginBtn);
+    } else if (inTelegramBrowser) {
+      host.appendChild(browserLoginBtn);
+      host.appendChild(btn);
     } else {
       host.appendChild(browserLoginBtn);
       host.appendChild(btn);
@@ -241,9 +301,11 @@
 
     const hint = global.document.createElement('p');
     hint.className = 'web-auth-alt';
-    hint.textContent = isMobileDevice()
-      ? 'На следующем экране нажмите LAUNCH / ЗАПУСТИТЬ. Если Telegram не открылся — вставьте скопированную ссылку в браузер телефона.'
-      : 'На компьютере для admin-панели нажмите «Войти через Telegram в браузере». Кнопка «Открыть в приложении» не логинит этот браузер.';
+    hint.textContent = inTelegramBrowser
+      ? 'Вы уже в Telegram. Для Mini App нажмите LAUNCH в чате с ботом или «Как открыть Mini App». OAuth — через кнопку «Войти через Telegram в браузере».'
+      : isMobileDevice()
+        ? 'На следующем экране нажмите LAUNCH / ЗАПУСТИТЬ. Если Telegram не открылся — вставьте скопированную ссылку в браузер телефона.'
+        : 'На компьютере для admin-панели нажмите «Войти через Telegram в браузере». Кнопка «Открыть в приложении» не логинит этот браузер.';
     host.appendChild(hint);
 
     const link = global.document.createElement('a');
@@ -252,7 +314,7 @@
     link.textContent = openUrl;
     link.addEventListener('click', (e) => {
       e.preventDefault();
-      navigateToTelegram(startParam);
+      if (!openTelegramMiniAppSafely(startParam)) navigateToTelegram(startParam);
     });
     host.appendChild(link);
   }
@@ -408,7 +470,9 @@
 
   /** Открыть Mini App в Telegram (онбординг, рефералка). */
   function openInTelegramApp() {
-    navigateToTelegram(readStartParamFromUrl());
+    if (!openTelegramMiniAppSafely(readStartParamFromUrl())) {
+      navigateToTelegram(readStartParamFromUrl());
+    }
   }
 
   global.onTelegramWebLogin = async function onTelegramWebLogin(user) {
