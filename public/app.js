@@ -1348,11 +1348,30 @@ function updateAdminAccessStatus(data) {
         return;
     }
     const userId = data.userId ? String(data.userId) : '—';
-    const guestNote = data.isGuest
-        ? ' Сейчас сессия гостевая — admin API не сработает.'
-        : '';
-    el.textContent =
-        `Владелец · Telegram ID: ${userId}.${guestNote} Секрет — DEBUG_ADMIN_SECRET из .env на VPS (точное совпадение).`;
+    const inTelegram = Boolean(window.VMRuntime?.isTelegram);
+    const sessionLabel = inTelegram
+        ? 'Telegram Mini App'
+        : data.isGuest
+          ? 'браузер · гость'
+          : 'браузер · Telegram';
+    const secretHint = inTelegram
+        ? 'Секрет не нужен — вы уже в Mini App.'
+        : 'В браузере нужен DEBUG_ADMIN_SECRET из .env на VPS.';
+    el.textContent = `Владелец · ID ${userId} · ${sessionLabel}. ${secretHint}`;
+    document.querySelectorAll('.admin-secret-field').forEach((field) => {
+        field.classList.toggle('hidden', inTelegram);
+    });
+}
+
+function isAdminViaTelegramApp() {
+    return Boolean(window.VMRuntime?.isTelegram);
+}
+
+function buildAdminPlanHeaders(secret) {
+    const headers = { ...miniAppHeaders(true) };
+    const trimmed = String(secret || '').trim();
+    if (trimmed) headers['X-Debug-Secret'] = trimmed;
+    return headers;
 }
 
 const ADMIN_SECRET_STORAGE_KEY = 'vm_admin_secret';
@@ -1651,16 +1670,17 @@ async function buyPlan(plan) {
 }
 
 async function activateDebugPlan(plan) {
-    const secret = window.prompt('Введите DEBUG_ADMIN_SECRET');
-    if (!secret) return;
+    let secret = '';
+    if (!isAdminViaTelegramApp()) {
+        secret = window.prompt('Введите DEBUG_ADMIN_SECRET');
+        if (!secret) return;
+        rememberAdminSecret(secret);
+    }
     try {
         const response = await fetch('/api/manual-plan', {
             method: 'POST',
-            headers: {
-                ...miniAppHeaders(true),
-                'X-Debug-Secret': secret.trim(),
-            },
-            body: JSON.stringify({ action: 'debug', plan }),
+            headers: buildAdminPlanHeaders(secret),
+            body: JSON.stringify({ action: 'debug', plan, ...(secret ? { secret: secret.trim() } : {}) }),
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
@@ -1690,23 +1710,20 @@ async function activateManualPlan(plan) {
     }
 
     const secret = secretInput ? secretInput.value.trim() : '';
-    if (!secret) {
+    if (!secret && !isAdminViaTelegramApp()) {
         if (statusEl) statusEl.textContent = 'Введите DEBUG_ADMIN_SECRET в поле ниже @username/userId.';
         showAppAlert('Введите DEBUG_ADMIN_SECRET в поле ниже @username/userId.');
         return;
     }
-    rememberAdminSecret(secret);
+    if (secret) rememberAdminSecret(secret);
 
     if (statusEl) statusEl.textContent = 'Активирую тариф...';
 
     try {
         const response = await fetch('/api/manual-plan', {
             method: 'POST',
-            headers: {
-                ...miniAppHeaders(true),
-                'X-Debug-Secret': secret,
-            },
-            body: JSON.stringify({ plan, target }),
+            headers: buildAdminPlanHeaders(secret),
+            body: JSON.stringify({ plan, target, ...(secret ? { secret } : {}) }),
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
@@ -1748,23 +1765,20 @@ function renderCleanupList(items) {
 async function loadCleanupPlans() {
     const statusEl = document.getElementById('cleanup-status');
     const secret = getCleanupSecret();
-    if (!secret) {
+    if (!secret && !isAdminViaTelegramApp()) {
         if (statusEl) statusEl.textContent = 'Введите DEBUG_ADMIN_SECRET в поле выше.';
         showAppAlert('Введите DEBUG_ADMIN_SECRET в поле выше.');
         return;
     }
-    rememberAdminSecret(secret);
+    if (secret) rememberAdminSecret(secret);
 
     if (statusEl) statusEl.textContent = 'Загружаю подписки...';
 
     try {
         const response = await fetch('/api/manual-plan', {
             method: 'POST',
-            headers: {
-                ...miniAppHeaders(true),
-                'X-Debug-Secret': secret,
-            },
-            body: JSON.stringify({ action: 'list', secret }),
+            headers: buildAdminPlanHeaders(secret),
+            body: JSON.stringify({ action: 'list', ...(secret ? { secret } : {}) }),
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
@@ -1812,12 +1826,12 @@ async function loadCleanupPlans() {
 async function resetCleanupPlan(userId, username = '') {
     const statusEl = document.getElementById('cleanup-status');
     const secret = getCleanupSecret();
-    if (!secret) {
+    if (!secret && !isAdminViaTelegramApp()) {
         if (statusEl) statusEl.textContent = 'Введите DEBUG_ADMIN_SECRET в поле выше.';
         showAppAlert('Введите DEBUG_ADMIN_SECRET в поле выше.');
         return;
     }
-    rememberAdminSecret(secret);
+    if (secret) rememberAdminSecret(secret);
 
     const label = username ? `@${username}` : userId;
     const confirmed = window.confirm(`Сбросить подписку пользователя ${label} в Free?`);
@@ -1828,11 +1842,8 @@ async function resetCleanupPlan(userId, username = '') {
     try {
         const response = await fetch('/api/manual-plan', {
             method: 'POST',
-            headers: {
-                ...miniAppHeaders(true),
-                'X-Debug-Secret': secret,
-            },
-            body: JSON.stringify({ action: 'reset', target: userId }),
+            headers: buildAdminPlanHeaders(secret),
+            body: JSON.stringify({ action: 'reset', target: userId, ...(secret ? { secret } : {}) }),
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {

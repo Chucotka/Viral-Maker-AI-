@@ -477,7 +477,7 @@
                             <label>Ручная активация после Tribute</label>
                             <p class="text-hint" style="margin-bottom:10px">Введи <b>@username</b> или <b>userId</b>. Пользователь должен хотя бы раз открыть mini app, чтобы связка сохранилась.</p>
                             <input type="text" id="manual-target" placeholder="@username или 123456789">
-                            <input type="password" id="manual-secret" placeholder="DEBUG_ADMIN_SECRET" autocomplete="off" style="margin-top:10px">
+                            <input type="password" id="manual-secret" class="admin-secret-field" placeholder="DEBUG_ADMIN_SECRET (только в браузере)" autocomplete="off" style="margin-top:10px">
                             <div class="plan-actions" style="margin-top:12px">
                                 <button type="button" class="btn btn-secondary btn-inline" id="btn-manual-pro">Выдать Pro</button>
                                 <button type="button" class="btn btn-secondary btn-inline" id="btn-manual-premium">Выдать Premium</button>
@@ -487,7 +487,7 @@
                         <div class="settings-group">
                             <label>Подписки пользователей</label>
                             <p class="text-hint" style="margin-bottom:10px">Активные Pro/Premium, истёкшие и Free-аккаунты с @username.</p>
-                            <input type="password" id="cleanup-secret" placeholder="DEBUG_ADMIN_SECRET" autocomplete="off">
+                            <input type="password" id="cleanup-secret" class="admin-secret-field" placeholder="DEBUG_ADMIN_SECRET (только в браузере)" autocomplete="off">
                             <div class="plan-actions" style="margin-top:12px">
                                 <button type="button" class="btn btn-secondary btn-inline" id="btn-cleanup-load">Обновить список</button>
                                 <button type="button" class="btn btn-secondary btn-inline" id="btn-cleanup-clear">Скрыть</button>

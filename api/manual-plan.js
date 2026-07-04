@@ -34,10 +34,11 @@ function parseAction(value) {
 function requireAdmin(req, res) {
   const auth = resolveTelegramUser(req, res);
   if (!auth) return null;
-  const access = getAdminAccessStatus(req, auth.userId);
+  const access = getAdminAccessStatus(req, auth.userId, { source: auth.source });
   if (!access.ok) {
     console.warn('Manual plan ignored: forbidden', {
       userId: auth.userId,
+      source: auth.source,
       reason: access.reason,
       hasSecret: !!readDebugSecret(req),
     });
