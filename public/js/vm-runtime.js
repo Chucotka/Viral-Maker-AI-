@@ -75,6 +75,9 @@
   if (hasInitData) {
     tg.expand?.();
     tg.ready?.();
+    global.document?.body?.classList?.add('vm-telegram');
+  } else {
+    global.document?.body?.classList?.add('vm-web');
   }
 
   global.VMRuntime = {

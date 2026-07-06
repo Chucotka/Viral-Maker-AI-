@@ -137,9 +137,88 @@ h3 { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
     color: var(--text-muted);
     line-height: 1.4;
 }
+.web-auth-legal {
+    margin-top: 10px;
+    font-size: 11px;
+    text-align: center;
+}
+.web-auth-legal a {
+    color: var(--accent);
+    text-decoration: none;
+}
 
+/* Legal / operator (Product Radar, 152-ФЗ) */
+.legal-settings-block {
+    margin-top: 20px;
+    padding: 14px;
+    border-radius: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+}
+.legal-operator-line {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.45;
+    margin-bottom: 4px;
+}
+.legal-operator-line a {
+    color: var(--accent);
+    text-decoration: none;
+}
+.legal-links-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 10px;
+}
+.legal-links-row a {
+    font-size: 12px;
+    color: var(--accent);
+    text-decoration: none;
+}
+.legal-subscription-note {
+    margin-top: 12px;
+    font-size: 11px;
+    line-height: 1.45;
+}
+.legal-subscription-note a {
+    color: var(--accent);
+}
+.app-legal-footer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+    z-index: 400;
+    padding: 6px 12px 8px;
+    text-align: center;
+    background: rgba(28, 28, 30, 0.96);
+    border-top: 1px solid var(--border);
+    backdrop-filter: blur(8px);
+}
+.app-legal-footer-operator {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+}
+.app-legal-footer-links {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 10px;
+}
+.app-legal-footer-links a {
+    color: var(--accent);
+    text-decoration: none;
+}
+body.vm-telegram .app-legal-footer {
+    display: none;
+}
+body.vm-web .tab-content {
+    padding-bottom: calc(130px + env(safe-area-inset-bottom, 0px));
+}
 
-/* Tabs */
 .tab-content {
     flex: 1;
     overflow-y: auto;
