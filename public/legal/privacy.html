@@ -3,44 +3,48 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Политика конфиденциальности · Innoko</title>
-  <link rel="stylesheet" href="../style.css?v=20260704" />
-  <style>
-    .legal-page { max-width: 640px; margin: 0 auto; padding: 24px 16px 48px; line-height: 1.55; }
-    .legal-page h1 { font-size: 1.35rem; margin-bottom: 8px; }
-    .legal-page h2 { font-size: 1.05rem; margin: 20px 0 8px; }
-    .legal-page p, .legal-page li { color: var(--text-secondary, #666); font-size: 0.95rem; }
-    .legal-back { display: inline-block; margin-bottom: 16px; color: var(--accent, #6c5ce7); text-decoration: none; }
-  </style>
+  <title>Политика конфиденциальности · Viral Maker AI</title>
+  <link rel="stylesheet" href="../style.css" />
+  <link rel="stylesheet" href="legal.css" />
 </head>
 <body>
   <article class="legal-page">
-    <a class="legal-back" href="../">← В приложение</a>
+    <a class="legal-back" href="/app/">← В приложение</a>
     <h1>Политика конфиденциальности</h1>
-    <p><strong>Innoko · Viral Maker AI</strong> · innoko.ru</p>
-    <p>Дата обновления: 3 июля 2026 г.</p>
+    <p><strong>Viral Maker AI</strong> · сервис Innoko</p>
+    <p>Дата обновления: 6 июля 2026 г.</p>
 
-    <h2>1. Какие данные мы обрабатываем</h2>
+    <div class="legal-operator">
+      <strong>Оператор персональных данных</strong><br />
+      Самозанятый Малахов Михаил Михаилович<br />
+      ИНН 623400038290<br />
+      Email: <a href="mailto:messmerize@gmail.com">messmerize@gmail.com</a><br />
+      Телефон: <a href="tel:+79109042827">+7 910 904-28-27</a><br />
+      Telegram: <a href="https://t.me/viral_maker_ai_bot" rel="noopener noreferrer">@viral_maker_ai_bot</a>
+    </div>
+
+    <h2>1. Какие данные обрабатываем</h2>
     <ul>
       <li>Идентификатор Telegram (при входе через Telegram) или анонимный гостевой id в браузере.</li>
+      <li>Имя пользователя Telegram, аватар (если доступны при авторизации).</li>
       <li>Настройки профиля: ниша, язык, стиль, история генераций.</li>
-      <li>Технические данные: cookie сессии, IP (через nginx/хостинг).</li>
+      <li>Технические данные: cookie сессии, IP-адрес, user-agent.</li>
+      <li>Данные об оплате обрабатываются Telegram Stars и Tribute; мы получаем только факт оплаты.</li>
     </ul>
 
-    <h2>2. Зачем</h2>
-    <p>Для работы сервиса: генерация контента, тарифы, реферальная программа, поддержка.</p>
+    <h2>2. Цели обработки</h2>
+    <p>Работа сервиса: генерация контента, тарифы, реферальная программа, поддержка, защита от злоупотреблений.</p>
 
     <h2>3. Хранение</h2>
-    <p>Данные профиля хранятся в облачном Redis (Upstash). Промпты отправляются в Google Gemini для генерации.</p>
+    <p>Данные профиля хранятся в облачном Redis (Upstash). Промпты передаются в Google Gemini для генерации.</p>
 
     <h2>4. Передача третьим лицам</h2>
-    <p>Telegram (авторизация), Google (AI), Tribute (оплата подписки), хостинг Timeweb.</p>
+    <p>Telegram, Google (Gemini), Tribute, Timeweb (хостинг).</p>
 
-    <h2>5. Ваши права</h2>
-    <p>Запрос на удаление данных — через поддержку в Telegram (кнопка «Связаться с нами» в приложении).</p>
+    <h2>5. Права пользователя</h2>
+    <p>Запрос доступа, исправления или удаления данных — через поддержку или email оператора.</p>
 
-    <h2>6. Контакты</h2>
-    <p>Оператор сервиса Innoko. Вопросы: через Telegram-поддержку в приложении.</p>
+    <p><a href="/app/legal/terms.html">Пользовательское соглашение</a> · <a href="/app/legal/offer.html">Публичная оферта</a></p>
   </article>
 </body>
 </html>

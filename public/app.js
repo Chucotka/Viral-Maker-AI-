@@ -790,6 +790,8 @@ function alertFromGenerateError(message) {
         text = 'Слишком много запросов за короткое время. Подождите около минуты и попробуйте снова.';
     } else if (/504|FUNCTION_INVOCATION_TIMEOUT|timeout|timed out|aborted/i.test(m)) {
         text = 'Сервер не успел ответить. Загляните в Дашборд — результат мог сохраниться в истории.';
+    } else if (/internal_error|Внутренняя ошибка сервера/i.test(m)) {
+        text = 'Сбой генерации на сервере. Администратору: на VPS выполните node scripts/diagnose-gemini.js и проверьте GEMINI_API_KEY / GEMINI_HTTPS_PROXY в .env';
     } else if (m && m.length < 320 && !/^Ошибка генерации \(\d+\)$/.test(m)) {
         text = m;
     }

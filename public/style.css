@@ -38,6 +38,32 @@ h3 { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
 .text-hint { color: var(--text-muted); font-size: 12px; margin-top: 4px; }
 .hidden { display: none !important; }
 
+.legal-settings-block {
+    margin-top: 20px;
+    padding: 14px;
+    border-radius: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+}
+.legal-operator-line {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.45;
+    margin-bottom: 4px;
+}
+.legal-operator-line a { color: var(--accent); text-decoration: none; }
+.legal-links-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 10px;
+}
+.legal-links-row a {
+    font-size: 12px;
+    color: var(--accent);
+    text-decoration: none;
+}
+
 /* Web login (innoko.ru/app) */
 .web-auth-overlay {
     position: fixed;
