@@ -72,6 +72,34 @@
     }
   }
 
+  function resolveLegalUrl(href) {
+    try {
+      return new URL(href, global.location.origin).href;
+    } catch {
+      return href;
+    }
+  }
+
+  function openLegalLink(href) {
+    const url = resolveLegalUrl(href);
+    if (hasInitData && tg?.openLink) {
+      tg.openLink(url);
+      return;
+    }
+    global.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  function installLegalLinks() {
+    global.document?.addEventListener('click', (e) => {
+      const a = e.target?.closest?.('a[href*="/app/legal/"], a[href*="legal/"]');
+      if (!a) return;
+      const href = a.getAttribute('href');
+      if (!href || href.startsWith('mailto:') || href.startsWith('tel:')) return;
+      e.preventDefault();
+      openLegalLink(href);
+    });
+  }
+
   if (hasInitData) {
     tg.expand?.();
     tg.ready?.();
@@ -79,6 +107,8 @@
   } else {
     global.document?.body?.classList?.add('vm-web');
   }
+
+  installLegalLinks();
 
   global.VMRuntime = {
     isTelegram: hasInitData,
@@ -90,5 +120,6 @@
     alert,
     popup,
     readStartParamFromUrl,
+    openLegalLink,
   };
 })(window);
