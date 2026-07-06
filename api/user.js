@@ -1,4 +1,4 @@
-const { resolveTelegramUser } = require('../lib/miniAppAuth');
+const { resolveAppUser } = require('../lib/miniAppAuth');
 const { isKvConfigured, getQuotaState, saveUserRecord, saveTelegramIdentity } = require('../lib/kvUserStore');
 const { isAppOwner } = require('../lib/appOwner');
 const { sendSafeError } = require('../lib/httpErrors');
@@ -19,9 +19,13 @@ function sanitizeProfileBody(body) {
   return { niche, language, styleNote, brandMemory };
 }
 
-/** Только подписанный start_param из initData — защита от подмены referrer. */
-function readReferralParam(_req, authStartParam) {
-  return authStartParam || null;
+/** start_param из initData / cookie-сессии; для web-ссылок — ?startapp=ref_* в query. */
+function readReferralParam(req, authStartParam) {
+  if (authStartParam && parseReferrerId(authStartParam)) return authStartParam;
+  const raw = req.query?.startapp || req.query?.start_param || '';
+  const q = String(raw || '').trim();
+  if (q && parseReferrerId(q)) return q;
+  return null;
 }
 
 module.exports = async (req, res) => {
@@ -33,7 +37,7 @@ module.exports = async (req, res) => {
       });
     }
 
-    const auth = resolveTelegramUser(req, res);
+    const auth = resolveAppUser(req, res);
     if (!auth) return;
     await saveTelegramIdentity(auth.userId, auth.user);
 
@@ -44,17 +48,24 @@ module.exports = async (req, res) => {
         referralSignup = await bindReferrerOnFirstVisit(auth.userId, referralParam);
       }
 
-      const { rec, quota } = await getQuotaState(auth.userId);
+      const { rec, quota, limit } = await getQuotaState(auth.userId);
       const referral = buildReferralStats(rec, auth.userId);
 
       return res.json({
         plan: rec.plan,
         dailyCount: rec.dailyCount,
         userId: auth.userId,
+        user: auth.user || null,
+        isGuest: auth.authKind === 'guest',
         isOwner: isAppOwner(auth.userId),
+        adminSecretRequired: !(
+          auth.source === 'telegram_mini_app' ||
+          (auth.source === 'web_session' && auth.authKind === 'telegram')
+        ),
         planUntil: rec.planUntil || null,
         bonusGenerations: rec.bonusGenerations || 0,
         quotaRemaining: quota.totalRemaining === Infinity ? null : quota.totalRemaining,
+        freeGenerationLimit: limit === Infinity ? null : limit,
         profile: {
           niche: rec.niche || '',
           language: rec.language || '',
@@ -102,3 +113,5 @@ module.exports = async (req, res) => {
     sendSafeError(res, e, 'user');
   }
 };
+
+module.exports.readReferralParam = readReferralParam;

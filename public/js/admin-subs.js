@@ -163,9 +163,43 @@
     lastOverview = null;
   }
 
-  function renderOverview(overview) {
+  function renderFunnel(funnel) {
+    const row = qs('subs-funnel-row');
+    const grid = qs('subs-funnel-grid');
+    if (!row || !grid) return;
+    const totals = funnel?.totals || {};
+    const labels = {
+      app_open: 'Открытия',
+      studio_open: 'Studio',
+      guest_session: 'Гости',
+      telegram_session: 'Вход TG',
+      generation_completed: 'Генерации',
+      limit_one_left: '1 осталась',
+      paywall_shown: 'Paywall',
+      checkout_click: 'Оплата',
+      landing_go: 'С лендинга',
+    };
+    const keys = Object.keys(labels);
+    const hasData = keys.some((k) => Number(totals[k]) > 0);
+    if (!hasData) {
+      row.classList.add('hidden');
+      grid.innerHTML = '';
+      return;
+    }
+    row.classList.remove('hidden');
+    grid.innerHTML = keys
+      .filter((k) => Number(totals[k]) > 0)
+      .map(
+        (k) =>
+          `<div class="subs-funnel-chip"><span class="subs-funnel-chip-value">${totals[k]}</span><span class="subs-funnel-chip-label">${labels[k]}</span></div>`,
+      )
+      .join('');
+  }
+
+  function renderOverview(overview, funnel) {
     lastOverview = overview;
     updateStats(overview.totals);
+    renderFunnel(funnel);
     showDashboard();
     renderPanel();
   }
