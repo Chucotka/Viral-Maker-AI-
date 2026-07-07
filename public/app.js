@@ -747,13 +747,23 @@ function setStudioMode(mode) {
     const ta = document.getElementById('studio-topic');
     if (isImage) {
         label.textContent = 'Опиши, что должно быть на картинке';
-        ta.placeholder = 'Например: яркий постер про нейросети, неон, тёмный фон...';
+        ta.placeholder = 'Например: сделай фон светлее, сохрани композицию...';
     } else if (isScript) {
         label.textContent = 'Тема ролика или ключевая мысль';
         ta.placeholder = 'Например: 3 ошибки при запуске Telegram-канала...';
     } else {
         label.textContent = 'Опиши идею или вставь тему';
         ta.placeholder = 'Например: Как использовать AI для бизнеса в 2026 году...';
+    }
+    const attachHint = document.getElementById('studio-attach-hint');
+    if (attachHint) {
+        if (isImage) {
+            attachHint.textContent = 'Прикрепите исходник — перегенерировать, поправить детали или стиль';
+        } else if (isScript) {
+            attachHint.textContent = 'Текстовый файл — адаптировать под сценарий Reels/Shorts';
+        } else {
+            attachHint.textContent = 'Текст или картинка — переписать, сократить, усилить подачу';
+        }
     }
     document.getElementById('result-container').classList.add('hidden');
 }
@@ -2263,9 +2273,18 @@ function runRefine(mode) {
     document.getElementById('btn-generate').click();
 }
 
+function buildGeneratePayload(base) {
+    const attachments = window.VMStudioAttachments?.getPayloadAttachments?.() || [];
+    if (attachments.length) {
+        return { ...base, attachments };
+    }
+    return base;
+}
+
 // --- Content Generation ---
 async function runTextGeneration(opts = {}) {
     const topic = document.getElementById('studio-topic').value.trim();
+    const hasFiles = window.VMStudioAttachments?.hasAttachments?.();
     const platform = opts.platform ?? studioPlatform.value;
     const tone = opts.tone ?? studioTone.value;
     const risk = (studioRisk && studioRisk.value) || studioRiskLevel || DEFAULT_RISK;
@@ -2276,8 +2295,8 @@ async function runTextGeneration(opts = {}) {
     const limitMsg = document.getElementById('limit-msg');
     limitMsg.classList.add('hidden');
 
-    if (!topic) {
-        showAppAlert(opts.emptyTopicMessage || 'Пожалуйста, введите тему или идею.');
+    if (!topic && !hasFiles) {
+        showAppAlert(opts.emptyTopicMessage || 'Введите тему или прикрепите файл с исходным текстом.');
         return;
     }
 
@@ -2292,7 +2311,8 @@ async function runTextGeneration(opts = {}) {
         const response = await fetch('/api/generate', {
             method: 'POST',
             headers: miniAppHeaders(true),
-            body: JSON.stringify({
+            body: JSON.stringify(
+                buildGeneratePayload({
                 topic,
                 platform,
                 tone,
@@ -2302,6 +2322,7 @@ async function runTextGeneration(opts = {}) {
                 ...(scriptDuration != null ? { scriptDuration } : {}),
                 ...(scriptFormat ? { scriptFormat } : {}),
             }),
+            ),
         });
 
         const data = await parseJsonResponse(response);
@@ -2348,6 +2369,7 @@ document.getElementById('btn-generate-script').addEventListener('click', () => {
 
 async function runImageGeneration() {
     const prompt = document.getElementById('studio-topic').value.trim();
+    const hasFiles = window.VMStudioAttachments?.hasAttachments?.();
     const aspectRatio = imageAspect.value;
     const style = imageStyle.value;
     const risk = (studioRisk && studioRisk.value) || studioRiskLevel || DEFAULT_RISK;
@@ -2355,8 +2377,8 @@ async function runImageGeneration() {
     const limitMsg = document.getElementById('limit-msg');
     limitMsg.classList.add('hidden');
 
-    if (!prompt) {
-        showAppAlert('Введите описание изображения.');
+    if (!prompt && !hasFiles) {
+        showAppAlert('Введите описание или прикрепите исходное изображение.');
         return;
     }
 
@@ -2370,7 +2392,7 @@ async function runImageGeneration() {
         const response = await fetch('/api/generate-image', {
             method: 'POST',
             headers: miniAppHeaders(true),
-            body: JSON.stringify({ prompt, aspectRatio, style, risk }),
+            body: JSON.stringify(buildGeneratePayload({ prompt, aspectRatio, style, risk })),
         });
 
         const data = await parseJsonResponse(response);

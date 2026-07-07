@@ -136,6 +136,16 @@
                 <p class="text-hint" id="studio-trend-hint">Выберите тренд, режим или просто напишите короткую мысль. Мы усилим запрос сами.</p>
             </div>
 
+            <div class="form-group" id="studio-attachments-group">
+                <label for="studio-attachment-input">Материал для переработки</label>
+                <input type="file" id="studio-attachment-input" class="hidden" accept="image/jpeg,image/png,image/webp,image/gif,.txt,.md,.csv,text/plain" multiple />
+                <div class="studio-attach-row">
+                    <button type="button" class="btn btn-secondary btn-inline" id="btn-studio-attach">📎 Прикрепить файл</button>
+                    <span class="text-hint" id="studio-attach-hint">Текст (.txt, .md) или картинка — переписать, исправить или перегенерировать</span>
+                </div>
+                <ul id="studio-attachment-list" class="studio-attachment-list hidden" aria-live="polite"></ul>
+            </div>
+
             <div class="form-group" id="studio-intent-group">
                 <label>Режим</label>
                 <div class="intent-pills" id="studio-intents">
@@ -803,6 +813,7 @@
     <script defer src="js/image-download.js"></script>
     <script defer src="js/vm-analytics.js?v=20260704r"></script>
     <script defer src="js/onboarding.js?v=20260704r"></script>
+    <script defer src="js/studio-attachments.js?v=20260704r"></script>
     <script defer src="js/admin-subs.js?v=20260704r"></script>
     <script defer src="referral.js?v=20260704r"></script>
     <script defer src="app.js?v=20260704r"></script>

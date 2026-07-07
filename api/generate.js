@@ -9,6 +9,7 @@ const { generateStudioTextContent } = require('../lib/textGeneration');
 const { assertGenerateRateLimit } = require('../lib/rateLimitKv');
 const { sendMappedError } = require('../lib/httpErrors');
 const { trackFunnelStage } = require('../lib/funnelMetrics');
+const { parseStudioAttachments } = require('../lib/studioAttachments');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).end();
@@ -32,10 +33,16 @@ module.exports = async (req, res) => {
       risk = 'balanced',
       scriptDuration,
       scriptFormat,
+      attachments: rawAttachments,
     } = req.body;
 
-    if (!topic || topic.trim().length === 0) {
-      return res.status(400).json({ error: 'topic_required', message: 'Тема не указана.' });
+    const attachments = parseStudioAttachments(rawAttachments);
+    const topicTrim = String(topic || '').trim();
+    if (!topicTrim && !attachments.length) {
+      return res.status(400).json({
+        error: 'topic_required',
+        message: 'Введите тему или прикрепите файл с исходным текстом/картинкой.',
+      });
     }
 
     if (!process.env.GEMINI_API_KEY) {
@@ -66,7 +73,7 @@ module.exports = async (req, res) => {
       risk,
     });
     const prompt = buildStudioTextPrompt({
-      topic,
+      topic: topicTrim || 'Переработай прикреплённый материал',
       platform,
       tone,
       intent,
@@ -76,6 +83,7 @@ module.exports = async (req, res) => {
       goal,
       scriptDuration,
       scriptFormat,
+      attachments,
     });
 
     const {
@@ -114,6 +122,7 @@ module.exports = async (req, res) => {
         goal,
         plan: rec.plan,
         paidTierActive: isPaidTierActive(rec),
+        attachments,
       },
     );
     const { remainingToday } = await incrementGenerationCount(auth.userId, rec);
