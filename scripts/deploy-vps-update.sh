@@ -2,7 +2,7 @@
 # Обновление уже установленного Viral Maker AI на VPS.
 # Запуск на сервере (root): bash scripts/deploy-vps-update.sh
 # Или одной строкой:
-#   curl -fsSL "https://raw.githubusercontent.com/Chucotka/Viral-Maker-AI-/cursor/guest-telegram-link-e202/scripts/deploy-vps-update.sh" | bash
+#   curl -fsSL "https://raw.githubusercontent.com/Chucotka/Viral-Maker-AI-/cursor/studio-attachments-e202/scripts/deploy-vps-update.sh" | bash
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/var/www/viral-maker}"

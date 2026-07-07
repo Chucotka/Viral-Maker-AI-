@@ -6,9 +6,11 @@ on:
       branch:
         description: 'Branch to deploy'
         required: true
-        default: 'cursor/guest-onboarding-p1-e202'
+        default: 'cursor/studio-attachments-e202'
   push:
     branches:
+      - cursor/studio-attachments-e202
+      - cursor/fix-generate-500-e202
       - cursor/guest-onboarding-p1-e202
       - cursor/production-hardening-e202
       - cursor/referral-e2e-e202
