@@ -23,6 +23,10 @@ if [[ -n "$PUBLIC_IP" && -n "$RESOLVED" && "$PUBLIC_IP" != "$RESOLVED" ]]; then
   exit 1
 fi
 
+if [[ -z "${MANUS_VIRAL_MAKER_HOST:-}" ]] && grep -q '^MANUS_VIRAL_MAKER_HOST=' .env 2>/dev/null; then
+  MANUS_VIRAL_MAKER_HOST="$(grep '^MANUS_VIRAL_MAKER_HOST=' .env | cut -d= -f2- | tr -d '"' | tr -d "'")"
+fi
+
 if [[ -z "${MANUS_VIRAL_MAKER_HOST:-}" ]]; then
   DEFAULT_MANUS_HOST="viral-maker-ai.manus.space"
   if [[ -t 0 ]]; then
