@@ -515,12 +515,12 @@ async function copyPremiumBotHandle() {
         if (typeof tg.showPopup === 'function') {
             tg.showPopup({
                 title: 'Скопировано',
-                message: 'Скопировал @PremiumBot. Откройте поиск в Telegram, вставьте username, купите Stars и вернитесь сюда.',
+                message: 'Скопировал @PremiumBot. Откройте поиск в Telegram, вставьте username, пополните Stars и вернитесь сюда.',
                 buttons: [{ type: 'ok' }],
             });
             return;
         }
-        tg.showAlert('Скопировал @PremiumBot. Откройте поиск в Telegram, вставьте username, купите Stars и вернитесь сюда.');
+        tg.showAlert('Скопировал @PremiumBot. Откройте поиск в Telegram, вставьте username, пополните Stars и вернитесь сюда.');
     } catch (e) {
         tg.showAlert('Откройте поиск в Telegram и найдите @PremiumBot вручную.');
     }
@@ -637,8 +637,8 @@ function showStarsHelp(plan) {
         : 'На iPhone и Android встроенная покупка может быть недоступна или не сработать в вашем регионе.';
     if (typeof tg.showPopup === 'function') {
         tg.showPopup({
-            title: `${planLabel}: оплата через Stars`,
-            message: `${platformHint}\n\nМожно оплатить картой через Tribute или купить Stars через @PremiumBot.`,
+            title: `${planLabel}: оплата картой или Stars`,
+            message: `${platformHint}\n\nМожно оплатить картой через Tribute. Telegram Stars — внутренняя единица Telegram (не криптовалюта).`,
             buttons: [
                 {
                     id: `open-tribute-${plan}`,
@@ -659,7 +659,7 @@ function showStarsHelp(plan) {
         });
         return;
     }
-    tg.showAlert('Оплата подписки идет через Telegram Stars. Если форма не открывается, оплатите картой через Tribute или купите Stars через @PremiumBot.');
+    tg.showAlert('Оплата подписки доступна картой через Tribute или через Telegram Stars. Stars не являются криптовалютой. Если форма Stars не открывается, используйте оплату картой.');
 }
 
 const savedSettings = loadSavedSettings();
