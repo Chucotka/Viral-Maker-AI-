@@ -210,6 +210,22 @@ async function checkTelegramSdkAsset() {
   }
 }
 
+async function checkLandingPage() {
+  const landingUrl = appUrl.replace(/\/$/, '') + '/../landing.html';
+  const u = new URL(landingUrl);
+  const r = await request(`${u.origin}${u.pathname}`);
+  if (r.status !== 200) {
+    fail('GET /app/landing.html', `HTTP ${r.status}`);
+    return;
+  }
+  const html = r.raw || '';
+  if (html.includes('299 ₽') && html.includes('privacy.html')) {
+    pass('Landing page', 'RUB pricing + legal links');
+  } else {
+    fail('Landing page', 'missing pricing or legal links');
+  }
+}
+
 async function main() {
   console.log('\n=== Stabilization smoke ===');
   console.log(`API: ${apiOrigin}`);
@@ -222,6 +238,7 @@ async function main() {
     checkGuestSession,
     checkEventsApi,
     checkAppHtml,
+    checkLandingPage,
     checkTelegramSdkAsset,
   ];
 

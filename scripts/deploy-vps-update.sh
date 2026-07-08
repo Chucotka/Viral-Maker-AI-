@@ -6,7 +6,7 @@
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/var/www/viral-maker}"
-BRANCH="${BRANCH:-cursor/studio-attachments-e202}"
+BRANCH="${BRANCH:-cursor/product-radar-landing-e202}"
 REPO_URL="${REPO_URL:-https://github.com/Chucotka/Viral-Maker-AI-.git}"
 PM2_NAME="${PM2_NAME:-viral-maker}"
 

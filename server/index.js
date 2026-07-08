@@ -43,6 +43,7 @@ app.get('/app', (req, res, next) => {
   if (req.path !== '/app') return next();
   return res.redirect(301, '/app/');
 });
+app.get('/app/landing', (req, res) => res.redirect(301, '/app/landing.html'));
 app.use('/app', express.static(publicDir, { index: 'index.html', setHeaders: setStaticCacheHeaders }));
 
 const LEGAL_FILES = new Set(['privacy.html', 'terms.html', 'offer.html', 'legal.css']);

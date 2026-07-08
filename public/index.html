@@ -8,6 +8,7 @@
     <base href="/app/" />
     <link rel="stylesheet" href="style.css?v=20260704r" />
     <script src="js/telegram-boot.js?v=20260704r"></script>
+    <script src="js/landing-guard.js?v=20260708r"></script>
 </head>
 <body>
     <div id="web-auth-overlay" class="web-auth-overlay hidden" aria-hidden="true">
@@ -15,6 +16,13 @@
             <p class="web-auth-brand">Innoko · Viral Maker AI</p>
             <h1 class="web-auth-title">Вход в Viral Maker AI</h1>
             <p class="web-auth-hint">На компьютере нажмите «Войти через Telegram в браузере» — так сохранится сессия и откроется admin-панель. «Открыть в Telegram» не логинит браузер.</p>
+            <p class="web-auth-legal text-hint">
+                Входя в сервис, вы соглашаетесь с
+                <a href="/app/legal/privacy.html" target="_blank" rel="noopener">политикой</a>,
+                <a href="/app/legal/terms.html" target="_blank" rel="noopener">соглашением</a>
+                и <a href="/app/legal/offer.html" target="_blank" rel="noopener">офертой</a>.
+                Тарифы — в <a href="/app/landing.html" target="_blank" rel="noopener">рублях</a>.
+            </p>
             <div id="web-auth-widget" class="web-auth-widget"></div>
         </div>
     </div>
@@ -476,9 +484,10 @@
                         <div class="plan-card" id="plan-pro" style="cursor: pointer;">
                             <div class="plan-header">
                                 <h4>Pro</h4>
-                                <span class="plan-price">99 Stars или карта</span>
+                                <span class="plan-price">299 ₽ / 30 дн.</span>
                             </div>
                             <p>Безлимит · аналитика · 2 AI-варианта</p>
+                            <p class="text-hint">В Telegram: карта или 99 Stars</p>
                             <div class="plan-actions">
                                 <button type="button" class="btn btn-secondary btn-inline" id="plan-pro-tribute">Картой через Tribute</button>
                             </div>
@@ -486,17 +495,18 @@
                         <div class="plan-card" id="plan-premium" style="cursor: pointer;">
                             <div class="plan-header">
                                 <h4>Premium</h4>
-                                <span class="plan-price">299 Stars или карта</span>
+                                <span class="plan-price">799 ₽ / 30 дн.</span>
                             </div>
                             <p>Pro + картинки в канал · 3 AI-варианта · ×2 rate limit</p>
+                            <p class="text-hint">В Telegram: карта или 299 Stars</p>
                             <div class="plan-actions">
                                 <button type="button" class="btn btn-secondary btn-inline" id="plan-premium-tribute">Картой через Tribute</button>
                             </div>
                         </div>
                         <div class="stars-help-card" id="stars-help-card">
-                            <div class="stars-help-title">Оплата: карта или Telegram Stars</div>
+                            <div class="stars-help-title">Оплата в рублях или через Telegram</div>
                             <p class="text-hint stars-help-text">
-                                Telegram Stars — внутренняя платёжная единица Telegram (не криптовалюта). Если Stars не открываются, оплатите картой через Tribute.
+                                Основная оплата — <b>картой в рублях</b> через Tribute. В Telegram дополнительно доступны Stars (внутренняя единица Telegram, не криптовалюта).
                             </p>
                             <div class="stars-help-actions">
                                 <button type="button" class="btn btn-secondary" id="btn-open-premiumbot">Купить Stars / Открыть @PremiumBot</button>
@@ -689,7 +699,7 @@
                     </details>
                     <details class="faq-item">
                         <summary class="faq-question">Как оплатить Pro или Premium?</summary>
-                        <p class="faq-answer">Оплатить можно <b>картой через Tribute</b> или через <b>Telegram Stars</b> в приложении. <b>Telegram Stars не являются криптовалютой</b>. Если форма Stars не открывается, используйте оплату картой.</p>
+                        <p class="faq-answer">Оплата подписки — <b>в рублях</b> картой через Tribute. В Telegram дополнительно доступны <b>Telegram Stars</b> (внутренняя единица Telegram, <b>не криптовалюта</b>). Актуальные цены — на <a href="/app/landing.html">странице продукта</a>.</p>
                     </details>
                     <details class="faq-item">
                         <summary class="faq-question">Как сохранить картинку в галерею телефона?</summary>

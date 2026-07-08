@@ -21,9 +21,16 @@ describe('stabilization (no-VPN load)', () => {
     assert.ok(fs.existsSync(path.join(__dirname, '../public/js/telegram-web-app.js')));
   });
 
-  it('deploy script defaults to product growth branch', () => {
+  it('deploy script defaults to product radar landing branch', () => {
     const sh = fs.readFileSync(path.join(__dirname, '../scripts/deploy-vps-update.sh'), 'utf8');
-    assert.match(sh, /cursor\/studio-attachments-e202/);
+    assert.match(sh, /cursor\/product-radar-landing-e202/);
     assert.match(sh, /stabilization-smoke\.js/);
+  });
+
+  it('landing page has RUB pricing and legal links', () => {
+    const html = fs.readFileSync(path.join(__dirname, '../public/landing.html'), 'utf8');
+    assert.match(html, /299 ₽/);
+    assert.match(html, /privacy\.html/);
+    assert.match(html, /не криптовалюта/i);
   });
 });

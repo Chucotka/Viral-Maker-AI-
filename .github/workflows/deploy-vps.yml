@@ -6,9 +6,10 @@ on:
       branch:
         description: 'Branch to deploy'
         required: true
-        default: 'cursor/studio-attachments-e202'
+        default: 'cursor/product-radar-landing-e202'
   push:
     branches:
+      - cursor/product-radar-landing-e202
       - cursor/studio-attachments-e202
       - cursor/fix-generate-500-e202
       - cursor/guest-onboarding-p1-e202

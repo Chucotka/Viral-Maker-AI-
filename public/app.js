@@ -637,8 +637,8 @@ function showStarsHelp(plan) {
         : 'На iPhone и Android встроенная покупка может быть недоступна или не сработать в вашем регионе.';
     if (typeof tg.showPopup === 'function') {
         tg.showPopup({
-            title: `${planLabel}: оплата картой или Stars`,
-            message: `${platformHint}\n\nМожно оплатить картой через Tribute. Telegram Stars — внутренняя единица Telegram (не криптовалюта).`,
+            title: `${planLabel}: оплата в рублях`,
+            message: `${platformHint}\n\nОсновная оплата — картой в рублях через Tribute. В Telegram дополнительно доступны Stars (не криптовалюта).`,
             buttons: [
                 {
                     id: `open-tribute-${plan}`,
@@ -659,7 +659,7 @@ function showStarsHelp(plan) {
         });
         return;
     }
-    tg.showAlert('Оплата подписки доступна картой через Tribute или через Telegram Stars. Stars не являются криптовалютой. Если форма Stars не открывается, используйте оплату картой.');
+    tg.showAlert('Оплата подписки — в рублях картой через Tribute. В Telegram дополнительно доступны Stars (не криптовалюта).');
 }
 
 const savedSettings = loadSavedSettings();
