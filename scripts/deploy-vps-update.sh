@@ -6,7 +6,7 @@
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/var/www/viral-maker}"
-BRANCH="${BRANCH:-cursor/product-radar-landing-e202}"
+BRANCH="${BRANCH:-cursor/viral-maker-domain-e202}"
 REPO_URL="${REPO_URL:-https://github.com/Chucotka/Viral-Maker-AI-.git}"
 PM2_NAME="${PM2_NAME:-viral-maker}"
 
@@ -46,10 +46,9 @@ fi
 echo "==> npm ci"
 npm ci --silent
 
-if [[ -f scripts/nginx-innoko-locations.conf ]]; then
-  echo "==> nginx snippet"
-  cp scripts/nginx-innoko-locations.conf /etc/nginx/snippets/innoko-locations.conf 2>/dev/null || true
-  nginx -t && systemctl reload nginx
+if [[ -f scripts/apply-nginx-config.sh ]]; then
+  echo "==> nginx"
+  bash scripts/apply-nginx-config.sh
 fi
 
 echo "==> pm2"

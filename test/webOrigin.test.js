@@ -25,6 +25,12 @@ describe('webOrigin', () => {
     assert.equal(resolveWebAppUrl(), 'https://app.innoko.ru/app/');
   });
 
+  it('keeps viral-maker.ru/app on same origin', () => {
+    process.env.WEBAPP_URL = 'https://viral-maker.ru/app';
+    assert.equal(resolveWebAuthOrigin(), 'https://viral-maker.ru');
+    assert.equal(resolveWebAppUrl(), 'https://viral-maker.ru/app/');
+  });
+
   it('keeps app.innoko.ru/app path', () => {
     process.env.WEBAPP_URL = 'https://app.innoko.ru/app';
     assert.equal(resolveWebAppUrl(), 'https://app.innoko.ru/app/');
