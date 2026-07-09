@@ -13,6 +13,17 @@ if [[ ! -f .env ]]; then
   exit 1
 fi
 
+set -a
+# shellcheck disable=SC1091
+source .env
+set +a
+
+if [[ -z "${MANUS_VIRAL_MAKER_HOST:-}" ]] && grep -q '^MANUS_VIRAL_MAKER_HOST=' .env 2>/dev/null; then
+  MANUS_VIRAL_MAKER_HOST="$(grep '^MANUS_VIRAL_MAKER_HOST=' .env | cut -d= -f2- | tr -d '"' | tr -d "'")"
+fi
+MANUS_VIRAL_MAKER_HOST="${MANUS_VIRAL_MAKER_HOST#https://}"
+MANUS_VIRAL_MAKER_HOST="${MANUS_VIRAL_MAKER_HOST%%/*}"
+
 echo "==> Проверка DNS (viral-maker.ru → этот сервер)"
 PUBLIC_IP="$(curl -sf https://api.ipify.org || true)"
 RESOLVED="$(getent ahostsv4 viral-maker.ru 2>/dev/null | awk '{print $1; exit}' || true)"
@@ -21,10 +32,6 @@ echo "    viral-maker.ru A: ${RESOLVED:-не найден}"
 if [[ -n "$PUBLIC_IP" && -n "$RESOLVED" && "$PUBLIC_IP" != "$RESOLVED" ]]; then
   echo "!!! DNS ещё не указывает на этот VPS. Настройте A-запись и повторите."
   exit 1
-fi
-
-if [[ -z "${MANUS_VIRAL_MAKER_HOST:-}" ]] && grep -q '^MANUS_VIRAL_MAKER_HOST=' .env 2>/dev/null; then
-  MANUS_VIRAL_MAKER_HOST="$(grep '^MANUS_VIRAL_MAKER_HOST=' .env | cut -d= -f2- | tr -d '"' | tr -d "'")"
 fi
 
 if [[ -z "${MANUS_VIRAL_MAKER_HOST:-}" ]]; then
@@ -43,6 +50,8 @@ if [[ -z "${MANUS_VIRAL_MAKER_HOST:-}" ]]; then
   else
     echo "MANUS_VIRAL_MAKER_HOST=${MANUS_VIRAL_MAKER_HOST}" >> .env
   fi
+else
+  echo "    MANUS_VIRAL_MAKER_HOST=${MANUS_VIRAL_MAKER_HOST}"
 fi
 
 echo "==> WEBAPP_URL для viral-maker.ru"
@@ -55,17 +64,20 @@ if ! grep -q '^WEBAPP_URL=https://viral-maker.ru' .env 2>/dev/null; then
   echo "    WEBAPP_URL=https://viral-maker.ru/app"
 fi
 
-echo "==> SSL (certbot expand)"
+echo "==> SSL (certbot)"
+APP_OK="$(dig +short app.viral-maker.ru A @8.8.8.8 | head -1 || true)"
+CERT_DOMAINS=(-d viral-maker.ru -d www.viral-maker.ru)
+if [[ -n "$APP_OK" ]]; then
+  CERT_DOMAINS+=(-d app.viral-maker.ru)
+  echo "    + app.viral-maker.ru"
+else
+  echo "    app.viral-maker.ru ещё не в DNS — сертификат только для @ и www"
+fi
 if certbot certificates 2>/dev/null | grep -q 'viral-maker.ru'; then
   certbot renew --quiet || true
 else
-  certbot --nginx \
-    -d viral-maker.ru -d www.viral-maker.ru -d app.viral-maker.ru \
-    --non-interactive --agree-tos --register-unsafely-without-email \
-    --expand 2>/dev/null \
-    || certbot --nginx \
-      -d viral-maker.ru -d www.viral-maker.ru -d app.viral-maker.ru \
-      --non-interactive --agree-tos --register-unsafely-without-email
+  certbot --nginx "${CERT_DOMAINS[@]}" \
+    --non-interactive --agree-tos --register-unsafely-without-email
 fi
 
 echo "==> nginx viral-maker.ru"
