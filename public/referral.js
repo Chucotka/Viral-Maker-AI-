@@ -319,12 +319,59 @@
     renderRewardTiers(stats);
     renderProgressTrack(stats);
     renderActivityFeed(stats);
+    renderInviteButtonState(stats);
   }
 
-  function shareReferralLink(stats) {
-    const links = stats?.links;
+  function renderInviteButtonState(stats) {
+    const needsLogin = Boolean(stats?.links?.requiresLogin);
+    document.querySelectorAll('[data-ref-invite]').forEach((btn) => {
+      btn.textContent = needsLogin ? '🔐 Войти, чтобы пригласить' : '⚡ Пригласить друзей — получить бонус';
+      btn.classList.toggle('btn-referral-guest', needsLogin);
+    });
+  }
+
+  function requireReferralLogin() {
+    const msg = 'Реферальная ссылка привязана к Telegram. Войдите через Telegram в браузере или откройте Mini App.';
+    if (global.VMRuntime?.isTelegram) {
+      tg?.showAlert?.(msg);
+      return;
+    }
+    if (global.VMWebAuth?.showOverlay) {
+      global.VMRuntime?.alert?.(msg, 'Нужен вход');
+      global.VMWebAuth.showOverlay();
+    } else {
+      tg?.showAlert?.(msg);
+    }
+  }
+
+  async function copyTextToClipboard(text) {
+    const value = String(text || '');
+    if (!value) return false;
+    try {
+      await global.navigator.clipboard.writeText(value);
+      return true;
+    } catch {
+      /* fallback below */
+    }
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = value;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+
+  function shareViaTelegram(links) {
     if (!links?.telegramLink) {
-      tg?.showAlert?.('Ссылка пока недоступна. Попробуйте позже.');
+      global.VMRuntime?.alert?.('Ссылка пока недоступна. Попробуйте позже.');
       return;
     }
     const shareUrl = links.telegramLink;
@@ -340,6 +387,55 @@
     }
 
     tg?.HapticFeedback?.impactOccurred?.('medium');
+  }
+
+  async function copyWebReferralLink(stats) {
+    const links = stats?.links;
+    if (links?.requiresLogin) {
+      requireReferralLogin();
+      return;
+    }
+    const webLink = links?.webLink;
+    if (!webLink) {
+      global.VMRuntime?.alert?.('Ссылка для браузера пока недоступна.');
+      return;
+    }
+    const ok = await copyTextToClipboard(formatShareText(webLink));
+    global.VMRuntime?.alert?.(
+      ok ? 'Ссылка скопирована — отправьте её друзьям в мессенджере или соцсетях.' : 'Не удалось скопировать ссылку.',
+      ok ? 'Готово' : 'Ошибка',
+    );
+    tg?.HapticFeedback?.notificationOccurred?.(ok ? 'success' : 'error');
+  }
+
+  function hideShareChooser() {
+    const overlay = qs('referral-share-modal');
+    if (!overlay) return;
+    overlay.classList.add('hidden');
+    delete overlay.dataset.refStatsReady;
+  }
+
+  function showShareChooser(stats) {
+    const overlay = qs('referral-share-modal');
+    if (!overlay) {
+      shareViaTelegram(stats?.links);
+      return;
+    }
+    overlay.dataset.refStatsReady = '1';
+    overlay.classList.remove('hidden');
+  }
+
+  function shareReferralLink(stats) {
+    const links = stats?.links;
+    if (links?.requiresLogin) {
+      requireReferralLogin();
+      return;
+    }
+    if (global.VMRuntime?.isWeb && links?.webLink && links?.telegramLink) {
+      showShareChooser(stats);
+      return;
+    }
+    shareViaTelegram(links);
   }
 
   function showMilestoneModal(reward) {
@@ -421,8 +517,23 @@
     });
   }
 
+  function bindShareChooser() {
+    qs('referral-share-tg')?.addEventListener('click', () => {
+      hideShareChooser();
+      if (currentStats) shareViaTelegram(currentStats.links);
+    });
+    qs('referral-share-web')?.addEventListener('click', async () => {
+      hideShareChooser();
+      if (currentStats) await copyWebReferralLink(currentStats);
+    });
+    qs('referral-share-cancel')?.addEventListener('click', hideShareChooser);
+    qs('referral-share-modal')?.querySelector('.referral-share-backdrop')
+      ?.addEventListener('click', hideShareChooser);
+  }
+
   function mount() {
     bindInviteButtons();
+    bindShareChooser();
     renderRuleHints();
     const closeBtn = qs('referral-reward-close');
     closeBtn?.addEventListener('click', hideMilestoneModal);
@@ -432,6 +543,7 @@
     readStartParam,
     renderStats,
     shareReferralLink,
+    copyWebReferralLink,
     showMilestoneModal,
     handleUnseenRewards,
     mount,

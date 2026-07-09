@@ -1,5 +1,7 @@
 const { getWebhookBot } = require('../lib/webhookBot');
 
+const { resolveWebAppUrl } = require('../lib/webOrigin');
+
 module.exports = async (req, res) => {
   if (req.method === 'POST') {
     const updateId = req.body?.update_id;
@@ -8,7 +10,7 @@ module.exports = async (req, res) => {
         res.status(200).end();
         return;
       }
-      const webAppUrl = process.env.WEBAPP_URL || 'https://viral-maker-ai.vercel.app';
+      const webAppUrl = resolveWebAppUrl();
       const bot = await getWebhookBot({ token: process.env.TELEGRAM_BOT_TOKEN, webAppUrl });
       await bot.handleUpdate(req.body);
       res.status(200).json({ ok: true });
