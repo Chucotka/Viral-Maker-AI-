@@ -64,6 +64,32 @@ if ! grep -q '^WEBAPP_URL=https://viral-maker.ru' .env 2>/dev/null; then
   echo "    WEBAPP_URL=https://viral-maker.ru/app"
 fi
 
+echo "==> nginx viral-maker.ru (HTTP для certbot)"
+mkdir -p /var/www/certbot
+ln -sf /etc/nginx/sites-available/viral-maker.ru /etc/nginx/sites-enabled/viral-maker.ru 2>/dev/null || true
+rm -f /etc/nginx/sites-enabled/viral-maker
+if [[ -f /etc/nginx/sites-available/innoko.ru ]]; then
+  ln -sf /etc/nginx/sites-available/innoko.ru /etc/nginx/sites-enabled/innoko.ru
+fi
+
+HAS_VALID_CERT=false
+if certbot certificates 2>/dev/null | grep -q 'Certificate Name: viral-maker.ru'; then
+  HAS_VALID_CERT=true
+fi
+if [[ "$HAS_VALID_CERT" == false ]] && [[ -d /etc/letsencrypt/live/viral-maker.ru ]]; then
+  echo "    Удаляем битое состояние certbot для viral-maker.ru"
+  rm -rf /etc/letsencrypt/live/viral-maker.ru
+  rm -rf /etc/letsencrypt/archive/viral-maker.ru
+  rm -f /etc/letsencrypt/renewal/viral-maker.ru.conf
+fi
+
+if [[ "$HAS_VALID_CERT" == true ]]; then
+  cp "$SCRIPT_DIR/nginx-viral-maker.conf" /etc/nginx/sites-available/viral-maker.ru
+else
+  cp "$SCRIPT_DIR/nginx-viral-maker-http.conf" /etc/nginx/sites-available/viral-maker.ru
+fi
+bash "$SCRIPT_DIR/apply-nginx-config.sh"
+
 echo "==> SSL (certbot)"
 APP_OK="$(dig +short app.viral-maker.ru A @8.8.8.8 | head -1 || true)"
 CERT_DOMAINS=(-d viral-maker.ru -d www.viral-maker.ru)
@@ -73,17 +99,20 @@ if [[ -n "$APP_OK" ]]; then
 else
   echo "    app.viral-maker.ru ещё не в DNS — сертификат только для @ и www"
 fi
-if certbot certificates 2>/dev/null | grep -q 'viral-maker.ru'; then
+
+HAS_VALID_CERT=false
+if certbot certificates 2>/dev/null | grep -q 'Certificate Name: viral-maker.ru'; then
+  HAS_VALID_CERT=true
+fi
+
+if [[ "$HAS_VALID_CERT" == true ]]; then
   certbot renew --quiet || true
 else
   certbot --nginx "${CERT_DOMAINS[@]}" \
     --non-interactive --agree-tos --register-unsafely-without-email
 fi
 
-echo "==> nginx viral-maker.ru"
 cp "$SCRIPT_DIR/nginx-viral-maker.conf" /etc/nginx/sites-available/viral-maker.ru
-ln -sf /etc/nginx/sites-available/viral-maker.ru /etc/nginx/sites-enabled/viral-maker.ru
-
 bash "$SCRIPT_DIR/apply-nginx-config.sh"
 
 pm2 restart viral-maker --update-env 2>/dev/null || true
