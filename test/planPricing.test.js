@@ -21,8 +21,9 @@ describe('planPricing', () => {
     assert.equal(formatPlanPriceRub(getPlanById('pro')), '299 ₽ / 30 дн.');
   });
 
-  it('mentions rubles first in legal note', () => {
+  it('mentions card payment in legal note', () => {
     assert.match(paymentLegalNote(), /рубл/i);
-    assert.match(paymentLegalNote(), /не криптовалют/i);
+    assert.match(paymentLegalNote(), /карт/i);
+    assert.match(paymentLegalNote(), /Tribute/i);
   });
 });

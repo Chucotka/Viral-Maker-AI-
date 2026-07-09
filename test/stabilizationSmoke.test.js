@@ -31,6 +31,7 @@ describe('stabilization (no-VPN load)', () => {
     const html = fs.readFileSync(path.join(__dirname, '../public/landing.html'), 'utf8');
     assert.match(html, /299 ₽/);
     assert.match(html, /privacy\.html/);
-    assert.match(html, /не криптовалюта/i);
+    assert.match(html, /Tribute/i);
+    assert.doesNotMatch(html, /Stars/i);
   });
 });

@@ -15,8 +15,6 @@ const tg = new Proxy(
     },
 );
 
-const PREMIUM_BOT_URL = 'https://t.me/PremiumBot';
-const PREMIUM_BOT_HANDLE = '@PremiumBot';
 const DEFAULT_SUPPORT_CHAT_URL = 'https://t.me/viral_maker_ai_bot?start=support';
 
 let supportChatLink = DEFAULT_SUPPORT_CHAT_URL;
@@ -488,44 +486,6 @@ function savedRisk() {
     return typeof value === 'string' && value ? value : DEFAULT_RISK;
 }
 
-function isDesktopLikeClient() {
-    const platform = String(tg.platform || '').toLowerCase();
-    if (platform.includes('tdesktop') || platform.includes('macos') || platform.includes('windows') || platform.includes('linux')) {
-        return true;
-    }
-    const ua = navigator.userAgent || '';
-    return /\bMacintosh\b|\bWindows\b|\bLinux\b/i.test(ua) && !/\bAndroid\b|\biPhone\b|\biPad\b/i.test(ua);
-}
-
-function openPremiumBot() {
-    if (typeof tg.openTelegramLink === 'function') {
-        tg.openTelegramLink(PREMIUM_BOT_URL);
-        return;
-    }
-    if (typeof tg.openLink === 'function') {
-        tg.openLink(PREMIUM_BOT_URL);
-        return;
-    }
-    window.open(PREMIUM_BOT_URL, '_blank', 'noopener');
-}
-
-async function copyPremiumBotHandle() {
-    try {
-        await navigator.clipboard.writeText(PREMIUM_BOT_HANDLE);
-        if (typeof tg.showPopup === 'function') {
-            tg.showPopup({
-                title: 'Скопировано',
-                message: 'Скопировал @PremiumBot. Откройте поиск в Telegram, вставьте username, пополните Stars и вернитесь сюда.',
-                buttons: [{ type: 'ok' }],
-            });
-            return;
-        }
-        tg.showAlert('Скопировал @PremiumBot. Откройте поиск в Telegram, вставьте username, пополните Stars и вернитесь сюда.');
-    } catch (e) {
-        tg.showAlert('Откройте поиск в Telegram и найдите @PremiumBot вручную.');
-    }
-}
-
 function openSupportChat() {
     const url = supportChatLink || DEFAULT_SUPPORT_CHAT_URL;
     try {
@@ -545,14 +505,6 @@ function openSupportChat() {
         /* ignore */
     }
     window.open(url, '_blank', 'noopener');
-}
-
-function handlePremiumBotAction() {
-    if (isDesktopLikeClient()) {
-        copyPremiumBotHandle();
-        return;
-    }
-    openPremiumBot();
 }
 
 async function buyPlanViaTribute(plan) {
@@ -628,38 +580,6 @@ function startPlanRefreshPolling(expectedPlan) {
             );
         }
     }, 4000);
-}
-
-function showStarsHelp(plan) {
-    const planLabel = plan === 'premium' ? 'Premium' : 'Pro';
-    const platformHint = isDesktopLikeClient()
-        ? 'На компьютере Telegram иногда не открывает форму покупки Stars для такого товара.'
-        : 'На iPhone и Android встроенная покупка может быть недоступна или не сработать в вашем регионе.';
-    if (typeof tg.showPopup === 'function') {
-        tg.showPopup({
-            title: `${planLabel}: оплата в рублях`,
-            message: `${platformHint}\n\nОсновная оплата — картой в рублях через Tribute. В Telegram дополнительно доступны Stars (не криптовалюта).`,
-            buttons: [
-                {
-                    id: `open-tribute-${plan}`,
-                    type: 'default',
-                    text: 'Оплатить картой',
-                },
-                {
-                    id: isDesktopLikeClient() ? 'copy-premiumbot' : 'open-premiumbot',
-                    type: 'default',
-                    text: isDesktopLikeClient() ? 'Скопировать @PremiumBot' : 'Купить Stars',
-                },
-                { type: 'cancel', text: 'Позже' },
-            ],
-        }, (buttonId) => {
-            if (buttonId === 'open-premiumbot') openPremiumBot();
-            if (buttonId === 'copy-premiumbot') copyPremiumBotHandle();
-            if (buttonId === `open-tribute-${plan}`) buyPlanViaTribute(plan);
-        });
-        return;
-    }
-    tg.showAlert('Оплата подписки — в рублях картой через Tribute. В Telegram дополнительно доступны Stars (не криптовалюта).');
 }
 
 const savedSettings = loadSavedSettings();
@@ -1906,34 +1826,7 @@ function updatePlanUI(plan, planUntil, bonusGenerations = 0, quotaRemaining = nu
 
 async function buyPlan(plan) {
     window.VMAnalytics?.track?.('checkout_click', { plan: String(plan || 'pro') });
-    if (window.VMRuntime?.isWeb) {
-        return buyPlanViaTribute(plan);
-    }
-    try {
-        const response = await fetch('/api/create-invoice', {
-            method: 'POST',
-            headers: miniAppHeaders(true),
-            body: JSON.stringify({ plan }),
-        });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) {
-            tg.showAlert(data.message || data.error || 'Не удалось создать счёт.');
-            return;
-        }
-        if (data.link) {
-            tg.openInvoice(data.link, (status) => {
-                if (status === 'paid') {
-                    tg.showAlert('✨ Спасибо за покупку! Ваша подписка активирована.');
-                    loadUserData();
-                } else if (status === 'failed') {
-                    showStarsHelp(plan);
-                }
-            });
-        }
-    } catch (error) {
-        console.error('Payment error:', error);
-        tg.showAlert('Произошла ошибка при создании счета.');
-    }
+    return buyPlanViaTribute(plan);
 }
 
 async function activateDebugPlan(plan) {
@@ -2146,7 +2039,6 @@ window.resetCleanupPlan = resetCleanupPlan;
 
 document.getElementById('plan-pro').addEventListener('click', () => buyPlan('pro'));
 document.getElementById('plan-premium').addEventListener('click', () => buyPlan('premium'));
-document.getElementById('btn-open-premiumbot').addEventListener('click', handlePremiumBotAction);
 document.getElementById('btn-contact-support')?.addEventListener('click', openSupportChat);
 document.getElementById('plan-pro-tribute').addEventListener('click', (e) => {
     e.stopPropagation();
@@ -2156,11 +2048,6 @@ document.getElementById('plan-premium-tribute').addEventListener('click', (e) =>
     e.stopPropagation();
     buyPlanViaTribute('premium');
 });
-
-if (isDesktopLikeClient()) {
-    const premiumBotBtn = document.getElementById('btn-open-premiumbot');
-    if (premiumBotBtn) premiumBotBtn.textContent = 'Скопировать @PremiumBot';
-}
 
 document.getElementById('btn-upgrade-pro')?.addEventListener('click', () => {
     if (window.SettingsHub) {

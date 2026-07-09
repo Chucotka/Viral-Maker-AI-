@@ -42,7 +42,7 @@ https://viral-maker.ru/app/landing.html
 - Free — 0 ₽
 - Pro — 299 ₽ / 30 дн.
 - Premium — 799 ₽ / 30 дн.
-Оплата картой в рублях; Telegram Stars — дополнительно, не криптовалюта.
+Оплата картой в рублях через Tribute.
 
 Не веди сразу в /app/ без landing — сначала landing.html или согласие на Manus-странице.
 ```
