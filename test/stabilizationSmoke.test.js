@@ -34,4 +34,12 @@ describe('stabilization (no-VPN load)', () => {
     assert.match(html, /Tribute/i);
     assert.doesNotMatch(html, /Stars/i);
   });
+
+  it('app home has clear entry actions', () => {
+    const html = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
+    assert.match(html, /app-chrome/);
+    assert.match(html, /home-action-card/);
+    assert.match(html, /Что создаём сегодня/);
+    assert.match(html, /nav-item-primary/);
+  });
 });

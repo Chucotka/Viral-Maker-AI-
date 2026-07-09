@@ -6,7 +6,7 @@
     <meta name="vm-bot-username" content="viral_maker_ai_bot" />
     <title>Viral Maker AI | Innoko</title>
     <base href="/app/" />
-    <link rel="stylesheet" href="style.css?v=20260704r" />
+    <link rel="stylesheet" href="style.css?v=20260709r" />
     <script src="js/telegram-boot.js?v=20260704r"></script>
     <script src="js/landing-guard.js?v=20260708r"></script>
 </head>
@@ -28,25 +28,61 @@
     </div>
     <div class="app-container">
 
-        <!-- Tab 1: Dashboard -->
-        <section id="tab-dashboard" class="tab-content active">
-            <header class="dashboard-header">
-                <div class="user-info">
-                    <div class="avatar" id="user-avatar">👤</div>
-                    <span id="user-name">Пользователь</span>
+        <header class="app-chrome" id="app-chrome">
+            <div class="app-chrome-brand">
+                <span class="app-chrome-logo" aria-hidden="true">⚡</span>
+                <div class="app-chrome-titles">
+                    <div class="app-chrome-name">Viral Maker AI</div>
+                    <div class="app-chrome-section" id="app-chrome-section">Главная</div>
                 </div>
-                <div class="score-badge" title="Ориентир по ключевым словам и структуре, не гарантия виральности">
-                    <span class="score-label">Viral Score</span>
-                    <span class="score-value" id="dashboard-score">0</span>/100
-                </div>
-            </header>
+            </div>
+            <div class="app-chrome-meta">
+                <button type="button" class="app-quota-chip" id="app-quota-chip" title="Остаток генераций" onclick="openSettingsPanel('subscription')">—</button>
+                <button type="button" class="app-user-chip" id="app-user-chip" title="Профиль и вход" onclick="switchTab('settings')">
+                    <span class="avatar avatar-sm" id="user-avatar">👤</span>
+                    <span id="user-name">Профиль</span>
+                </button>
+            </div>
+        </header>
 
-            <div class="main-cta-container">
-                <button class="btn btn-primary btn-large" onclick="switchTab('studio')">🚀 Создать Контент</button>
+        <!-- Tab 1: Home -->
+        <section id="tab-dashboard" class="tab-content active">
+            <div class="home-welcome">
+                <p class="home-eyebrow">Innoko · Visual Marketing</p>
+                <h2 class="home-title">Что создаём сегодня?</h2>
+                <p class="home-lead">Выберите тип контента — в студии опишите идею, ИИ подготовит готовый материал.</p>
             </div>
 
-            <!-- Реферальный блок на главной (compact) -->
-            <div class="referral-card referral-card-compact" id="referral-dashboard-card">
+            <div class="home-actions" aria-label="Быстрый старт">
+                <button type="button" class="home-action-card" onclick="openStudioWithMode('text')">
+                    <span class="home-action-icon" aria-hidden="true">📝</span>
+                    <span class="home-action-copy">
+                        <strong>Текст для соцсетей</strong>
+                        <span>Пост, Telegram, VK</span>
+                    </span>
+                    <span class="home-action-arrow" aria-hidden="true">→</span>
+                </button>
+                <button type="button" class="home-action-card" onclick="openStudioWithMode('script')">
+                    <span class="home-action-icon" aria-hidden="true">🎬</span>
+                    <span class="home-action-copy">
+                        <strong>Сценарий Reels / Shorts</strong>
+                        <span>Хук, покадровка, CTA</span>
+                    </span>
+                    <span class="home-action-arrow" aria-hidden="true">→</span>
+                </button>
+                <button type="button" class="home-action-card" onclick="openStudioWithMode('image')">
+                    <span class="home-action-icon" aria-hidden="true">🖼</span>
+                    <span class="home-action-copy">
+                        <strong>Картинка</strong>
+                        <span>Визуал для поста или сторис</span>
+                    </span>
+                    <span class="home-action-arrow" aria-hidden="true">→</span>
+                </button>
+            </div>
+
+            <details class="home-details" id="home-referral-details">
+                <summary class="home-details-summary">⚡ Бонусы за друзей — бесплатные генерации и Pro</summary>
+                <div class="referral-card referral-card-compact">
                 <div class="referral-card-glow"></div>
                 <div class="referral-card-header">
                     <span class="referral-lightning">⚡</span>
@@ -96,40 +132,40 @@
                 <button type="button" class="btn btn-referral btn-full" data-ref-invite>
                     ⚡ Пригласить друзей — получить бонус
                 </button>
-            </div>
+                </div>
+            </details>
 
-            <div class="trending-strip-container">
-                <h3>Тренды сейчас</h3>
+            <section class="home-section trending-strip-container">
+                <div class="home-section-head">
+                    <h3>Идеи из трендов</h3>
+                    <button type="button" class="home-section-link" onclick="switchTab('trends')">Все тренды →</button>
+                </div>
                 <div class="trending-strip" id="dashboard-trends">
                     <!-- Populated via JS -->
                 </div>
-            </div>
+            </section>
 
-            <div class="recent-posts-container">
-                <h3>Последние генерации</h3>
+            <section class="home-section recent-posts-container">
+                <div class="home-section-head">
+                    <h3>Ваши работы</h3>
+                    <button type="button" class="home-section-link" onclick="openStudioWithMode('text')">Создать →</button>
+                </div>
                 <div class="recent-posts" id="recent-posts-list">
                     <p class="text-muted">История пуста.</p>
                     <!-- Populated via JS -->
                 </div>
-            </div>
+            </section>
+            <span id="dashboard-score" class="hidden" aria-hidden="true">0</span>
         </section>
 
         <!-- Tab 2: Content Studio -->
         <section id="tab-studio" class="tab-content">
-            <header class="section-header">
-                <h2>Студия Контента</h2>
-            </header>
+            <div class="studio-flow-header">
+                <p class="studio-step-label" id="studio-step-label">Шаг 1 · Тип контента</p>
+                <p class="studio-flow-hint" id="studio-flow-hint">Выберите тип → опишите идею → нажмите «Сгенерировать»</p>
+            </div>
 
             <div id="guest-studio-banner" class="guest-studio-banner hidden" aria-live="polite"></div>
-
-            <div class="studio-tips-card" id="studio-tips-card">
-                <div class="studio-tips-title">💡 Быстрый старт</div>
-                <ul class="studio-tips-list">
-                    <li><b>Авто</b> — AI сам выберет лучший угол подачи</li>
-                    <li><b>Короткая тема</b> — достаточно 3–5 слов, мы развернём</li>
-                    <li><b>Refine</b> после генерации — новая версия (списывает лимит)</li>
-                </ul>
-            </div>
 
             <div class="studio-mode-row" role="tablist" aria-label="Режим студии">
                 <button type="button" class="mode-pill active" id="mode-pill-text" data-studio-mode="text">Текст</button>
@@ -139,11 +175,14 @@
             <p class="text-hint studio-mode-hint" id="studio-mode-hint">Картинки и текст делят один дневной лимит на Free.</p>
 
             <div class="form-group">
-                <label for="studio-topic" id="label-studio-topic">Опиши идею или вставь тему</label>
+                <label for="studio-topic" id="label-studio-topic">Шаг 2 · Опиши идею или вставь тему</label>
                 <textarea id="studio-topic" placeholder="Например: Как использовать AI для бизнеса в 2024 году..." rows="4"></textarea>
-                <p class="text-hint" id="studio-trend-hint">Выберите тренд, режим или просто напишите короткую мысль. Мы усилим запрос сами.</p>
+                <p class="text-hint" id="studio-trend-hint">Достаточно 3–5 слов — мы развернём идею сами.</p>
             </div>
 
+            <details class="studio-advanced" id="studio-advanced">
+                <summary class="studio-advanced-summary">Дополнительные настройки</summary>
+                <div class="studio-advanced-body">
             <div class="form-group" id="studio-attachments-group">
                 <label for="studio-attachment-input">Материал для переработки</label>
                 <input type="file" id="studio-attachment-input" class="hidden" accept="image/jpeg,image/png,image/webp,image/gif,.txt,.md,.csv,text/plain" multiple />
@@ -175,6 +214,8 @@
                     <option value="bold">Смелее</option>
                 </select>
             </div>
+                </div>
+            </details>
 
             <div id="studio-text-options">
                 <div class="form-row">
@@ -747,12 +788,12 @@
         <!-- Navigation -->
         <nav class="bottom-nav">
             <button class="nav-item active" data-tab="dashboard" onclick="switchTab('dashboard')">
-                <span class="nav-icon">📊</span>
-                <span class="nav-text">Дашборд</span>
+                <span class="nav-icon">🏠</span>
+                <span class="nav-text">Главная</span>
             </button>
-            <button class="nav-item" data-tab="studio" onclick="switchTab('studio')">
-                <span class="nav-icon">✍️</span>
-                <span class="nav-text">Студия</span>
+            <button class="nav-item nav-item-primary" data-tab="studio" onclick="switchTab('studio')">
+                <span class="nav-icon">✨</span>
+                <span class="nav-text">Создать</span>
             </button>
             <button class="nav-item" data-tab="trends" onclick="switchTab('trends')">
                 <span class="nav-icon">🔥</span>
@@ -811,11 +852,11 @@
     <script defer src="js/history-store.js"></script>
     <script defer src="js/image-download.js"></script>
     <script defer src="js/vm-analytics.js?v=20260704r"></script>
-    <script defer src="js/onboarding.js?v=20260704r"></script>
+    <script defer src="js/onboarding.js?v=20260709r"></script>
     <script defer src="js/studio-attachments.js?v=20260704r"></script>
     <script defer src="js/admin-subs.js?v=20260704r"></script>
     <script defer src="referral.js?v=20260704r"></script>
-    <script defer src="app.js?v=20260704r"></script>
+    <script defer src="app.js?v=20260709r"></script>
     <script defer src="js/vm-router.js"></script>
 </body>
 </html>

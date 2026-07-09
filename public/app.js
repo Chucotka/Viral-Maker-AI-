@@ -666,13 +666,13 @@ function setStudioMode(mode) {
     const label = document.getElementById('label-studio-topic');
     const ta = document.getElementById('studio-topic');
     if (isImage) {
-        label.textContent = 'Опиши, что должно быть на картинке';
+        label.textContent = 'Шаг 2 · Опиши, что должно быть на картинке';
         ta.placeholder = 'Например: сделай фон светлее, сохрани композицию...';
     } else if (isScript) {
-        label.textContent = 'Тема ролика или ключевая мысль';
+        label.textContent = 'Шаг 2 · Тема ролика или ключевая мысль';
         ta.placeholder = 'Например: 3 ошибки при запуске Telegram-канала...';
     } else {
-        label.textContent = 'Опиши идею или вставь тему';
+        label.textContent = 'Шаг 2 · Опиши идею или вставь тему';
         ta.placeholder = 'Например: Как использовать AI для бизнеса в 2026 году...';
     }
     const attachHint = document.getElementById('studio-attach-hint');
@@ -686,6 +686,9 @@ function setStudioMode(mode) {
         }
     }
     document.getElementById('result-container').classList.add('hidden');
+    const stepEl = document.getElementById('studio-step-label');
+    if (stepEl) stepEl.textContent = `Шаг 1 · Тип: ${isImage ? 'картинка' : isScript ? 'сценарий' : 'текст'}`;
+    updateStudioFlowUI();
 }
 
 function alertFromGenerateError(message) {
@@ -1083,8 +1086,56 @@ async function recoverActiveGenerationOnLoad() {
 document.getElementById('mode-pill-text').addEventListener('click', () => setStudioMode('text'));
 document.getElementById('mode-pill-script').addEventListener('click', () => setStudioMode('script'));
 document.getElementById('mode-pill-image').addEventListener('click', () => setStudioMode('image'));
+document.getElementById('studio-topic')?.addEventListener('input', updateStudioFlowUI);
 
 // --- Tab Navigation ---
+const TAB_TITLES = {
+    dashboard: 'Главная',
+    studio: 'Создать контент',
+    trends: 'Тренды',
+    analytics: 'Аналитика',
+    settings: 'Настройки',
+};
+
+const STUDIO_MODE_LABELS = {
+    text: 'текст',
+    script: 'сценарий',
+    image: 'картинку',
+};
+
+function updateAppChrome(tabId) {
+    const sectionEl = document.getElementById('app-chrome-section');
+    if (sectionEl) sectionEl.textContent = TAB_TITLES[tabId] || 'Viral Maker AI';
+}
+
+function updateStudioFlowUI() {
+    const stepEl = document.getElementById('studio-step-label');
+    const hintEl = document.getElementById('studio-flow-hint');
+    const topic = (document.getElementById('studio-topic')?.value || '').trim();
+    const modeLabel = STUDIO_MODE_LABELS[studioMode] || 'контент';
+    if (stepEl) {
+        stepEl.textContent = topic
+            ? `Шаг 3 · Сгенерировать ${modeLabel}`
+            : 'Шаг 2 · Опишите идею';
+    }
+    if (hintEl) {
+        hintEl.textContent = topic
+            ? 'Проверьте настройки и нажмите кнопку генерации ниже.'
+            : 'Сначала выберите тип (шаг 1), затем опишите идею.';
+    }
+}
+
+function openStudioWithMode(mode) {
+    setStudioMode(mode);
+    switchTab('studio');
+    updateStudioFlowUI();
+    const topic = document.getElementById('studio-topic');
+    if (topic) {
+        setTimeout(() => topic.focus(), 120);
+    }
+}
+window.openStudioWithMode = openStudioWithMode;
+
 function switchTab(tabId) {
     if (tabId !== 'settings' && window.SettingsHub) {
         SettingsHub.reset();
@@ -1110,7 +1161,10 @@ function switchTab(tabId) {
     }
     if (tabId === 'studio') {
         window.VMAnalytics?.track?.('studio_open');
+        updateStudioFlowUI();
     }
+
+    updateAppChrome(tabId);
 }
 
 function renderDashboardFromList(list) {
@@ -1763,6 +1817,7 @@ function updateGuestStudioBanner(quotaRemaining, freeGenerationLimit, isGuest) {
 function updatePlanUI(plan, planUntil, bonusGenerations = 0, quotaRemaining = null, freeGenerationLimit = null, isGuest = false) {
     const badge = document.getElementById('current-plan-badge');
     const upgradeBtn = document.getElementById('btn-upgrade-pro');
+    const quotaChip = document.getElementById('app-quota-chip');
     const quotaValue = document.getElementById('settings-quota-value');
     const quotaLabel = document.getElementById('settings-quota-label');
     const heroPlan = document.getElementById('settings-hero-plan-badge');
@@ -1787,6 +1842,10 @@ function updatePlanUI(plan, planUntil, bonusGenerations = 0, quotaRemaining = nu
                 : `Pro · безлимит${untilLine} ✨`;
         if (upgradeBtn) upgradeBtn.classList.add('hidden');
         if (quotaValue) quotaValue.textContent = '∞';
+        if (quotaChip) {
+            const planShort = plan === 'premium' ? 'Premium' : 'Pro';
+            quotaChip.textContent = untilShort ? `${planShort} · до ${untilShort}` : `${planShort} · ∞`;
+        }
         if (quotaLabel) quotaLabel.textContent = untilShort ? `до ${untilShort}` : 'безлимит';
         if (heroPlan) {
             heroPlan.textContent = plan === 'premium' ? 'PREMIUM' : 'PRO';
@@ -1804,6 +1863,9 @@ function updatePlanUI(plan, planUntil, bonusGenerations = 0, quotaRemaining = nu
         if (upgradeBtn) upgradeBtn.classList.remove('hidden');
         const remaining = quotaRemaining != null && Number.isFinite(quotaRemaining) ? quotaRemaining : pool;
         if (quotaValue) quotaValue.textContent = String(remaining);
+        if (quotaChip) {
+            quotaChip.textContent = remaining > 0 ? `${remaining} ген.` : '0 ген.';
+        }
         if (quotaLabel) {
             quotaLabel.textContent = bonusGenerations > 0
                 ? `из ${pool} · +${bonusGenerations} бонус`
@@ -2544,6 +2606,7 @@ document.getElementById('tab-studio')?.addEventListener('click', (e) => {
 });
 document.getElementById('btn-analytics-upgrade')?.addEventListener('click', () => buyPlan('pro'));
 updatePlanUI('free', null);
+updateAppChrome('dashboard');
 recoverActiveGenerationOnLoad();
 async function bootApp() {
     if (window.VMTelegramBoot?.isInsideTelegramClient?.() || window.Telegram?.WebApp) {
@@ -2578,7 +2641,7 @@ async function bootApp() {
         window.VMAnalytics?.track?.('landing_go');
     }
 
-    if (window.VMOnboarding && !VMOnboarding.isDone() && window.VMRuntime?.isWeb) {
+    if (window.VMOnboarding && !VMOnboarding.isDone()) {
         setTimeout(() => VMOnboarding.show(), 400);
     }
     if (window.VMImageDownload?.readPendingSaveToken?.()) {
