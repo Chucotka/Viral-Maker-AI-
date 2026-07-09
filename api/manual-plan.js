@@ -1,5 +1,5 @@
 const { resolveTelegramUser } = require('../lib/miniAppAuth');
-const { hasAdminApiAccess } = require('../lib/adminAccess');
+const { getAdminAccessStatus, adminDenialMessage } = require('../lib/adminAccess');
 const { sendSafeError } = require('../lib/httpErrors');
 const { readDebugSecret, normalizeDebugPlan } = require('../lib/debugPlan');
 const {
@@ -12,6 +12,7 @@ const {
   listActivePaidUsers,
   listSubscriptionOverview,
 } = require('../lib/kvUserStore');
+const { getFunnelSnapshot } = require('../lib/funnelMetrics');
 
 function parseTarget(value) {
   const raw = String(value || '').trim();
@@ -34,9 +35,23 @@ function parseAction(value) {
 function requireAdmin(req, res) {
   const auth = resolveTelegramUser(req, res);
   if (!auth) return null;
-  if (!hasAdminApiAccess(req, auth.userId)) {
-    console.warn('Manual plan ignored: forbidden', { userId: auth.userId });
-    res.status(403).json({ error: 'forbidden' });
+  const access = getAdminAccessStatus(req, auth.userId, {
+    source: auth.source,
+    authKind: auth.authKind,
+  });
+  if (!access.ok) {
+    console.warn('Manual plan ignored: forbidden', {
+      userId: auth.userId,
+      source: auth.source,
+      reason: access.reason,
+      hasSecret: !!readDebugSecret(req),
+    });
+    res.status(403).json({
+      error: 'forbidden',
+      reason: access.reason,
+      userId: auth.userId,
+      message: adminDenialMessage(access.reason),
+    });
     return null;
   }
   return auth;
@@ -86,13 +101,24 @@ module.exports = async (req, res) => {
         return res.status(405).end();
       }
       if (!requireAdmin(req, res)) return;
-      const overview = await listSubscriptionOverview({ scanCount: 150, freeLimit: 50 });
+      let overview;
+      try {
+        overview = await listSubscriptionOverview({ scanCount: 150, freeLimit: 50 });
+      } catch (scanErr) {
+        console.error('Manual plan list scan failed', scanErr);
+        return res.status(503).json({
+          error: 'list_failed',
+          message: 'Не удалось прочитать базу пользователей (Redis). Попробуйте через минуту.',
+        });
+      }
       console.info('Manual plan list returned', overview.totals);
+      const funnel = await getFunnelSnapshot(7);
       return res.json({
         ok: true,
         items: overview.active,
         count: overview.totals.active,
         overview,
+        funnel,
       });
     }
 
