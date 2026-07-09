@@ -29,7 +29,11 @@ if [[ -f /etc/nginx/sites-available/innoko.ru ]]; then
 fi
 
 if [[ -L /etc/nginx/sites-enabled/viral-maker.ru ]]; then
-  cp "$SCRIPT_DIR/nginx-viral-maker.conf" /etc/nginx/sites-available/viral-maker.ru
+  if certbot certificates 2>/dev/null | grep -q 'Certificate Name: viral-maker.ru'; then
+    cp "$SCRIPT_DIR/nginx-viral-maker.conf" /etc/nginx/sites-available/viral-maker.ru
+  elif [[ -f /etc/letsencrypt/live/viral-maker.ru/fullchain.pem ]]; then
+    cp "$SCRIPT_DIR/nginx-viral-maker.conf" /etc/nginx/sites-available/viral-maker.ru
+  fi
 fi
 
 nginx -t

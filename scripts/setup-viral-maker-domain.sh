@@ -66,7 +66,6 @@ fi
 
 echo "==> nginx viral-maker.ru (HTTP для certbot)"
 mkdir -p /var/www/certbot
-ln -sf /etc/nginx/sites-available/viral-maker.ru /etc/nginx/sites-enabled/viral-maker.ru 2>/dev/null || true
 rm -f /etc/nginx/sites-enabled/viral-maker
 if [[ -f /etc/nginx/sites-available/innoko.ru ]]; then
   ln -sf /etc/nginx/sites-available/innoko.ru /etc/nginx/sites-enabled/innoko.ru
@@ -88,6 +87,7 @@ if [[ "$HAS_VALID_CERT" == true ]]; then
 else
   cp "$SCRIPT_DIR/nginx-viral-maker-http.conf" /etc/nginx/sites-available/viral-maker.ru
 fi
+ln -sf /etc/nginx/sites-available/viral-maker.ru /etc/nginx/sites-enabled/viral-maker.ru
 bash "$SCRIPT_DIR/apply-nginx-config.sh"
 
 echo "==> SSL (certbot)"
