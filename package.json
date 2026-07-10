@@ -12,6 +12,7 @@
     "smoke:local": "node scripts/stabilization-smoke.js --local",
     "deploy": "bash scripts/deploy-vps-update.sh",
     "deploy:vps": "bash scripts/deploy-vps-update.sh",
+    "vendor:telegram-sdk": "bash scripts/vendor-telegram-sdk.sh",
     "health:monitor": "node scripts/health-monitor.js"
   },
   "repository": {

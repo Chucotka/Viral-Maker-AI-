@@ -6,9 +6,13 @@ on:
       branch:
         description: 'Branch to deploy'
         required: true
-        default: 'cursor/product-radar-landing-e202'
+        default: 'cursor/viral-maker-domain-e202'
   push:
     branches:
+      - cursor/viral-maker-domain-e202
+      - cursor/tg-proxy-compat-e202
+      - cursor/app-ui-clarity-e202
+      - cursor/card-only-pricing-e202
       - cursor/product-radar-landing-e202
       - cursor/studio-attachments-e202
       - cursor/fix-generate-500-e202
