@@ -1,7 +1,19 @@
-// Initialize Telegram Web App
-const tg = window.Telegram.WebApp;
-tg.expand();
-tg.ready();
+// Telegram Web App или веб (тот же origin)
+function getTg() {
+  return window.VMRuntime?.tg || window.Telegram?.WebApp || null;
+}
+
+const tg = new Proxy(
+  {},
+  {
+    get(_target, prop) {
+      const api = getTg();
+      if (!api || !(prop in api)) return undefined;
+      const value = api[prop];
+      return typeof value === 'function' ? value.bind(api) : value;
+    },
+  },
+);
 
 const PREMIUM_BOT_URL = 'https://t.me/PremiumBot';
 const PREMIUM_BOT_HANDLE = '@PremiumBot';
@@ -14,11 +26,13 @@ const SETTINGS_KEY = 'vm_settings_v1';
 const DEFAULT_INTENT = 'auto';
 const DEFAULT_RISK = 'balanced';
 
-/** Заголовки для Vercel API: подпись Telegram Mini App (обязательно). */
+/** Заголовки API: initData (Telegram) или cookie-сессия (веб). */
 function miniAppHeaders(jsonBody = false) {
+    if (window.VMRuntime?.headers) return window.VMRuntime.headers(jsonBody);
     const h = {};
     if (jsonBody) h['Content-Type'] = 'application/json';
-    if (tg.initData) h['X-Telegram-Init-Data'] = tg.initData;
+    const initData = getTg().initData;
+    if (initData) h['X-Telegram-Init-Data'] = initData;
     return h;
 }
 
@@ -699,6 +713,10 @@ function alertFromGenerateError(message) {
     } else if (/404|not found for API version|no longer available|ListModels/i.test(m)) {
         text = 'Модель недоступна для вашего ключа. Обновите приложение или проверьте доступ в Google AI Studio.';
     } else if (/missing_init_data|invalid_init_data|Откройте приложение из Telegram/i.test(m)) {
+        if (window.VMRuntime?.isWeb && window.VMWebAuth) {
+            window.VMWebAuth.showOverlay();
+            return;
+        }
         text = 'Откройте мини-приложение из Telegram (кнопка в боте), чтобы подпись сессии передалась на сервер.';
     } else if (/kv_required|Redis/i.test(m)) {
         text = 'На сервере не настроено хранилище Redis. Добавьте Upstash Redis в Vercel и переменные окружения.';
@@ -709,7 +727,7 @@ function alertFromGenerateError(message) {
     } else if (m && m.length < 320 && !/^Ошибка генерации \(\d+\)$/.test(m)) {
         text = m;
     }
-    tg.showAlert(text);
+    (window.VMRuntime?.alert || tg.showAlert)?.(text);
 }
 
 async function parseJsonResponse(response) {
@@ -1293,7 +1311,17 @@ async function loadUserData(options = {}) {
         if (response.status === 401 || response.status === 503) {
             const msg = data.message || data.error || 'Проверьте настройки сервера (KV, Telegram).';
             console.warn('loadUserData:', response.status, msg);
-            if (response.status === 401 && !silent) tg.showAlert('Откройте приложение из Telegram, чтобы загрузить профиль.');
+            if (response.status === 401) {
+                if (window.VMRuntime?.isWeb && window.VMWebAuth) {
+                    window.VMWebAuth.showOverlay();
+                } else if (!silent) {
+                    (window.VMRuntime?.alert || tg.showAlert)?.(
+                        'Откройте приложение из Telegram, чтобы загрузить профиль.',
+                    );
+                }
+            } else if (!silent) {
+                (window.VMRuntime?.alert || tg.showAlert)?.(msg);
+            }
             return;
         }
         if (data && data.plan) {
@@ -1341,12 +1369,12 @@ async function loadUserData(options = {}) {
 }
 
 document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) {
-        loadUserData({ silent: true });
-    }
+    if (document.hidden || window.VMRuntime?.isWeb) return;
+    loadUserData({ silent: true });
 });
 
 window.addEventListener('focus', () => {
+    if (window.VMRuntime?.isWeb) return;
     loadUserData({ silent: true });
 });
 
@@ -2165,19 +2193,34 @@ if (window.AdminSubs) AdminSubs.mount();
 document.getElementById('btn-analytics-upgrade')?.addEventListener('click', () => buyPlan('pro'));
 updatePlanUI('free', null);
 recoverActiveGenerationOnLoad();
-loadUserData().then(() => {
+async function bootApp() {
+    if (window.VMTelegramBoot?.isInsideTelegramClient?.() || window.Telegram?.WebApp) {
+        await window.VMTelegramBoot?.waitForInitData?.(8000);
+    }
+    window.VMRuntime?.syncTelegramChrome?.();
+
+    if (window.VMRuntime?.isWeb && window.VMWebAuth) {
+        try {
+            await window.VMWebAuth.ensureSession();
+        } catch (e) {
+            console.warn('web auth:', e);
+            return;
+        }
+    }
+    await loadUserData();
     if (window.VMOnboarding && !VMOnboarding.isDone()) {
         setTimeout(() => VMOnboarding.show(), 400);
     }
     if (window.VMImageDownload?.readPendingSaveToken?.()) {
         setTimeout(() => {
             VMImageDownload.retryPendingSaveIfAny({
-                tg,
+                tg: getTg(),
                 getHeaders: () => miniAppHeaders(true),
             });
         }, 800);
     }
-});
+}
+bootApp();
 const SettingsHub = (function initSettingsHub() {
     const hubView = document.getElementById('settings-hub-view');
     const moreRow = document.getElementById('settings-hub-more');

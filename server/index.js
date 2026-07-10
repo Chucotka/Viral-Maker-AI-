@@ -8,6 +8,8 @@ const { mountApiRoutes } = require('./mountApi');
 
 const app = express();
 
+app.set('trust proxy', 1);
+
 app.use(
   express.json({
     verify: (req, res, buf) => {
@@ -16,9 +18,22 @@ app.use(
   }),
 );
 
-app.use(express.static(path.join(__dirname, '../public')));
+const publicDir = path.join(__dirname, '../public');
+
+/** Корень — Telegram Mini App и legacy URL. */
+app.use(express.static(publicDir));
+
+/** Веб-версия на innoko.ru/app */
+app.get('/app', (req, res, next) => {
+  if (req.path !== '/app') return next();
+  return res.redirect(301, '/app/');
+});
+app.use('/app', express.static(publicDir, { index: 'index.html' }));
 
 mountApiRoutes(app);
+
+/** Совместимость: Manus/legacy путь → тот же callback, что /api/auth/telegram-callback */
+app.get('/auth/telegram/callback', require('../api/auth-telegram-callback'));
 
 /** Dev-only health check (на Vercel используйте /api/webhook GET). */
 app.get('/api/ping', (req, res) => res.send('pong'));

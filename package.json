@@ -5,7 +5,10 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon --quiet dev.js",
+    "start": "node dev.js",
+    "setup:vps": "bash scripts/setup-vps-innoko.sh",
     "test": "node --test test/*.test.js",
+    "vendor:telegram-sdk": "bash scripts/vendor-telegram-sdk.sh",
     "deploy": "vercel --prod"
   },
   "repository": {
