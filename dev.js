@@ -1,4 +1,7 @@
-require('dotenv').config({ quiet: true });
+require('dotenv').config({ quiet: true, override: true });
+const { configureGeminiNetwork } = require('./lib/geminiNetwork');
+configureGeminiNetwork();
+
 const http = require('http');
 const app = require('./server/index.js');
 
@@ -15,13 +18,15 @@ function startServer(port) {
 async function main() {
   let port = DEFAULT_PORT;
   let server;
+  const portLocked = Boolean(process.env.PORT);
+  const maxAttempts = portLocked ? 1 : 10;
 
-  for (let attempt = 0; attempt < 10; attempt += 1) {
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     try {
       server = await startServer(port);
       break;
     } catch (err) {
-      if (err.code === 'EADDRINUSE' && attempt < 9) {
+      if (err.code === 'EADDRINUSE' && attempt < maxAttempts - 1) {
         port += 1;
         continue;
       }
