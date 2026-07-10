@@ -1,11 +1,27 @@
 /**
- * Среда выполнения: Telegram Mini App или веб (innoko.ru/app).
+ * Среда выполнения: Telegram Mini App или веб (тот же origin — без telegram.org в API).
  */
 (function initVmRuntime(global) {
-  const tg = global.Telegram?.WebApp;
-  const hasInitData = Boolean(tg?.initData);
+  const nativeFetch =
+    typeof global.fetch === 'function' ? global.fetch.bind(global) : null;
 
-  const nativeFetch = global.fetch.bind(global);
+  function getWebApp() {
+    return global.Telegram?.WebApp || null;
+  }
+
+  function hasInitData() {
+    return Boolean(String(getWebApp()?.initData || '').trim());
+  }
+
+  function syncTelegramChrome() {
+    const tg = getWebApp();
+    if (!tg?.initData) return;
+    tg.expand?.();
+    tg.ready?.();
+    global.document?.documentElement?.classList?.add('vm-telegram-mini-app');
+    const overlay = global.document?.getElementById('web-auth-overlay');
+    if (overlay) overlay.classList.add('hidden');
+  }
 
   function apiPath(path) {
     const p = String(path || '');
@@ -17,11 +33,16 @@
   function headers(jsonBody = false) {
     const h = {};
     if (jsonBody) h['Content-Type'] = 'application/json';
-    if (hasInitData) h['X-Telegram-Init-Data'] = tg.initData;
+    const initData = getWebApp()?.initData;
+    if (initData) h['X-Telegram-Init-Data'] = initData;
     return h;
   }
 
   async function apiFetch(path, options = {}) {
+    if (!nativeFetch) {
+      throw new Error('Браузер не поддерживает fetch');
+    }
+    syncTelegramChrome();
     const url = apiPath(path);
     const opts = {
       credentials: 'include',
@@ -36,19 +57,22 @@
     return s.startsWith('/api') || /^https?:\/\/[^/]+\/api\//.test(s);
   }
 
-  global.fetch = function patchedFetch(input, init) {
-    const url = typeof input === 'string' ? input : input?.url || '';
-    if (shouldPatchApi(url)) return apiFetch(url, init || {});
-    return nativeFetch(input, init);
-  };
+  if (nativeFetch) {
+    global.fetch = function patchedFetch(input, init) {
+      const url = typeof input === 'string' ? input : input?.url || '';
+      if (shouldPatchApi(url)) return apiFetch(url, init || {});
+      return nativeFetch(input, init);
+    };
+  }
 
   function alert(message, title) {
     const text = String(message || '');
-    if (hasInitData && tg?.showAlert) {
+    const tg = getWebApp();
+    if (hasInitData() && tg?.showAlert) {
       tg.showAlert(text);
       return;
     }
-    if (hasInitData && tg?.showPopup) {
+    if (hasInitData() && tg?.showPopup) {
       tg.showPopup({ title: title || 'Viral Maker AI', message: text });
       return;
     }
@@ -56,7 +80,8 @@
   }
 
   function popup(opts) {
-    if (tg?.showPopup) {
+    const tg = getWebApp();
+    if (hasInitData() && tg?.showPopup) {
       tg.showPopup(opts);
       return;
     }
@@ -72,20 +97,25 @@
     }
   }
 
-  if (hasInitData) {
-    tg.expand?.();
-    tg.ready?.();
-  }
+  syncTelegramChrome();
 
   global.VMRuntime = {
-    isTelegram: hasInitData,
-    isWeb: !hasInitData,
-    tg,
+    get isTelegram() {
+      return hasInitData();
+    },
+    get isWeb() {
+      return !hasInitData();
+    },
+    get tg() {
+      return getWebApp();
+    },
     apiPath,
     headers,
     apiFetch,
     alert,
     popup,
     readStartParamFromUrl,
+    syncTelegramChrome,
+    hasInitData,
   };
 })(window);

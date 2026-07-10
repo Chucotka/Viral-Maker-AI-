@@ -1,5 +1,19 @@
-// Telegram Web App или веб (innoko.ru/app)
-const tg = window.VMRuntime?.tg || window.Telegram?.WebApp || {};
+// Telegram Web App или веб (тот же origin)
+function getTg() {
+  return window.VMRuntime?.tg || window.Telegram?.WebApp || null;
+}
+
+const tg = new Proxy(
+  {},
+  {
+    get(_target, prop) {
+      const api = getTg();
+      if (!api || !(prop in api)) return undefined;
+      const value = api[prop];
+      return typeof value === 'function' ? value.bind(api) : value;
+    },
+  },
+);
 
 const PREMIUM_BOT_URL = 'https://t.me/PremiumBot';
 const PREMIUM_BOT_HANDLE = '@PremiumBot';
@@ -17,7 +31,8 @@ function miniAppHeaders(jsonBody = false) {
     if (window.VMRuntime?.headers) return window.VMRuntime.headers(jsonBody);
     const h = {};
     if (jsonBody) h['Content-Type'] = 'application/json';
-    if (tg.initData) h['X-Telegram-Init-Data'] = tg.initData;
+    const initData = getTg().initData;
+    if (initData) h['X-Telegram-Init-Data'] = initData;
     return h;
 }
 
@@ -2179,6 +2194,11 @@ document.getElementById('btn-analytics-upgrade')?.addEventListener('click', () =
 updatePlanUI('free', null);
 recoverActiveGenerationOnLoad();
 async function bootApp() {
+    if (window.VMTelegramBoot?.isInsideTelegramClient?.() || window.Telegram?.WebApp) {
+        await window.VMTelegramBoot?.waitForInitData?.(8000);
+    }
+    window.VMRuntime?.syncTelegramChrome?.();
+
     if (window.VMRuntime?.isWeb && window.VMWebAuth) {
         try {
             await window.VMWebAuth.ensureSession();
@@ -2194,7 +2214,7 @@ async function bootApp() {
     if (window.VMImageDownload?.readPendingSaveToken?.()) {
         setTimeout(() => {
             VMImageDownload.retryPendingSaveIfAny({
-                tg,
+                tg: getTg(),
                 getHeaders: () => miniAppHeaders(true),
             });
         }, 800);
