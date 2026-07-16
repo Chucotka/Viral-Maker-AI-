@@ -42,6 +42,10 @@ app.get('/app', (req, res, next) => {
   if (req.path !== '/app') return next();
   return res.redirect(301, '/app/');
 });
+app.get('/app/landing.html', (req, res) => {
+  const qs = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+  return res.redirect(302, `/app/${qs}`);
+});
 app.use('/app', express.static(publicDir, { index: 'index.html', setHeaders: setStaticCacheHeaders }));
 
 mountApiRoutes(app);

@@ -29,4 +29,10 @@ describe('web app routes', () => {
     const res = await request('/app/');
     assert.equal(res.status, 200);
   });
+
+  it('/app/landing.html redirects to /app/', async () => {
+    const res = await request('/app/landing.html?utm=1');
+    assert.equal(res.status, 302);
+    assert.equal(res.location, '/app/?utm=1');
+  });
 });
