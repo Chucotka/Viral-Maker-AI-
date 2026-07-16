@@ -13,8 +13,8 @@
     <div id="web-auth-overlay" class="web-auth-overlay hidden" aria-hidden="true">
         <div class="web-auth-card">
             <p class="web-auth-brand">Innoko · Viral Maker AI</p>
-            <h1 class="web-auth-title">Открыть в Telegram</h1>
-            <p class="web-auth-hint">Вход и сохранение прогресса — в Mini App Telegram. В браузере можно продолжить как гость.</p>
+            <h1 class="web-auth-title">Вход в Viral Maker AI</h1>
+            <p class="web-auth-hint">На компьютере нажмите «Войти через Telegram в браузере» — так сохранится сессия и откроется admin-панель. «Открыть в Telegram» не логинит браузер.</p>
             <div id="web-auth-widget" class="web-auth-widget"></div>
         </div>
     </div>
@@ -469,14 +469,16 @@
                         <div class="plan-actions">
                             <button type="button" class="btn btn-secondary btn-inline" id="btn-debug-pro">Активировать Pro</button>
                             <button type="button" class="btn btn-secondary btn-inline" id="btn-debug-premium">Активировать Premium</button>
+                            <button type="button" class="btn btn-secondary btn-inline" id="btn-debug-premium-1d" title="Premium на 24 часа">Premium на 24ч</button>
                         </div>
                     </div>
                     <div id="admin-tools-panel" class="hidden">
+                        <p class="text-hint" id="admin-access-status" style="margin-bottom:12px"></p>
                         <div class="settings-group">
                             <label>Ручная активация после Tribute</label>
                             <p class="text-hint" style="margin-bottom:10px">Введи <b>@username</b> или <b>userId</b>. Пользователь должен хотя бы раз открыть mini app, чтобы связка сохранилась.</p>
                             <input type="text" id="manual-target" placeholder="@username или 123456789">
-                            <input type="password" id="manual-secret" placeholder="DEBUG_ADMIN_SECRET" autocomplete="off" style="margin-top:10px">
+                            <input type="password" id="manual-secret" class="admin-secret-field" placeholder="DEBUG_ADMIN_SECRET (только в браузере)" autocomplete="off" style="margin-top:10px">
                             <div class="plan-actions" style="margin-top:12px">
                                 <button type="button" class="btn btn-secondary btn-inline" id="btn-manual-pro">Выдать Pro</button>
                                 <button type="button" class="btn btn-secondary btn-inline" id="btn-manual-premium">Выдать Premium</button>
@@ -486,7 +488,7 @@
                         <div class="settings-group">
                             <label>Подписки пользователей</label>
                             <p class="text-hint" style="margin-bottom:10px">Активные Pro/Premium, истёкшие и Free-аккаунты с @username.</p>
-                            <input type="password" id="cleanup-secret" placeholder="DEBUG_ADMIN_SECRET" autocomplete="off">
+                            <input type="password" id="cleanup-secret" class="admin-secret-field" placeholder="DEBUG_ADMIN_SECRET (только в браузере)" autocomplete="off">
                             <div class="plan-actions" style="margin-top:12px">
                                 <button type="button" class="btn btn-secondary btn-inline" id="btn-cleanup-load">Обновить список</button>
                                 <button type="button" class="btn btn-secondary btn-inline" id="btn-cleanup-clear">Скрыть</button>
@@ -761,14 +763,14 @@
 
     <script defer src="https://telegram.org/js/telegram-web-app.js"></script>
     <script defer src="js/vm-runtime.js?v=20260704f"></script>
-    <script defer src="js/web-auth.js?v=20260704h"></script>
+    <script defer src="js/web-auth.js?v=20260704j"></script>
     <script defer src="js/vm-core.js"></script>
     <script defer src="js/history-store.js"></script>
     <script defer src="js/image-download.js"></script>
     <script defer src="js/onboarding.js"></script>
     <script defer src="js/admin-subs.js"></script>
     <script defer src="referral.js"></script>
-    <script defer src="app.js?v=20260704i"></script>
+    <script defer src="app.js?v=20260704j"></script>
     <script defer src="js/vm-router.js"></script>
 </body>
 </html>

@@ -1340,6 +1340,79 @@ function applyOwnerOnlySections(isOwnerFromServer) {
     });
 }
 
+function updateAdminAccessStatus(data) {
+    const el = document.getElementById('admin-access-status');
+    if (!el) return;
+    if (!data?.isOwner) {
+        el.textContent = '';
+        return;
+    }
+    const userId = data.userId ? String(data.userId) : '—';
+    const inTelegram = Boolean(window.VMRuntime?.isTelegram);
+    const sessionLabel = inTelegram
+        ? 'Telegram Mini App'
+        : data.isGuest
+          ? 'браузер · гость'
+          : 'браузер · Telegram';
+    let secretHint = 'Секрет не нужен — вход через Telegram подтверждён.';
+    if (data.isGuest) {
+        secretHint =
+            'Сейчас гостевая сессия. Нажмите «Войти» в шапке → «Войти через Telegram в браузере».';
+    } else if (data.adminSecretRequired === true) {
+        secretHint = 'Нужен DEBUG_ADMIN_SECRET из .env на VPS.';
+    } else if (data.adminSecretRequired === false) {
+        secretHint = 'Секрет не нужен — вход через Telegram подтверждён.';
+    } else {
+        secretHint =
+            'Если список не грузится — введите DEBUG_ADMIN_SECRET из .env или обновите сервер.';
+    }
+    el.textContent = `Владелец · ID ${userId} · ${sessionLabel}. ${secretHint}`;
+    const hideSecret = data.adminSecretRequired === false;
+    document.querySelectorAll('.admin-secret-field').forEach((field) => {
+        field.classList.toggle('hidden', hideSecret);
+    });
+}
+
+function isAdminSecretRequired() {
+    return window.__vmAdminSecretRequired === true;
+}
+
+function buildAdminPlanHeaders(secret) {
+    const headers = { ...miniAppHeaders(true) };
+    const trimmed = String(secret || '').trim();
+    if (trimmed) headers['X-Debug-Secret'] = trimmed;
+    return headers;
+}
+
+const ADMIN_SECRET_STORAGE_KEY = 'vm_admin_secret';
+
+function rememberAdminSecret(secret) {
+    const value = String(secret || '').trim();
+    if (!value) return;
+    try {
+        sessionStorage.setItem(ADMIN_SECRET_STORAGE_KEY, value);
+    } catch {
+        /* ignore */
+    }
+}
+
+function readStoredAdminSecret() {
+    try {
+        return sessionStorage.getItem(ADMIN_SECRET_STORAGE_KEY) || '';
+    } catch {
+        return '';
+    }
+}
+
+function hydrateAdminSecretInputs() {
+    const stored = readStoredAdminSecret();
+    if (!stored) return;
+    ['manual-secret', 'cleanup-secret'].forEach((id) => {
+        const input = document.getElementById(id);
+        if (input && !input.value.trim()) input.value = stored;
+    });
+}
+
 function readReferralStartParam() {
     try {
         const stored = sessionStorage.getItem('vm_start_param');
@@ -1441,6 +1514,15 @@ async function loadUserData(options = {}) {
             );
         }
         applyOwnerOnlySections(Boolean(data?.isOwner));
+        window.__vmIsOwner = Boolean(data?.isOwner);
+        window.__vmAdminSecretRequired =
+            data?.adminSecretRequired === false
+                ? false
+                : data?.adminSecretRequired === true
+                  ? true
+                  : undefined;
+        updateAdminAccessStatus(data);
+        if (data?.isOwner) hydrateAdminSecretInputs();
         if (data?.user && window.VMWebAuth) {
             window.VMWebAuth.applyUserToUi(data.user, data.isGuest);
         }
@@ -1605,16 +1687,17 @@ async function buyPlan(plan) {
 }
 
 async function activateDebugPlan(plan) {
-    const secret = window.prompt('Введите DEBUG_ADMIN_SECRET');
-    if (!secret) return;
+    let secret = '';
+    if (isAdminSecretRequired()) {
+        secret = window.prompt('Введите DEBUG_ADMIN_SECRET');
+        if (!secret) return;
+        rememberAdminSecret(secret);
+    }
     try {
         const response = await fetch('/api/manual-plan', {
             method: 'POST',
-            headers: {
-                ...miniAppHeaders(true),
-                'X-Debug-Secret': secret.trim(),
-            },
-            body: JSON.stringify({ action: 'debug', plan }),
+            headers: buildAdminPlanHeaders(secret),
+            body: JSON.stringify({ action: 'debug', plan, ...(secret ? { secret: secret.trim() } : {}) }),
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
@@ -1644,22 +1727,20 @@ async function activateManualPlan(plan) {
     }
 
     const secret = secretInput ? secretInput.value.trim() : '';
-    if (!secret) {
+    if (!secret && isAdminSecretRequired()) {
         if (statusEl) statusEl.textContent = 'Введите DEBUG_ADMIN_SECRET в поле ниже @username/userId.';
         showAppAlert('Введите DEBUG_ADMIN_SECRET в поле ниже @username/userId.');
         return;
     }
+    if (secret) rememberAdminSecret(secret);
 
     if (statusEl) statusEl.textContent = 'Активирую тариф...';
 
     try {
         const response = await fetch('/api/manual-plan', {
             method: 'POST',
-            headers: {
-                ...miniAppHeaders(true),
-                'X-Debug-Secret': secret,
-            },
-            body: JSON.stringify({ plan, target }),
+            headers: buildAdminPlanHeaders(secret),
+            body: JSON.stringify({ plan, target, ...(secret ? { secret } : {}) }),
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
@@ -1701,26 +1782,34 @@ function renderCleanupList(items) {
 async function loadCleanupPlans() {
     const statusEl = document.getElementById('cleanup-status');
     const secret = getCleanupSecret();
-    if (!secret) {
+    if (!secret && isAdminSecretRequired()) {
         if (statusEl) statusEl.textContent = 'Введите DEBUG_ADMIN_SECRET в поле выше.';
         showAppAlert('Введите DEBUG_ADMIN_SECRET в поле выше.');
         return;
     }
+    if (secret) rememberAdminSecret(secret);
 
     if (statusEl) statusEl.textContent = 'Загружаю подписки...';
 
     try {
-        const response = await fetch('/api/manual-plan?action=list', {
-            method: 'GET',
-            headers: {
-                ...miniAppHeaders(false),
-                'X-Debug-Secret': secret,
-            },
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 45000);
+        const response = await fetch('/api/manual-plan', {
+            method: 'POST',
+            headers: buildAdminPlanHeaders(secret),
+            body: JSON.stringify({ action: 'list', ...(secret ? { secret } : {}) }),
+            signal: controller.signal,
         });
+        clearTimeout(timeoutId);
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
             const message = data.message || data.error || `Не удалось получить список (HTTP ${response.status}).`;
-            if (statusEl) statusEl.textContent = message;
+            if (statusEl) {
+                statusEl.textContent =
+                    data.reason === 'guest_session'
+                        ? `${message} Нажмите «Войти» в шапке → «Войти через Telegram в браузере».`
+                        : message;
+            }
             showAppAlert(message);
             return;
         }
@@ -1749,7 +1838,10 @@ async function loadCleanupPlans() {
         }
     } catch (error) {
         console.error('Cleanup list error:', error);
-        const message = error?.message || 'Ошибка при загрузке списка.';
+        const message =
+            error?.name === 'AbortError'
+                ? 'Таймаут загрузки списка (>45 с). Попробуйте ещё раз или проверьте Redis на VPS.'
+                : error?.message || 'Ошибка при загрузке списка.';
         if (statusEl) statusEl.textContent = message;
         showAppAlert(message);
     }
@@ -1758,11 +1850,12 @@ async function loadCleanupPlans() {
 async function resetCleanupPlan(userId, username = '') {
     const statusEl = document.getElementById('cleanup-status');
     const secret = getCleanupSecret();
-    if (!secret) {
+    if (!secret && isAdminSecretRequired()) {
         if (statusEl) statusEl.textContent = 'Введите DEBUG_ADMIN_SECRET в поле выше.';
         showAppAlert('Введите DEBUG_ADMIN_SECRET в поле выше.');
         return;
     }
+    if (secret) rememberAdminSecret(secret);
 
     const label = username ? `@${username}` : userId;
     const confirmed = window.confirm(`Сбросить подписку пользователя ${label} в Free?`);
@@ -1773,11 +1866,8 @@ async function resetCleanupPlan(userId, username = '') {
     try {
         const response = await fetch('/api/manual-plan', {
             method: 'POST',
-            headers: {
-                ...miniAppHeaders(true),
-                'X-Debug-Secret': secret,
-            },
-            body: JSON.stringify({ action: 'reset', target: userId }),
+            headers: buildAdminPlanHeaders(secret),
+            body: JSON.stringify({ action: 'reset', target: userId, ...(secret ? { secret } : {}) }),
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
@@ -1833,6 +1923,24 @@ document.getElementById('btn-upgrade-pro')?.addEventListener('click', () => {
 
 document.getElementById('btn-debug-pro').addEventListener('click', () => activateDebugPlan('pro'));
 document.getElementById('btn-debug-premium').addEventListener('click', () => activateDebugPlan('premium'));
+document.getElementById('btn-debug-premium-1d')?.addEventListener('click', async () => {
+    try {
+        const res = await fetch('/api/manual-plan?action=debug', {
+            method: 'POST',
+            headers: miniAppHeaders(true),
+            body: JSON.stringify({ plan: 'premium', durationDays: 1 }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            (window.VMRuntime?.alert || tg.showAlert)?.(data.message || data.error || 'Не удалось выдать Premium на 24 часа.');
+            return;
+        }
+        (window.VMRuntime?.alert || tg.showAlert)?.('Премиум доступ включён на 24 часа.');
+        await loadUserData();
+    } catch (e) {
+        (window.VMRuntime?.alert || tg.showAlert)?.('Ошибка сети при включении Premium на 24 часа.');
+    }
+});
 document.getElementById('btn-manual-pro').addEventListener('click', () => activateManualPlan('pro'));
 document.getElementById('btn-manual-premium').addEventListener('click', () => activateManualPlan('premium'));
 document.getElementById('btn-cleanup-load').addEventListener('click', () => loadCleanupPlans());
@@ -2346,6 +2454,9 @@ const SettingsHub = (function initSettingsHub() {
         setTileActive(panelId);
         const panelEl = document.getElementById(`settings-panel-${panelId}`);
         if (panelEl) panelEl.scrollTop = 0;
+        if (panelId === 'subscription' && window.__vmIsOwner) {
+            loadCleanupPlans();
+        }
         const tab = document.getElementById('tab-settings');
         if (tab) {
             tab.scrollTop = 0;

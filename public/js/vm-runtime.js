@@ -83,6 +83,18 @@
     tg.ready?.();
   }
 
+  const host = String(global.location?.hostname || '');
+  if (host.includes('vercel.app') || host.includes('vercel.sh')) {
+    global.alert(
+      'Эта ссылка ведёт на старый Vercel (удалён).\n\nОткройте приложение здесь:\nhttps://app.innoko.ru/app/',
+    );
+    try {
+      global.location.replace('https://app.innoko.ru/app/');
+    } catch {
+      /* ignore */
+    }
+  }
+
   global.VMRuntime = {
     isTelegram: hasInitData,
     isWeb: !hasInitData,
