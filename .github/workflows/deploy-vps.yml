@@ -6,9 +6,10 @@ on:
       branch:
         description: 'Branch to deploy'
         required: true
-        default: 'cursor/guest-onboarding-p1-e202'
+        default: 'cursor/fix-viral-maker-manus-e202'
   push:
     branches:
+      - cursor/fix-viral-maker-manus-e202
       - cursor/guest-onboarding-p1-e202
       - cursor/production-hardening-e202
       - cursor/referral-e2e-e202

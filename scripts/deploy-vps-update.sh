@@ -6,7 +6,7 @@
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/var/www/viral-maker}"
-BRANCH="${BRANCH:-cursor/guest-onboarding-p1-e202}"
+BRANCH="${BRANCH:-cursor/fix-viral-maker-manus-e202}"
 REPO_URL="${REPO_URL:-https://github.com/Chucotka/Viral-Maker-AI-.git}"
 PM2_NAME="${PM2_NAME:-viral-maker}"
 
@@ -40,10 +40,12 @@ git pull --ff-only origin "$BRANCH"
 echo "==> npm ci"
 npm ci --silent
 
-if [[ -f scripts/nginx-innoko-locations.conf ]]; then
-  echo "==> nginx snippet"
-  cp scripts/nginx-innoko-locations.conf /etc/nginx/snippets/innoko-locations.conf 2>/dev/null || true
-  nginx -t && systemctl reload nginx
+if [[ -f scripts/apply-nginx-config.sh ]]; then
+  echo "==> nginx"
+  if ! grep -q '^MANUS_VIRAL_MAKER_HOST=' .env 2>/dev/null; then
+    echo 'MANUS_VIRAL_MAKER_HOST=viralmaker-wizzwuwp.manus.space' >> .env
+  fi
+  bash scripts/apply-nginx-config.sh
 fi
 
 echo "==> pm2"
