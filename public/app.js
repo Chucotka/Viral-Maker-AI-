@@ -741,6 +741,15 @@ function alertFromGenerateError(message) {
         text = 'Проблема с ключом или доступом к API. Проверьте GEMINI_API_KEY на сервере.';
     } else if (/404|not found for API version|no longer available|ListModels/i.test(m)) {
         text = 'Модель недоступна для вашего ключа. Обновите приложение или проверьте доступ в Google AI Studio.';
+    } else if (/auth_required|Войдите через Telegram/i.test(m)) {
+        if (window.VMRuntime?.isWeb && window.VMWebAuth) {
+            showAppAlert(
+                'Сессия не активна. Нажмите «Войти» в шапке → «Войти через Telegram в браузере».',
+                'Нужен вход',
+            );
+            return;
+        }
+        text = 'Откройте мини-приложение из Telegram (кнопка в боте), чтобы подпись сессии передалась на сервер.';
     } else if (/missing_init_data|invalid_init_data|Откройте приложение из Telegram/i.test(m)) {
         if (window.VMRuntime?.isWeb && window.VMWebAuth) {
             window.VMWebAuth.showOverlay();
@@ -909,6 +918,67 @@ function revealResultContainer() {
     } catch (e) { /* ignore */ }
 }
 
+const PRO_TEASER_STORAGE_KEY = 'vm_pro_teaser_v1_shown';
+
+function hideProTeaserCard() {
+    document.getElementById('pro-teaser-card')?.classList.add('hidden');
+}
+
+function markProTeaserShown() {
+    try {
+        localStorage.setItem(PRO_TEASER_STORAGE_KEY, '1');
+    } catch {
+        /* ignore */
+    }
+}
+
+function shouldShowProTeaser() {
+    if (userPlan === 'pro' || userPlan === 'premium') return false;
+    try {
+        return localStorage.getItem(PRO_TEASER_STORAGE_KEY) !== '1';
+    } catch {
+        return false;
+    }
+}
+
+function maybeShowProTeaserAfterGeneration(options = {}) {
+    if (!shouldShowProTeaser()) {
+        hideProTeaserCard();
+        return;
+    }
+    const el = document.getElementById('pro-teaser-card');
+    const bodyEl = document.getElementById('pro-teaser-body');
+    if (!el) return;
+
+    const score = Number(options.score);
+    const kind = options.kind === 'image' ? 'image' : 'text';
+    if (bodyEl) {
+        if (kind === 'text' && Number.isFinite(score) && score > 0) {
+            bodyEl.textContent =
+                `Viral Score ${score}/100 — на Pro сравнивайте 2 AI-варианта, смотрите динамику за 7 дней и генерируйте без лимита.`;
+        } else if (kind === 'image') {
+            bodyEl.textContent =
+                'Картинка готова — на Pro публикуйте в канал (Premium), генерируйте без лимита и открывайте аналитику.';
+        } else {
+            bodyEl.textContent =
+                'Сравнивайте 2 AI-варианта текста, смотрите аналитику Viral Score за 7 дней и генерируйте без лимита.';
+        }
+    }
+
+    el.classList.remove('hidden');
+    markProTeaserShown();
+}
+
+function mountProTeaserActions() {
+    document.getElementById('btn-pro-teaser-upgrade')?.addEventListener('click', () => {
+        hideProTeaserCard();
+        openSettingsPanel('subscription');
+    });
+    document.getElementById('btn-pro-teaser-dismiss')?.addEventListener('click', () => {
+        hideProTeaserCard();
+    });
+}
+
 async function tryRecoverGenerationResult(kind) {
     if (!generationStartedAt) return false;
     try {
@@ -1004,6 +1074,7 @@ function applyTextGenerateData(data, topic) {
     });
     syncCurrentHistoryFromItem(historyEntry || { ts: Date.now(), type: 'text' });
     if (document.getElementById('tab-dashboard').classList.contains('active')) loadDashboardData();
+    maybeShowProTeaserAfterGeneration({ kind: 'text', score: currentGeneratedScore });
     return data;
 }
 
@@ -1135,6 +1206,7 @@ function renderDashboardFromList(list) {
 
 function openHistoryItem(item) {
     if (!item || typeof item !== 'object') return;
+    hideProTeaserCard();
     if (window.VMHistory) item = window.VMHistory.hydrateHistoryItem(item);
     switchTab('studio');
     const resultContainer = document.getElementById('result-container');
@@ -1448,22 +1520,30 @@ function showReferralSignupFeedback(signup, silent) {
 
 function updateReferralInviteBanner(referral) {
     const invited = referral?.referrerId && !referral?.referralConfirmed;
-    let el = document.getElementById('referral-invite-banner');
-    if (!invited) {
-        el?.classList.add('hidden');
-        return;
-    }
-    if (!el) {
-        el = document.createElement('div');
-        el.id = 'referral-invite-banner';
-        el.className = 'referral-invite-banner';
-        const host = document.querySelector('#tab-dashboard .main-cta-container');
-        if (host) host.before(el);
-        else document.querySelector('#tab-dashboard')?.prepend(el);
-    }
-    el.classList.remove('hidden');
-    el.innerHTML =
+    const html =
         '🎁 <strong>Вы по приглашению.</strong> Сделайте первую генерацию в Studio — друг получит +10 бонусных генераций.';
+
+    function upsertBanner(id, insertAfterEl) {
+        let el = document.getElementById(id);
+        if (!invited) {
+            el?.classList.add('hidden');
+            return;
+        }
+        if (!el) {
+            el = document.createElement('div');
+            el.id = id;
+            el.className = 'referral-invite-banner';
+            if (insertAfterEl) insertAfterEl.after(el);
+        }
+        el.classList.remove('hidden');
+        el.innerHTML = html;
+    }
+
+    upsertBanner(
+        'referral-invite-banner',
+        document.querySelector('#tab-dashboard .main-cta-container'),
+    );
+    upsertBanner('referral-invite-banner-studio', document.querySelector('#tab-studio .section-header'));
 }
 
 async function loadUserData(options = {}) {
@@ -1511,8 +1591,10 @@ async function loadUserData(options = {}) {
                 data.bonusGenerations || 0,
                 data.quotaRemaining,
                 data.freeGenerationLimit,
+                Boolean(data.isGuest),
             );
         }
+        window.__vmIsGuest = Boolean(data?.isGuest);
         applyOwnerOnlySections(Boolean(data?.isOwner));
         window.__vmIsOwner = Boolean(data?.isOwner);
         window.__vmAdminSecretRequired =
@@ -1590,18 +1672,103 @@ async function syncQuotaAfterGeneration(data) {
         const limitMsg = document.getElementById('limit-msg');
         const remaining = Number(data.remainingToday);
         if (limitMsg && Number.isFinite(remaining) && remaining <= 2) {
-            limitMsg.innerHTML = remaining > 0
-                ? `⚡️ Осталось бесплатных генераций: <b>${remaining}</b>.`
-                : '⚡️ Бесплатные генерации закончились. Пригласите друзей или перейдите на Pro.';
-            limitMsg.classList.remove('hidden');
-            limitMsg.classList.toggle('error', remaining <= 0);
-            limitMsg.classList.toggle('warning', remaining > 0);
+            if (remaining <= 0) {
+                showLimitReachedPaywall({ silent: true });
+            } else {
+                limitMsg.innerHTML = `⚡️ Осталось бесплатных генераций: <b>${remaining}</b>. <a href="javascript:void(0)" onclick="openSettingsPanel('subscription')">Pro →</a>`;
+                limitMsg.classList.remove('hidden');
+                limitMsg.classList.remove('error');
+                limitMsg.classList.add('warning');
+            }
         }
     }
     await loadUserData({ silent: true });
 }
 
-function updatePlanUI(plan, planUntil, bonusGenerations = 0, quotaRemaining = null, freeGenerationLimit = null) {
+async function ensureWebSessionForGeneration() {
+    if (window.VMRuntime?.isTelegram) return true;
+    if (!window.VMWebAuth?.ensureSession) {
+        showAppAlert('Сессия не активна. Обновите страницу (Ctrl+F5).', 'Нужен вход');
+        return false;
+    }
+    try {
+        const ok = await window.VMWebAuth.ensureSession();
+        if (!ok) {
+            showAppAlert(
+                'Сессия не активна. Нажмите «Войти» в шапке → «Войти через Telegram в браузере» или «Продолжить как гость».',
+                'Нужен вход',
+            );
+            return false;
+        }
+        return true;
+    } catch (e) {
+        console.warn('ensureWebSessionForGeneration:', e);
+        showAppAlert('Не удалось проверить сессию. Обновите страницу.', 'Ошибка');
+        return false;
+    }
+}
+
+function showLimitReachedPaywall(options = {}) {
+    const { silent = false } = options;
+    const limitMsg = document.getElementById('limit-msg');
+    const guest = Boolean(window.VMWebAuth?.isGuest?.());
+    const guestLoginLink = guest
+        ? ' <a href="javascript:void(0)" data-guest-login>Войти через Telegram</a> или'
+        : '';
+    if (limitMsg) {
+        limitMsg.innerHTML =
+            `⚡️ Бесплатные генерации закончились.${guestLoginLink} <a href="javascript:void(0)" onclick="openSettingsPanel('subscription')">Pro или рефералка →</a>`;
+        limitMsg.classList.remove('hidden');
+        limitMsg.classList.add('error');
+        limitMsg.classList.remove('warning');
+    }
+    if (!silent) {
+        showAppPopup({
+            title: 'Лимит исчерпан',
+            message: guest
+                ? 'Войдите через Telegram (5 генераций + история) или оформите Pro для безлимита.'
+                : 'Оформите Pro для безлимита или пригласите друзей за бонусные генерации.',
+            buttons: [{ type: 'ok' }],
+        });
+    }
+}
+
+function maybeNudgeGuestAfterGeneration() {
+    if (!window.VMWebAuth?.isGuest?.()) return;
+    try {
+        if (sessionStorage.getItem('vm_guest_gen_nudge') === '1') return;
+        sessionStorage.setItem('vm_guest_gen_nudge', '1');
+    } catch {
+        /* ignore */
+    }
+    setTimeout(() => {
+        const limitMsg = document.getElementById('limit-msg');
+        if (!limitMsg || limitMsg.classList.contains('error')) return;
+        limitMsg.innerHTML =
+            '💡 Гостевые генерации не переносятся между браузерами. ' +
+            '<a href="javascript:void(0)" data-guest-login>Войти через Telegram</a> — 5 генераций и история на сервере.';
+        limitMsg.classList.remove('hidden', 'error');
+        limitMsg.classList.add('warning');
+    }, 1800);
+}
+
+function updateGuestStudioBanner(quotaRemaining, freeGenerationLimit, isGuest) {
+    const el = document.getElementById('guest-studio-banner');
+    if (!el) return;
+    if (!isGuest) {
+        el.classList.add('hidden');
+        return;
+    }
+    const pool = freeGenerationLimit != null && Number.isFinite(freeGenerationLimit) ? freeGenerationLimit : 3;
+    const remaining =
+        quotaRemaining != null && Number.isFinite(quotaRemaining) ? quotaRemaining : pool;
+    el.classList.remove('hidden');
+    el.innerHTML =
+        `<span>Гость · осталось <b>${remaining}/${pool}</b> генераций.</span>` +
+        `<button type="button" class="guest-studio-banner-btn" data-guest-login>Войти через Telegram</button>`;
+}
+
+function updatePlanUI(plan, planUntil, bonusGenerations = 0, quotaRemaining = null, freeGenerationLimit = null, isGuest = false) {
     const badge = document.getElementById('current-plan-badge');
     const upgradeBtn = document.getElementById('btn-upgrade-pro');
     const quotaValue = document.getElementById('settings-quota-value');
@@ -1609,6 +1776,7 @@ function updatePlanUI(plan, planUntil, bonusGenerations = 0, quotaRemaining = nu
     const heroPlan = document.getElementById('settings-hero-plan-badge');
 
     if (plan === 'pro' || plan === 'premium') {
+        hideProTeaserCard();
         badge.className = 'plan-badge plan-pro';
         let untilLine = '';
         let untilShort = '';
@@ -1650,15 +1818,21 @@ function updatePlanUI(plan, planUntil, bonusGenerations = 0, quotaRemaining = nu
                 : `из ${pool} ⚡`;
         }
         if (heroPlan) {
-            heroPlan.textContent = 'FREE';
-            heroPlan.className = 'settings-hero-plan settings-hero-plan-free';
+            heroPlan.textContent = isGuest ? 'GUEST' : 'FREE';
+            heroPlan.className = isGuest
+                ? 'settings-hero-plan settings-hero-plan-guest'
+                : 'settings-hero-plan settings-hero-plan-free';
         }
     }
+    updateGuestStudioBanner(quotaRemaining, freeGenerationLimit, isGuest);
     const hintImg = document.getElementById('hint-image-publish');
     if (hintImg) hintImg.classList.toggle('hidden', plan === 'premium');
 }
 
 async function buyPlan(plan) {
+    if (window.VMRuntime?.isWeb) {
+        return buyPlanViaTribute(plan);
+    }
     try {
         const response = await fetch('/api/create-invoice', {
             method: 'POST',
@@ -2059,6 +2233,8 @@ async function runTextGeneration(opts = {}) {
         return;
     }
 
+    if (!(await ensureWebSessionForGeneration())) return;
+
     const btnId = opts.buttonId || 'btn-generate';
     const btn = document.getElementById(btnId);
     const originalText = btn ? btn.textContent : '';
@@ -2083,9 +2259,7 @@ async function runTextGeneration(opts = {}) {
         const data = await parseJsonResponse(response);
 
         if (response.status === 403 && data.error === 'limit_reached') {
-            limitMsg.innerHTML = `⚡️ Бесплатные генерации закончились. Пригласите друзей за бонус или <a href="javascript:void(0)" onclick="openSettingsPanel('subscription')">перейдите на Pro →</a>`;
-            limitMsg.classList.remove('hidden');
-            limitMsg.classList.add('error');
+            showLimitReachedPaywall();
             return;
         }
 
@@ -2096,6 +2270,7 @@ async function runTextGeneration(opts = {}) {
 
         applyTextGenerateData(data, topic);
         await syncQuotaAfterGeneration(data);
+        maybeNudgeGuestAfterGeneration();
     } catch (error) {
         console.error(error);
         const recovered = await tryRecoverGenerationResult('text');
@@ -2137,6 +2312,8 @@ async function runImageGeneration() {
         return;
     }
 
+    if (!(await ensureWebSessionForGeneration())) return;
+
     const btn = document.getElementById('btn-generate-image');
     const originalText = btn.textContent;
     const seq = beginGenerationSession('image');
@@ -2151,9 +2328,7 @@ async function runImageGeneration() {
         const data = await parseJsonResponse(response);
 
         if (response.status === 403 && data.error === 'limit_reached') {
-            limitMsg.innerHTML = `⚡️ Бесплатные генерации закончились. Пригласите друзей за бонус или <a href="javascript:void(0)" onclick="openSettingsPanel('subscription')">перейдите на Pro →</a>`;
-            limitMsg.classList.remove('hidden');
-            limitMsg.classList.add('error');
+            showLimitReachedPaywall();
             return;
         }
 
@@ -2203,6 +2378,7 @@ async function runImageGeneration() {
 
         revealResultContainer();
         document.getElementById('publish-status').classList.add('hidden');
+        maybeShowProTeaserAfterGeneration({ kind: 'image' });
 
         const imageTs = Number(data.historyTs) || Date.now();
         const historyEntry = appendHistoryEntry({
@@ -2226,6 +2402,7 @@ async function runImageGeneration() {
         if (document.getElementById('tab-dashboard').classList.contains('active')) loadDashboardData();
 
         await syncQuotaAfterGeneration(data);
+        maybeNudgeGuestAfterGeneration();
     } catch (error) {
         console.error(error);
         const recovered = await tryRecoverGenerationResult('image');
@@ -2402,6 +2579,12 @@ document.getElementById('trend-search').addEventListener('input', (e) => {
 if (window.VMOnboarding) VMOnboarding.mount();
 if (window.ReferralSystem) ReferralSystem.mount();
 if (window.AdminSubs) AdminSubs.mount();
+mountProTeaserActions();
+document.getElementById('tab-studio')?.addEventListener('click', (e) => {
+    if (e.target.closest('[data-guest-login]')) {
+        window.VMWebAuth?.showOverlay?.();
+    }
+});
 document.getElementById('btn-analytics-upgrade')?.addEventListener('click', () => buyPlan('pro'));
 updatePlanUI('free', null);
 recoverActiveGenerationOnLoad();
