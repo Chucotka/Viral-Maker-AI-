@@ -86,12 +86,15 @@ module.exports = async (req, res) => {
       if (!plan) {
         return res.status(400).json({ error: 'invalid_plan' });
       }
-      await setUserPlan(auth.userId, plan, { durationDays: planDurationDays() });
+      // Позволяем администратору задать короткую длительность (например, 1 сутки)
+      const dRaw = Number(req.body?.durationDays || req.query?.durationDays || NaN);
+      const durationDays = Number.isFinite(dRaw) && dRaw > 0 && dRaw <= 7 ? dRaw : planDurationDays();
+      await setUserPlan(auth.userId, plan, { durationDays });
       return res.json({
         ok: true,
         userId: auth.userId,
         plan,
-        planUntil: new Date(Date.now() + planDurationDays() * 864e5).toISOString(),
+        planUntil: new Date(Date.now() + durationDays * 864e5).toISOString(),
       });
     }
 
@@ -160,7 +163,11 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'invalid_plan' });
     }
 
-    await setUserPlan(userId, plan, { durationDays: planDurationDays() });
+    // Для ручной активации админом разрешаем указать durationDays (например, 1 сутки)
+    const dRaw = Number(req.body?.durationDays || req.query?.durationDays || NaN);
+    const durationDays = Number.isFinite(dRaw) && dRaw > 0 && dRaw <= 31 ? dRaw : planDurationDays();
+
+    await setUserPlan(userId, plan, { durationDays });
     const rec = await getUserRecord(userId);
 
     console.info('Manual plan activated', {

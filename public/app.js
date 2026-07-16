@@ -1923,6 +1923,24 @@ document.getElementById('btn-upgrade-pro')?.addEventListener('click', () => {
 
 document.getElementById('btn-debug-pro').addEventListener('click', () => activateDebugPlan('pro'));
 document.getElementById('btn-debug-premium').addEventListener('click', () => activateDebugPlan('premium'));
+document.getElementById('btn-debug-premium-1d')?.addEventListener('click', async () => {
+    try {
+        const res = await fetch('/api/manual-plan?action=debug', {
+            method: 'POST',
+            headers: miniAppHeaders(true),
+            body: JSON.stringify({ plan: 'premium', durationDays: 1 }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            (window.VMRuntime?.alert || tg.showAlert)?.(data.message || data.error || 'Не удалось выдать Premium на 24 часа.');
+            return;
+        }
+        (window.VMRuntime?.alert || tg.showAlert)?.('Премиум доступ включён на 24 часа.');
+        await loadUserData();
+    } catch (e) {
+        (window.VMRuntime?.alert || tg.showAlert)?.('Ошибка сети при включении Premium на 24 часа.');
+    }
+});
 document.getElementById('btn-manual-pro').addEventListener('click', () => activateManualPlan('pro'));
 document.getElementById('btn-manual-premium').addEventListener('click', () => activateManualPlan('premium'));
 document.getElementById('btn-cleanup-load').addEventListener('click', () => loadCleanupPlans());
