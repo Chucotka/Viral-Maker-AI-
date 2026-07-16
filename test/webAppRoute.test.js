@@ -30,9 +30,8 @@ describe('web app routes', () => {
     assert.equal(res.status, 200);
   });
 
-  it('/app/landing.html redirects to /app/', async () => {
-    const res = await request('/app/landing.html?utm=1');
-    assert.equal(res.status, 302);
-    assert.equal(res.location, '/app/?utm=1');
+  it('/app/landing.html serves consent gate', async () => {
+    const res = await request('/app/landing.html');
+    assert.equal(res.status, 200);
   });
 });
