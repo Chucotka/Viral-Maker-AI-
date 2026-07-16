@@ -1,34 +1,88 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Viral Maker AI</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta name="vm-bot-username" content="viral_maker_ai_bot" />
+    <title>Viral Maker AI | Innoko</title>
+    <base href="/app/" />
+    <link rel="stylesheet" href="style.css?v=20260709r" />
+    <script src="js/telegram-boot.js?v=20260704r"></script>
+    <script src="js/landing-guard.js?v=20260708r"></script>
 </head>
 <body>
+    <div id="web-auth-overlay" class="web-auth-overlay hidden" aria-hidden="true">
+        <div class="web-auth-card">
+            <p class="web-auth-brand">Innoko · Viral Maker AI</p>
+            <h1 class="web-auth-title">Вход в Viral Maker AI</h1>
+            <p class="web-auth-hint">На компьютере нажмите «Войти через Telegram в браузере» — так сохранится сессия и откроется admin-панель. «Открыть в Telegram» не логинит браузер.</p>
+            <p class="web-auth-legal text-hint">
+                Входя в сервис, вы соглашаетесь с
+                <a href="/app/legal/privacy.html" target="_blank" rel="noopener">политикой</a>,
+                <a href="/app/legal/terms.html" target="_blank" rel="noopener">соглашением</a>
+                и <a href="/app/legal/offer.html" target="_blank" rel="noopener">офертой</a>.
+                Тарифы — в <a href="/app/landing.html" target="_blank" rel="noopener">рублях</a>.
+            </p>
+            <div id="web-auth-widget" class="web-auth-widget"></div>
+        </div>
+    </div>
     <div class="app-container">
 
-        <!-- Tab 1: Dashboard -->
-        <section id="tab-dashboard" class="tab-content active">
-            <header class="dashboard-header">
-                <div class="user-info">
-                    <div class="avatar" id="user-avatar">👤</div>
-                    <span id="user-name">Пользователь</span>
+        <header class="app-chrome" id="app-chrome">
+            <div class="app-chrome-brand">
+                <span class="app-chrome-logo" aria-hidden="true">⚡</span>
+                <div class="app-chrome-titles">
+                    <div class="app-chrome-name">Viral Maker AI</div>
+                    <div class="app-chrome-section" id="app-chrome-section">Главная</div>
                 </div>
-                <div class="score-badge" title="Ориентир по ключевым словам и структуре, не гарантия виральности">
-                    <span class="score-label">Viral Score</span>
-                    <span class="score-value" id="dashboard-score">0</span>/100
-                </div>
-            </header>
+            </div>
+            <div class="app-chrome-meta">
+                <button type="button" class="app-quota-chip" id="app-quota-chip" title="Остаток генераций" onclick="openSettingsPanel('subscription')">—</button>
+                <button type="button" class="app-user-chip" id="app-user-chip" title="Профиль и вход" onclick="switchTab('settings')">
+                    <span class="avatar avatar-sm" id="user-avatar">👤</span>
+                    <span id="user-name">Профиль</span>
+                </button>
+            </div>
+        </header>
 
-            <div class="main-cta-container">
-                <button class="btn btn-primary btn-large" onclick="switchTab('studio')">🚀 Создать Контент</button>
+        <!-- Tab 1: Home -->
+        <section id="tab-dashboard" class="tab-content active">
+            <div class="home-welcome">
+                <p class="home-eyebrow">Innoko · Visual Marketing</p>
+                <h2 class="home-title">Что создаём сегодня?</h2>
+                <p class="home-lead">Выберите тип контента — в студии опишите идею, ИИ подготовит готовый материал.</p>
             </div>
 
-            <!-- Реферальный блок на главной (compact) -->
-            <div class="referral-card referral-card-compact" id="referral-dashboard-card">
+            <div class="home-actions" aria-label="Быстрый старт">
+                <button type="button" class="home-action-card" onclick="openStudioWithMode('text')">
+                    <span class="home-action-icon" aria-hidden="true">📝</span>
+                    <span class="home-action-copy">
+                        <strong>Текст для соцсетей</strong>
+                        <span>Пост, Telegram, VK</span>
+                    </span>
+                    <span class="home-action-arrow" aria-hidden="true">→</span>
+                </button>
+                <button type="button" class="home-action-card" onclick="openStudioWithMode('script')">
+                    <span class="home-action-icon" aria-hidden="true">🎬</span>
+                    <span class="home-action-copy">
+                        <strong>Сценарий Reels / Shorts</strong>
+                        <span>Хук, покадровка, CTA</span>
+                    </span>
+                    <span class="home-action-arrow" aria-hidden="true">→</span>
+                </button>
+                <button type="button" class="home-action-card" onclick="openStudioWithMode('image')">
+                    <span class="home-action-icon" aria-hidden="true">🖼</span>
+                    <span class="home-action-copy">
+                        <strong>Картинка</strong>
+                        <span>Визуал для поста или сторис</span>
+                    </span>
+                    <span class="home-action-arrow" aria-hidden="true">→</span>
+                </button>
+            </div>
+
+            <details class="home-details" id="home-referral-details">
+                <summary class="home-details-summary">⚡ Бонусы за друзей — бесплатные генерации и Pro</summary>
+                <div class="referral-card referral-card-compact">
                 <div class="referral-card-glow"></div>
                 <div class="referral-card-header">
                     <span class="referral-lightning">⚡</span>
@@ -78,38 +132,40 @@
                 <button type="button" class="btn btn-referral btn-full" data-ref-invite>
                     ⚡ Пригласить друзей — получить бонус
                 </button>
-            </div>
+                </div>
+            </details>
 
-            <div class="trending-strip-container">
-                <h3>Тренды сейчас</h3>
+            <section class="home-section trending-strip-container">
+                <div class="home-section-head">
+                    <h3>Идеи из трендов</h3>
+                    <button type="button" class="home-section-link" onclick="switchTab('trends')">Все тренды →</button>
+                </div>
                 <div class="trending-strip" id="dashboard-trends">
                     <!-- Populated via JS -->
                 </div>
-            </div>
+            </section>
 
-            <div class="recent-posts-container">
-                <h3>Последние генерации</h3>
+            <section class="home-section recent-posts-container">
+                <div class="home-section-head">
+                    <h3>Ваши работы</h3>
+                    <button type="button" class="home-section-link" onclick="openStudioWithMode('text')">Создать →</button>
+                </div>
                 <div class="recent-posts" id="recent-posts-list">
                     <p class="text-muted">История пуста.</p>
                     <!-- Populated via JS -->
                 </div>
-            </div>
+            </section>
+            <span id="dashboard-score" class="hidden" aria-hidden="true">0</span>
         </section>
 
         <!-- Tab 2: Content Studio -->
         <section id="tab-studio" class="tab-content">
-            <header class="section-header">
-                <h2>Студия Контента</h2>
-            </header>
-
-            <div class="studio-tips-card" id="studio-tips-card">
-                <div class="studio-tips-title">💡 Быстрый старт</div>
-                <ul class="studio-tips-list">
-                    <li><b>Авто</b> — AI сам выберет лучший угол подачи</li>
-                    <li><b>Короткая тема</b> — достаточно 3–5 слов, мы развернём</li>
-                    <li><b>Refine</b> после генерации — новая версия (списывает лимит)</li>
-                </ul>
+            <div class="studio-flow-header">
+                <p class="studio-step-label" id="studio-step-label">Шаг 1 · Тип контента</p>
+                <p class="studio-flow-hint" id="studio-flow-hint">Выберите тип → опишите идею → нажмите «Сгенерировать»</p>
             </div>
+
+            <div id="guest-studio-banner" class="guest-studio-banner hidden" aria-live="polite"></div>
 
             <div class="studio-mode-row" role="tablist" aria-label="Режим студии">
                 <button type="button" class="mode-pill active" id="mode-pill-text" data-studio-mode="text">Текст</button>
@@ -119,9 +175,22 @@
             <p class="text-hint studio-mode-hint" id="studio-mode-hint">Картинки и текст делят один дневной лимит на Free.</p>
 
             <div class="form-group">
-                <label for="studio-topic" id="label-studio-topic">Опиши идею или вставь тему</label>
+                <label for="studio-topic" id="label-studio-topic">Шаг 2 · Опиши идею или вставь тему</label>
                 <textarea id="studio-topic" placeholder="Например: Как использовать AI для бизнеса в 2024 году..." rows="4"></textarea>
-                <p class="text-hint" id="studio-trend-hint">Выберите тренд, режим или просто напишите короткую мысль. Мы усилим запрос сами.</p>
+                <p class="text-hint" id="studio-trend-hint">Достаточно 3–5 слов — мы развернём идею сами.</p>
+            </div>
+
+            <details class="studio-advanced" id="studio-advanced">
+                <summary class="studio-advanced-summary">Дополнительные настройки</summary>
+                <div class="studio-advanced-body">
+            <div class="form-group" id="studio-attachments-group">
+                <label for="studio-attachment-input">Материал для переработки</label>
+                <input type="file" id="studio-attachment-input" class="hidden" accept="image/jpeg,image/png,image/webp,image/gif,.txt,.md,.csv,text/plain" multiple />
+                <div class="studio-attach-row">
+                    <button type="button" class="btn btn-secondary btn-inline" id="btn-studio-attach">📎 Прикрепить файл</button>
+                    <span class="text-hint" id="studio-attach-hint">Текст (.txt, .md) или картинка — переписать, исправить или перегенерировать</span>
+                </div>
+                <ul id="studio-attachment-list" class="studio-attachment-list hidden" aria-live="polite"></ul>
             </div>
 
             <div class="form-group" id="studio-intent-group">
@@ -145,6 +214,8 @@
                     <option value="bold">Смелее</option>
                 </select>
             </div>
+                </div>
+            </details>
 
             <div id="studio-text-options">
                 <div class="form-row">
@@ -267,6 +338,25 @@
                 <div class="result-content" id="result-text"></div>
                 <div id="result-image-wrap" class="hidden">
                     <img id="result-image" alt="Сгенерированное изображение" class="result-image" />
+                </div>
+
+                <div id="pro-teaser-card" class="pro-teaser-card hidden" aria-live="polite">
+                    <div class="pro-teaser-head">
+                        <span class="pro-teaser-badge">Pro</span>
+                        <strong class="pro-teaser-title">Откройте больше с Pro</strong>
+                    </div>
+                    <p class="pro-teaser-body" id="pro-teaser-body">
+                        Сравнивайте 2 AI-варианта текста, смотрите аналитику Viral Score за 7 дней и генерируйте без лимита.
+                    </p>
+                    <ul class="pro-teaser-list">
+                        <li>2 AI-варианта (A/B) — выбрать лучший</li>
+                        <li>Аналитика Viral Score за 7 дней</li>
+                        <li>Безлимит генераций</li>
+                    </ul>
+                    <div class="pro-teaser-actions">
+                        <button type="button" class="btn btn-primary btn-inline" id="btn-pro-teaser-upgrade">Посмотреть Pro</button>
+                        <button type="button" class="btn btn-secondary btn-inline" id="btn-pro-teaser-dismiss">Позже</button>
+                    </div>
                 </div>
 
                 <div class="action-buttons" id="result-actions-text">
@@ -403,6 +493,15 @@
                         <span class="settings-hub-label">Поддержка</span>
                     </button>
                 </div>
+                <div class="legal-settings-block" id="legal-settings-block">
+                    <p class="legal-operator-line">Самозанятый Малахов М.М. · ИНН 623400038290</p>
+                    <p class="legal-operator-line"><a href="mailto:messmerize@gmail.com">messmerize@gmail.com</a></p>
+                    <p class="legal-links-row">
+                        <a href="/app/legal/privacy.html">Политика</a>
+                        <a href="/app/legal/terms.html">Соглашение</a>
+                        <a href="/app/legal/offer.html">Оферта</a>
+                    </p>
+                </div>
             </div>
 
             <div id="settings-panels" class="settings-panels">
@@ -419,14 +518,14 @@
                         <div class="plan-card active">
                             <div class="plan-header">
                                 <h4>Free</h4>
-                                <span class="plan-price">0 Stars</span>
+                                <span class="plan-price">0 ₽</span>
                             </div>
                             <p>5 бесплатных генераций на аккаунт. Бонусы за друзей — отдельно, не сгорают.</p>
                         </div>
                         <div class="plan-card" id="plan-pro" style="cursor: pointer;">
                             <div class="plan-header">
                                 <h4>Pro</h4>
-                                <span class="plan-price">99 Stars / карта</span>
+                                <span class="plan-price">299 ₽ / 30 дн.</span>
                             </div>
                             <p>Безлимит · аналитика · 2 AI-варианта</p>
                             <div class="plan-actions">
@@ -436,20 +535,11 @@
                         <div class="plan-card" id="plan-premium" style="cursor: pointer;">
                             <div class="plan-header">
                                 <h4>Premium</h4>
-                                <span class="plan-price">299 Stars / карта</span>
+                                <span class="plan-price">799 ₽ / 30 дн.</span>
                             </div>
                             <p>Pro + картинки в канал · 3 AI-варианта · ×2 rate limit</p>
                             <div class="plan-actions">
                                 <button type="button" class="btn btn-secondary btn-inline" id="plan-premium-tribute">Картой через Tribute</button>
-                            </div>
-                        </div>
-                        <div class="stars-help-card" id="stars-help-card">
-                            <div class="stars-help-title">Оплата в Telegram идет через Stars</div>
-                            <p class="text-hint stars-help-text">
-                                Если Stars не открываются, оплатите картой через Tribute. Также можно купить Stars через @PremiumBot и вернуться к оплате.
-                            </p>
-                            <div class="stars-help-actions">
-                                <button type="button" class="btn btn-secondary" id="btn-open-premiumbot">Купить Stars / Открыть @PremiumBot</button>
                             </div>
                         </div>
                     </div>
@@ -459,14 +549,16 @@
                         <div class="plan-actions">
                             <button type="button" class="btn btn-secondary btn-inline" id="btn-debug-pro">Активировать Pro</button>
                             <button type="button" class="btn btn-secondary btn-inline" id="btn-debug-premium">Активировать Premium</button>
+                            <button type="button" class="btn btn-secondary btn-inline" id="btn-debug-premium-1d" title="Premium на 24 часа">Premium на 24ч</button>
                         </div>
                     </div>
                     <div id="admin-tools-panel" class="hidden">
+                        <p class="text-hint" id="admin-access-status" style="margin-bottom:12px"></p>
                         <div class="settings-group">
                             <label>Ручная активация после Tribute</label>
                             <p class="text-hint" style="margin-bottom:10px">Введи <b>@username</b> или <b>userId</b>. Пользователь должен хотя бы раз открыть mini app, чтобы связка сохранилась.</p>
                             <input type="text" id="manual-target" placeholder="@username или 123456789">
-                            <input type="password" id="manual-secret" placeholder="DEBUG_ADMIN_SECRET" autocomplete="off" style="margin-top:10px">
+                            <input type="password" id="manual-secret" class="admin-secret-field" placeholder="DEBUG_ADMIN_SECRET (только в браузере)" autocomplete="off" style="margin-top:10px">
                             <div class="plan-actions" style="margin-top:12px">
                                 <button type="button" class="btn btn-secondary btn-inline" id="btn-manual-pro">Выдать Pro</button>
                                 <button type="button" class="btn btn-secondary btn-inline" id="btn-manual-premium">Выдать Premium</button>
@@ -476,7 +568,7 @@
                         <div class="settings-group">
                             <label>Подписки пользователей</label>
                             <p class="text-hint" style="margin-bottom:10px">Активные Pro/Premium, истёкшие и Free-аккаунты с @username.</p>
-                            <input type="password" id="cleanup-secret" placeholder="DEBUG_ADMIN_SECRET" autocomplete="off">
+                            <input type="password" id="cleanup-secret" class="admin-secret-field" placeholder="DEBUG_ADMIN_SECRET (только в браузере)" autocomplete="off">
                             <div class="plan-actions" style="margin-top:12px">
                                 <button type="button" class="btn btn-secondary btn-inline" id="btn-cleanup-load">Обновить список</button>
                                 <button type="button" class="btn btn-secondary btn-inline" id="btn-cleanup-clear">Скрыть</button>
@@ -498,6 +590,10 @@
                                     </div>
                                 </div>
                                 <p class="text-hint subs-analytics-hint">Считаем по lastSeen в Redis (открытие app). Старые пользователи без lastSeen попадут в счёт после следующего визита.</p>
+                                <div id="subs-funnel-row" class="subs-funnel-row hidden">
+                                    <p class="subs-funnel-title">Воронка · 7 дней</p>
+                                    <div class="subs-funnel-grid" id="subs-funnel-grid"></div>
+                                </div>
                                 <div class="subs-stats-row">
                                     <div class="subs-stat subs-stat-active">
                                         <span class="subs-stat-value" id="subs-count-active">0</span>
@@ -622,7 +718,7 @@
                     <div class="faq-list faq-list-cards">
                     <details class="faq-item">
                         <summary class="faq-question">Сколько генераций на тарифе Free?</summary>
-                        <p class="faq-answer">На Free — <b>5 бесплатных генераций на аккаунт</b>. Лимит не обновляется каждый день. Отдельно копятся <b>бонусные генерации</b> за приглашённых друзей — они не сгорают и тратятся, когда бесплатные 5 закончились.</p>
+                        <p class="faq-answer">На Free — <b>5 бесплатных генераций</b> после входа через Telegram (или <b>3</b> в браузере как гость). Лимит не обновляется каждый день. Отдельно копятся <b>бонусные генерации</b> за приглашённых друзей — они не сгорают и тратятся, когда бесплатный пул закончился.</p>
                     </details>
                     <details class="faq-item">
                         <summary class="faq-question">Что считается одной генерацией?</summary>
@@ -634,7 +730,7 @@
                     </details>
                     <details class="faq-item">
                         <summary class="faq-question">Как оплатить Pro или Premium?</summary>
-                        <p class="faq-answer">В Telegram — через <b>Stars</b> (кнопка подписки в настройках). Если Stars не открываются — оплата <b>картой через Tribute</b> или покупка Stars через <b>@PremiumBot</b>, затем снова оплата в приложении.</p>
+                        <p class="faq-answer">Оплата подписки — <b>в рублях</b> банковской картой через Tribute. Актуальные цены — на <a href="/app/landing.html">странице продукта</a>.</p>
                     </details>
                     <details class="faq-item">
                         <summary class="faq-question">Как сохранить картинку в галерею телефона?</summary>
@@ -654,7 +750,7 @@
                     </details>
                     <details class="faq-item">
                         <summary class="faq-question">Генерация долго идёт или пропала</summary>
-                        <p class="faq-answer">Текст и сценарии обычно занимают <b>30–90 секунд</b>, картинки — <b>20–90 секунд</b>. Не сворачивайте Telegram во время генерации. Если кажется, что зависло — откройте <b>Дашборд</b>: готовый результат часто уже в истории.</p>
+                        <p class="faq-answer">Текст и сценарии обычно занимают <b>30–90 секунд</b>, картинки — <b>20–90 секунд</b>. В Telegram не сворачивайте приложение, в браузере — не закрывайте вкладку. Если кажется, что зависло — откройте <b>Дашборд</b>: готовый результат часто уже в истории.</p>
                     </details>
                     <details class="faq-item">
                         <summary class="faq-question">Зачем заполнять профиль автора?</summary>
@@ -677,6 +773,13 @@
                             </p>
                             <button type="button" class="btn btn-secondary btn-full" id="btn-contact-support">Написать в поддержку</button>
                             <p class="text-hint contact-card-hint" id="contact-support-hint">Откроется чат в Telegram. Если бот просит — нажмите Start и отправьте сообщение.</p>
+                            <p class="text-hint legal-links" style="margin-top:16px">
+                                <a href="/app/legal/privacy.html">Политика конфиденциальности</a>
+                                ·
+                                <a href="/app/legal/terms.html">Пользовательское соглашение</a>
+                                ·
+                                <a href="/app/legal/offer.html">Публичная оферта</a>
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -686,12 +789,12 @@
         <!-- Navigation -->
         <nav class="bottom-nav">
             <button class="nav-item active" data-tab="dashboard" onclick="switchTab('dashboard')">
-                <span class="nav-icon">📊</span>
-                <span class="nav-text">Дашборд</span>
+                <span class="nav-icon">🏠</span>
+                <span class="nav-text">Главная</span>
             </button>
-            <button class="nav-item" data-tab="studio" onclick="switchTab('studio')">
-                <span class="nav-icon">✍️</span>
-                <span class="nav-text">Студия</span>
+            <button class="nav-item nav-item-primary" data-tab="studio" onclick="switchTab('studio')">
+                <span class="nav-icon">✨</span>
+                <span class="nav-text">Создать</span>
             </button>
             <button class="nav-item" data-tab="trends" onclick="switchTab('trends')">
                 <span class="nav-icon">🔥</span>
@@ -719,6 +822,18 @@
             </div>
         </div>
 
+        <!-- Выбор способа шаринга рефералки (веб) -->
+        <div id="referral-share-modal" class="referral-share-modal hidden" role="dialog" aria-modal="true" aria-labelledby="referral-share-title">
+            <div class="referral-share-backdrop"></div>
+            <div class="referral-share-card">
+                <h3 id="referral-share-title">Как пригласить друга?</h3>
+                <p class="referral-share-hint">Telegram откроет Mini App, ссылка для браузера — для WhatsApp, VK и других мессенджеров.</p>
+                <button type="button" class="btn btn-referral btn-full" id="referral-share-tg">📲 Поделиться в Telegram</button>
+                <button type="button" class="btn btn-secondary btn-full" id="referral-share-web">🔗 Скопировать ссылку для браузера</button>
+                <button type="button" class="referral-share-cancel" id="referral-share-cancel">Отмена</button>
+            </div>
+        </div>
+
         <!-- Модалка награды за milestone -->
         <div id="referral-reward-modal" class="referral-modal hidden" role="dialog" aria-modal="true">
             <div class="referral-modal-backdrop"></div>
@@ -732,12 +847,17 @@
         </div>
     </div>
 
-    <script src="js/vm-core.js"></script>
-    <script src="js/history-store.js"></script>
-    <script src="js/image-download.js"></script>
-    <script src="js/onboarding.js"></script>
-    <script src="js/admin-subs.js"></script>
-    <script src="referral.js"></script>
-    <script src="app.js"></script>
+    <script defer src="js/vm-runtime.js?v=20260704r"></script>
+    <script defer src="js/web-auth.js?v=20260704r"></script>
+    <script defer src="js/vm-core.js"></script>
+    <script defer src="js/history-store.js"></script>
+    <script defer src="js/image-download.js"></script>
+    <script defer src="js/vm-analytics.js?v=20260704r"></script>
+    <script defer src="js/onboarding.js?v=20260709r"></script>
+    <script defer src="js/studio-attachments.js?v=20260704r"></script>
+    <script defer src="js/admin-subs.js?v=20260704r"></script>
+    <script defer src="referral.js?v=20260704r"></script>
+    <script defer src="app.js?v=20260709r"></script>
+    <script defer src="js/vm-router.js"></script>
 </body>
 </html>
