@@ -106,7 +106,15 @@ if certbot certificates 2>/dev/null | grep -q 'Certificate Name: viral-maker.ru'
 fi
 
 if [[ "$HAS_VALID_CERT" == true ]]; then
-  certbot renew --quiet || true
+  if certbot certificates 2>/dev/null | awk '/Certificate Name: viral-maker.ru/,/^$/' | grep -q 'app.viral-maker.ru'; then
+    certbot renew --quiet || true
+  elif [[ -n "$APP_OK" ]]; then
+    certbot certonly --nginx --expand \
+      -d viral-maker.ru -d www.viral-maker.ru -d app.viral-maker.ru \
+      --non-interactive --agree-tos --register-unsafely-without-email
+  else
+    certbot renew --quiet || true
+  fi
 else
   certbot --nginx "${CERT_DOMAINS[@]}" \
     --non-interactive --agree-tos --register-unsafely-without-email

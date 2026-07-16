@@ -48,6 +48,10 @@ if [[ -f scripts/apply-nginx-config.sh ]]; then
   bash scripts/apply-nginx-config.sh
 fi
 
+if [[ -f scripts/ensure-viral-maker-ssl.sh ]] && [[ -f /etc/nginx/sites-available/viral-maker.ru ]]; then
+  bash scripts/ensure-viral-maker-ssl.sh || true
+fi
+
 echo "==> pm2"
 if pm2 describe "$PM2_NAME" >/dev/null 2>&1; then
   pm2 restart "$PM2_NAME"
