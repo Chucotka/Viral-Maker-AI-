@@ -26,7 +26,9 @@ const API_ROUTES = [
   { path: '/api/tribute-webhook', module: '../api/tribute-webhook', methods: ['get', 'head', 'post'] },
   { path: '/api/webhook', module: '../api/webhook', methods: ['get', 'post'] },
   { path: '/api/trends', module: '../api/trends', methods: ['get'] },
+  { path: '/api/events', module: '../api/events', methods: ['post'] },
   { path: '/api/health', module: '../api/health', methods: ['get'] },
+  { path: '/api/plans', module: '../api/plans', methods: ['get'] },
 ];
 
 function wrapHandler(handlerFn, routePath) {

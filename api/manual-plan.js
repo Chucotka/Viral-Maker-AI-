@@ -12,6 +12,7 @@ const {
   listActivePaidUsers,
   listSubscriptionOverview,
 } = require('../lib/kvUserStore');
+const { getFunnelSnapshot } = require('../lib/funnelMetrics');
 
 function parseTarget(value) {
   const raw = String(value || '').trim();
@@ -114,11 +115,13 @@ module.exports = async (req, res) => {
         });
       }
       console.info('Manual plan list returned', overview.totals);
+      const funnel = await getFunnelSnapshot(7);
       return res.json({
         ok: true,
         items: overview.active,
         count: overview.totals.active,
         overview,
+        funnel,
       });
     }
 

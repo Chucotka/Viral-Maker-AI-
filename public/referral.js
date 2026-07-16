@@ -319,10 +319,23 @@
     renderRewardTiers(stats);
     renderProgressTrack(stats);
     renderActivityFeed(stats);
+    renderInviteButtonState(stats);
+  }
+
+  function renderInviteButtonState(stats) {
+    const needsLogin = Boolean(stats?.links?.requiresLogin);
+    document.querySelectorAll('[data-ref-invite]').forEach((btn) => {
+      btn.textContent = needsLogin ? '🔐 Войти, чтобы пригласить' : '⚡ Пригласить друзей — получить бонус';
+      btn.classList.toggle('btn-referral-guest', needsLogin);
+    });
   }
 
   function requireReferralLogin() {
-    const msg = 'Реферальная ссылка привязана к Telegram. Откройте приложение в Telegram.';
+    const msg = 'Реферальная ссылка привязана к Telegram. Войдите через Telegram в браузере или откройте Mini App.';
+    if (global.VMRuntime?.isTelegram) {
+      tg?.showAlert?.(msg);
+      return;
+    }
     if (global.VMWebAuth?.showOverlay) {
       global.VMRuntime?.alert?.(msg, 'Нужен вход');
       global.VMWebAuth.showOverlay();

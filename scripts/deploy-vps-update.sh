@@ -2,7 +2,7 @@
 # Обновление уже установленного Viral Maker AI на VPS.
 # Запуск на сервере (root): bash scripts/deploy-vps-update.sh
 # Или одной строкой:
-#   curl -fsSL "https://raw.githubusercontent.com/Chucotka/Viral-Maker-AI-/cursor/guest-telegram-link-e202/scripts/deploy-vps-update.sh" | bash
+#   curl -fsSL "https://raw.githubusercontent.com/Chucotka/Viral-Maker-AI-/cursor/studio-attachments-e202/scripts/deploy-vps-update.sh" | bash
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/var/www/viral-maker}"
@@ -36,6 +36,12 @@ echo "==> git fetch + checkout $BRANCH"
 git fetch origin
 git checkout "$BRANCH"
 git pull --ff-only origin "$BRANCH"
+export APP_BUILD="$(git rev-parse --short HEAD)"
+if grep -q '^APP_BUILD=' .env 2>/dev/null; then
+  sed -i "s/^APP_BUILD=.*/APP_BUILD=${APP_BUILD}/" .env
+else
+  echo "APP_BUILD=${APP_BUILD}" >> .env
+fi
 
 echo "==> npm ci"
 npm ci --silent
@@ -55,7 +61,7 @@ fi
 
 echo "==> pm2"
 if pm2 describe "$PM2_NAME" >/dev/null 2>&1; then
-  pm2 restart "$PM2_NAME"
+  pm2 restart "$PM2_NAME" --update-env
 else
   pm2 start dev.js --name "$PM2_NAME"
   pm2 save
@@ -70,7 +76,15 @@ if curl -sf "http://127.0.0.1:${PORT}/api/ping" | grep -q pong; then
   echo "OK: http://127.0.0.1:${PORT}/api/ping → pong"
   curl -sf "http://127.0.0.1:${PORT}/api/health" | head -c 200 || true
   echo ""
-  echo "Проверка снаружи: curl -s https://app.innoko.ru/api/health"
+  echo "==> stabilization smoke (local)"
+  if node scripts/stabilization-smoke.js --local; then
+    echo ""
+    echo "Проверка снаружи: node scripts/stabilization-smoke.js"
+    echo "              или: curl -s https://app.innoko.ru/api/health"
+  else
+    echo "!!! Smoke-check не прошёл — см. вывод выше"
+    exit 1
+  fi
 else
   echo "!!! Приложение не отвечает на :${PORT}/api/ping"
   pm2 logs "$PM2_NAME" --lines 40 --nostream || true

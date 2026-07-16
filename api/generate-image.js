@@ -15,6 +15,8 @@ const {
 } = require('../lib/buildTextPrompt');
 const { assertGenerateRateLimit } = require('../lib/rateLimitKv');
 const { sendMappedError } = require('../lib/httpErrors');
+const { trackFunnelStage } = require('../lib/funnelMetrics');
+const { parseStudioAttachments } = require('../lib/studioAttachments');
 const {
   putImageDownload,
   buildDownloadFileName,
@@ -34,11 +36,22 @@ module.exports = async (req, res) => {
     const auth = resolveTelegramUser(req, res);
     if (!auth) return;
 
-    const { prompt: rawPrompt, aspectRatio = '1:1', style = '', risk = 'balanced' } = req.body;
+    const {
+      prompt: rawPrompt,
+      aspectRatio = '1:1',
+      style = '',
+      risk = 'balanced',
+      attachments: rawAttachments,
+    } = req.body;
 
+    const attachments = parseStudioAttachments(rawAttachments);
     const prompt = String(rawPrompt || '').trim();
-    if (!prompt) {
-      return res.status(400).json({ error: 'prompt_required', message: 'Введите описание картинки.' });
+    const refImage = attachments.find((a) => a.type === 'image');
+    if (!prompt && !refImage) {
+      return res.status(400).json({
+        error: 'prompt_required',
+        message: 'Введите описание или прикрепите исходное изображение.',
+      });
     }
 
     if (!process.env.GEMINI_API_KEY) {
@@ -62,11 +75,12 @@ module.exports = async (req, res) => {
     let imagePrompt = isSurpriseRequest(prompt)
       ? buildSurpriseImageModelPrompt({ aspectRatio, style: styleBit, profile: rec, recentHistory, risk })
       : buildImageModelPrompt({
-          prompt,
+          prompt: prompt || 'Recreate and improve the attached reference image',
           aspectRatio,
           style: styleBit,
           profile: rec,
           recentHistory,
+          hasReference: Boolean(refImage),
         });
     let directorApplied = false;
     if (!isSurpriseRequest(prompt)) {
@@ -95,9 +109,11 @@ module.exports = async (req, res) => {
       apiKey: process.env.GEMINI_API_KEY,
       prompt: imagePrompt,
       aspectRatio,
+      referenceImage: refImage || null,
     });
 
     const { remainingToday } = await incrementGenerationCount(auth.userId, rec);
+    void trackFunnelStage('generation_completed', { kind: 'image' }).catch(() => {});
     await confirmReferralAfterFirstGeneration(auth.userId);
 
     const historyTs = Date.now();
@@ -105,8 +121,9 @@ module.exports = async (req, res) => {
       await appendUserHistory(auth.userId, {
         ts: historyTs,
         type: 'image',
-        prompt: prompt.slice(0, 240),
+        prompt: (prompt || 'reference image').slice(0, 240),
         directorApplied: !!directorApplied,
+        hadReference: Boolean(refImage),
       });
     } catch (histErr) {
       console.error('appendUserHistory:', histErr.message);

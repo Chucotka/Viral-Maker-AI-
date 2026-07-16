@@ -2,11 +2,26 @@
  * Среда выполнения: Telegram Mini App или веб (innoko.ru/#/dashboard).
  */
 (function initVmRuntime(global) {
-  const tg = global.Telegram?.WebApp;
-  const hasInitData = Boolean(tg?.initData);
-
   const nativeFetch =
     typeof global.fetch === 'function' ? global.fetch.bind(global) : null;
+
+  function getWebApp() {
+    return global.Telegram?.WebApp || null;
+  }
+
+  function hasInitData() {
+    return Boolean(getWebApp()?.initData);
+  }
+
+  function syncTelegramChrome() {
+    const tg = getWebApp();
+    if (!tg?.initData) return;
+    tg.expand?.();
+    tg.ready?.();
+    global.document?.documentElement?.classList?.add('vm-telegram-mini-app');
+    const overlay = global.document?.getElementById('web-auth-overlay');
+    if (overlay) overlay.classList.add('hidden');
+  }
 
   function apiPath(path) {
     const p = String(path || '');
@@ -18,7 +33,8 @@
   function headers(jsonBody = false) {
     const h = {};
     if (jsonBody) h['Content-Type'] = 'application/json';
-    if (hasInitData) h['X-Telegram-Init-Data'] = tg.initData;
+    const initData = getWebApp()?.initData;
+    if (initData) h['X-Telegram-Init-Data'] = initData;
     return h;
   }
 
@@ -26,6 +42,7 @@
     if (!nativeFetch) {
       throw new Error('Браузер не поддерживает fetch');
     }
+    syncTelegramChrome();
     const url = apiPath(path);
     const opts = {
       credentials: 'include',
@@ -50,11 +67,12 @@
 
   function alert(message, title) {
     const text = String(message || '');
-    if (hasInitData && tg?.showAlert) {
+    const tg = getWebApp();
+    if (hasInitData() && tg?.showAlert) {
       tg.showAlert(text);
       return;
     }
-    if (hasInitData && tg?.showPopup) {
+    if (hasInitData() && tg?.showPopup) {
       tg.showPopup({ title: title || 'Viral Maker AI', message: text });
       return;
     }
@@ -62,7 +80,8 @@
   }
 
   function popup(opts) {
-    if (tg?.showPopup) {
+    const tg = getWebApp();
+    if (hasInitData() && tg?.showPopup) {
       tg.showPopup(opts);
       return;
     }
@@ -78,10 +97,38 @@
     }
   }
 
-  if (hasInitData) {
-    tg.expand?.();
-    tg.ready?.();
+  syncTelegramChrome();
+
+  function resolveLegalUrl(href) {
+    try {
+      return new URL(href, global.location.origin).href;
+    } catch {
+      return href;
+    }
   }
+
+  function openLegalLink(href) {
+    const url = resolveLegalUrl(href);
+    const tg = getWebApp();
+    if (hasInitData() && tg?.openLink) {
+      tg.openLink(url);
+      return;
+    }
+    global.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  function installLegalLinks() {
+    global.document?.addEventListener('click', (e) => {
+      const a = e.target?.closest?.('a[href*="/app/legal/"], a[href*="legal/"]');
+      if (!a) return;
+      const href = a.getAttribute('href');
+      if (!href || href.startsWith('mailto:') || href.startsWith('tel:')) return;
+      e.preventDefault();
+      openLegalLink(href);
+    });
+  }
+
+  installLegalLinks();
 
   const host = String(global.location?.hostname || '');
   if (host.includes('vercel.app') || host.includes('vercel.sh')) {
@@ -96,14 +143,23 @@
   }
 
   global.VMRuntime = {
-    isTelegram: hasInitData,
-    isWeb: !hasInitData,
-    tg,
+    get isTelegram() {
+      return hasInitData();
+    },
+    get isWeb() {
+      return !hasInitData();
+    },
+    get tg() {
+      return getWebApp();
+    },
     apiPath,
     headers,
     apiFetch,
     alert,
     popup,
     readStartParamFromUrl,
+    syncTelegramChrome,
+    hasInitData,
+    openLegalLink,
   };
 })(window);
