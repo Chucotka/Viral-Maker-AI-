@@ -48,8 +48,9 @@ if [[ -f scripts/apply-nginx-config.sh ]]; then
   bash scripts/apply-nginx-config.sh
 fi
 
-if [[ -f scripts/ensure-viral-maker-ssl.sh ]] && [[ -f /etc/nginx/sites-available/viral-maker.ru ]]; then
-  bash scripts/ensure-viral-maker-ssl.sh || true
+if [[ -f scripts/ensure-viral-maker-ssl.sh ]] && certbot certificates 2>/dev/null | grep -q 'Certificate Name: viral-maker.ru'; then
+  echo "==> SSL (app.viral-maker.ru)"
+  bash scripts/ensure-viral-maker-ssl.sh
 fi
 
 echo "==> pm2"
